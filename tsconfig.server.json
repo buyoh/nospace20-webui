@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "outDir": "build",
+    "noEmit": false,
+    "strict": true
+  },
+  "include": [
+    "src/app/**/*",
+    "src/interfaces/**/*"
+  ]
+}
