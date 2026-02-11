@@ -380,7 +380,9 @@ describe('NospaceExecutionService', () => {
 
       session.sendStdin('test input\n');
 
-      expect((fakeProcess.stdin as FakeWritable).writtenData).toContain('test input\n');
+      expect((fakeProcess.stdin as FakeWritable).writtenData).toContain(
+        'test input\n'
+      );
 
       session.kill();
     });

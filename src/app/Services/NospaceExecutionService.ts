@@ -28,7 +28,9 @@ export interface ExecutionConfig {
 const defaultFileSystem: FileSystem = {
   existsSync,
   writeFileSync: (path: string, data: string, encoding?: string) => {
-    writeFileSync(path, data, { encoding: (encoding as BufferEncoding) || 'utf-8' });
+    writeFileSync(path, data, {
+      encoding: (encoding as BufferEncoding) || 'utf-8',
+    });
   },
   unlinkSync,
   mkdirSync,
