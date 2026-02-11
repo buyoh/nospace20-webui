@@ -20,7 +20,11 @@ export function useNospaceExecution() {
   const isRunning = executionStatus === 'running';
 
   const handleRun = (stdinData?: string) => {
-    if (!socket || isRunning) return;
+    console.log('[useNospaceExecution] handleRun called', { socket: !!socket, isRunning, sourceCode: sourceCode.substring(0, 50) });
+    if (!socket || isRunning) {
+      console.warn('[useNospaceExecution] handleRun blocked:', { socketExists: !!socket, isRunning });
+      return;
+    }
 
     // Clear output
     setOutputEntries([]);

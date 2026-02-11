@@ -78,11 +78,11 @@ export class NospaceController {
     // Register session
     this.sessionsBySocket.set(socket.id, session.sessionId);
 
-    // Emit initial status
+    // Emit initial status (only if session is actually running)
     socket.emit('nospace_execution_status', {
       sessionId: session.sessionId,
-      status: 'running',
-      exitCode: null,
+      status: session.status,
+      exitCode: session.exitCode,
     });
 
     // If batch mode, send stdin data and close stdin

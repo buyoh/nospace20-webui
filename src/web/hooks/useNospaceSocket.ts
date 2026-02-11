@@ -19,8 +19,22 @@ export function useNospaceSocket() {
   useEffect(() => {
     // Create socket connection
     if (!socket) {
+      console.log('[useNospaceSocket] Creating new socket connection');
       const newSocket = createSocket();
       setSocket(newSocket);
+
+      // Log connection events
+      newSocket.on('connect', () => {
+        console.log('[useNospaceSocket] Socket connected:', newSocket.id);
+      });
+
+      newSocket.on('connect_error', (error) => {
+        console.error('[useNospaceSocket] Socket connection error:', error);
+      });
+
+      newSocket.on('disconnect', (reason) => {
+        console.log('[useNospaceSocket] Socket disconnected:', reason);
+      });
 
       // Setup nospace event listeners
       newSocket.on('nospace_stdout', (payload) => {
@@ -81,11 +95,11 @@ export function useNospaceSocket() {
       });
 
       return () => {
+        console.log('[useNospaceSocket] Cleaning up socket connection');
         newSocket.close();
       };
     }
   }, [
-    socket,
     setSocket,
     setExecutionStatus,
     setCurrentSessionId,

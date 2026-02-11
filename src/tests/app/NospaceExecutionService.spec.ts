@@ -7,17 +7,23 @@ import {
 import type { RunOptions } from '../../interfaces/NospaceTypes';
 import { ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
+import { Readable, Writable } from 'stream';
 
 // Fake ChildProcess for testing
-class FakeChildProcess extends EventEmitter implements Partial<ChildProcess> {
-  public stdin = new FakeWritable();
-  public stdout = new EventEmitter();
-  public stderr = new EventEmitter();
+class FakeChildProcess extends EventEmitter {
+  public stdin: FakeWritable;
+  public stdout: EventEmitter;
+  public stderr: EventEmitter;
   public killed = false;
   public exitCode: number | null = null;
+  public pid: number;
 
-  constructor(public pid: number = 12345) {
+  constructor(pid: number = 12345) {
     super();
+    this.pid = pid;
+    this.stdin = new FakeWritable();
+    this.stdout = new EventEmitter();
+    this.stderr = new EventEmitter();
   }
 
   kill(signal?: NodeJS.Signals | number): boolean {
@@ -235,7 +241,7 @@ describe('NospaceExecutionService', () => {
     it('コマンド引数が正しく構築される (with debug and ignoreDebug)', () => {
       const code = 'code';
       const options: RunOptions = {
-        language: 'whitespace',
+        language: 'ws',
         debug: true,
         ignoreDebug: true,
         inputMode: 'interactive',
@@ -374,7 +380,7 @@ describe('NospaceExecutionService', () => {
 
       session.sendStdin('test input\n');
 
-      expect(fakeProcess.stdin.writtenData).toContain('test input\n');
+      expect((fakeProcess.stdin as FakeWritable).writtenData).toContain('test input\n');
 
       session.kill();
     });

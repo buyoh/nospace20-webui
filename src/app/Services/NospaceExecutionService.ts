@@ -8,7 +8,7 @@ import type { RunOptions } from '../../interfaces/NospaceTypes';
 /** ファイルシステム操作の抽象 */
 export interface FileSystem {
   existsSync(path: string): boolean;
-  writeFileSync(path: string, data: string, encoding: string): void;
+  writeFileSync(path: string, data: string, encoding?: string): void;
   unlinkSync(path: string): void;
   mkdirSync(path: string, options?: { recursive: boolean }): void;
 }
@@ -27,7 +27,9 @@ export interface ExecutionConfig {
 /** デフォルトのFileSystem実装 */
 const defaultFileSystem: FileSystem = {
   existsSync,
-  writeFileSync,
+  writeFileSync: (path: string, data: string, encoding?: string) => {
+    writeFileSync(path, data, { encoding: (encoding as BufferEncoding) || 'utf-8' });
+  },
   unlinkSync,
   mkdirSync,
 };
