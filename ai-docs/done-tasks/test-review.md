@@ -194,7 +194,11 @@ DI導入後、以下のテストケースを追加・修正する:
 
 ## ステータス
 
-- [ ] フェーズ 1: NospaceExecutionService リファクタリング
-- [ ] フェーズ 2: NospaceExecutionService テスト書き直し
-- [ ] フェーズ 3: NospaceController テスト新規作成
-- [ ] フェーズ 4: フロントエンドテスト拡充
+- [x] フェーズ 1: NospaceExecutionService リファクタリング（完了: 2026/02/11）
+- [x] フェーズ 2: NospaceExecutionService テスト書き直し（完了: 2026/02/11）
+- [ ] フェーズ 3: NospaceController テスト新規作成 → 別ドキュメントに移行: [test-review-phase3-4.md](../tasks/test-review-phase3-4.md)
+- [ ] フェーズ 4: フロントエンドテスト拡充 → 別ドキュメントに移行: [test-review-phase3-4.md](../tasks/test-review-phase3-4.md)
+
+**関連ドキュメント**:
+- 実装完了報告: [test-review-phase1-2-implementation.md](test-review-phase1-2-implementation.md)
+- 残タスク: [test-review-phase3-4.md](../tasks/test-review-phase3-4.md)

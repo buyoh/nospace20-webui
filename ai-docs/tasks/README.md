@@ -2,8 +2,7 @@
 
 ## タスク一覧
 
-- [example-task.md](example-task.md) これは例です
-- [test-review.md](test-review.md) テストコード レビュー・改善計画
+- [test-review-phase3-4.md](test-review-phase3-4.md) テストコード レビュー・改善計画（フェーズ3-4）
 - [nospace-webui/](nospace-webui/) nospace Web UI の設計・実装タスク
   - [00-overview.md](nospace-webui/00-overview.md) 全体概要・実装フェーズ定義
   - [01-frontend-layout.md](nospace-webui/01-frontend-layout.md) フロントエンド構成・コンポーネント設計
@@ -12,3 +11,8 @@
   - [04-socketio-protocol.md](nospace-webui/04-socketio-protocol.md) Socket.IO 通信プロトコル（Phase 3）
   - [05-env-config.md](nospace-webui/05-env-config.md) 環境設定・.env 設計（Phase 1 + Phase 7）
   - [06-io-interaction.md](nospace-webui/06-io-interaction.md) 標準入出力のインタラクションモード（Phase 6）
+
+## 完了済みタスク
+
+- [test-review.md](../done-tasks/test-review.md) テストコード レビュー・改善計画（フェーズ1-2完了）
+  - 実装完了報告: [test-review-phase1-2-implementation.md](../done-tasks/test-review-phase1-2-implementation.md)
