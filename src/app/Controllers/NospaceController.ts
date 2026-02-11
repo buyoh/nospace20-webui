@@ -51,33 +51,29 @@ export class NospaceController {
     }
 
     // Create new session
-    const session = this.executionService.run(
-      code,
-      options,
-      {
-        onStdout: (data) => {
-          socket.emit('nospace_stdout', {
-            sessionId: session.sessionId,
-            data,
-          });
-        },
-        onStderr: (data) => {
-          socket.emit('nospace_stderr', {
-            sessionId: session.sessionId,
-            data,
-          });
-        },
-        onExit: (exitCode) => {
-          socket.emit('nospace_execution_status', {
-            sessionId: session.sessionId,
-            status: session.status,
-            exitCode,
-          });
-          this.executionService.removeSession(session.sessionId);
-          this.sessionsBySocket.delete(socket.id);
-        },
-      }
-    );
+    const session = this.executionService.run(code, options, {
+      onStdout: (data) => {
+        socket.emit('nospace_stdout', {
+          sessionId: session.sessionId,
+          data,
+        });
+      },
+      onStderr: (data) => {
+        socket.emit('nospace_stderr', {
+          sessionId: session.sessionId,
+          data,
+        });
+      },
+      onExit: (exitCode) => {
+        socket.emit('nospace_execution_status', {
+          sessionId: session.sessionId,
+          status: session.status,
+          exitCode,
+        });
+        this.executionService.removeSession(session.sessionId);
+        this.sessionsBySocket.delete(socket.id);
+      },
+    });
 
     // Register session
     this.sessionsBySocket.set(socket.id, session.sessionId);

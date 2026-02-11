@@ -37,8 +37,7 @@ export function useNospaceExecution() {
     socket.emit('nospace_run', {
       code: sourceCode,
       options: runOptions,
-      stdinData:
-        executionOptions.inputMode === 'batch' ? stdinData : undefined,
+      stdinData: executionOptions.inputMode === 'batch' ? stdinData : undefined,
     });
   };
 

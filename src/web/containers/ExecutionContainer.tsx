@@ -11,8 +11,13 @@ import './styles/ExecutionContainer.scss';
 export const ExecutionContainer: React.FC = () => {
   const executionOptions = useAtomValue(executionOptionsAtom);
   const [batchInput, setBatchInput] = useState('');
-  const { isRunning, handleRun, handleKill, handleSendStdin, handleClearOutput } =
-    useNospaceExecution();
+  const {
+    isRunning,
+    handleRun,
+    handleKill,
+    handleSendStdin,
+    handleClearOutput,
+  } = useNospaceExecution();
 
   const handleRunWithInput = () => {
     handleRun(executionOptions.inputMode === 'batch' ? batchInput : undefined);

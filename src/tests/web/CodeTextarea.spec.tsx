@@ -8,7 +8,9 @@ describe('CodeTextarea', () => {
     const mockOnChange = jest.fn();
     render(<CodeTextarea value="" onChange={mockOnChange} />);
 
-    const textarea = screen.getByPlaceholderText(/Write your nospace code here.../i);
+    const textarea = screen.getByPlaceholderText(
+      /Write your nospace code here.../i
+    );
     expect(textarea).toBeInTheDocument();
   });
 
@@ -25,7 +27,9 @@ describe('CodeTextarea', () => {
     const mockOnChange = jest.fn();
     render(<CodeTextarea value="" onChange={mockOnChange} />);
 
-    const textarea = screen.getByPlaceholderText(/Write your nospace code here.../i) as HTMLTextAreaElement;
+    const textarea = screen.getByPlaceholderText(
+      /Write your nospace code here.../i
+    ) as HTMLTextAreaElement;
 
     // ユーザーがテキストを入力する動作をシミュレート
     const newValue = 'test';

@@ -84,7 +84,14 @@ export function useNospaceSocket() {
         newSocket.close();
       };
     }
-  }, [socket, setSocket, setExecutionStatus, setCurrentSessionId, setOutputEntries, setExitCode]);
+  }, [
+    socket,
+    setSocket,
+    setExecutionStatus,
+    setCurrentSessionId,
+    setOutputEntries,
+    setExitCode,
+  ]);
 
   return socket;
 }

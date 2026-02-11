@@ -77,8 +77,8 @@ export const InputPanel: React.FC<InputPanelProps> = ({
     <div className="input-panel">
       <h3>Batch Input</h3>
       <textarea
-        value={batchInputonBatchInputChange?.
-        onChange={(e) => setBatchInput(e.target.value)}
+        value={batchInput}
+        onChange={(e) => onBatchInputChange?.(e.target.value)}
         placeholder="Enter all input data here (before running)..."
         className="batch-input"
       />

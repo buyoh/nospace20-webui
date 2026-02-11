@@ -1,23 +1,13 @@
 import { atom } from 'jotai';
 import { io, Socket } from 'socket.io-client';
 import {
-  ClientToServerEvents,
-  ServerToClientEvents,
-} from '../../interfaces/CounterTypes';
-import {
   NospaceClientToServerEvents,
   NospaceServerToClientEvents,
 } from '../../interfaces/NospaceTypes';
 
-// Combine event types
-type CombinedClientToServerEvents = ClientToServerEvents &
-  NospaceClientToServerEvents;
-type CombinedServerToClientEvents = ServerToClientEvents &
-  NospaceServerToClientEvents;
-
 export type AppSocket = Socket<
-  CombinedServerToClientEvents,
-  CombinedClientToServerEvents
+  NospaceServerToClientEvents,
+  NospaceClientToServerEvents
 >;
 
 // Socket インスタンスを保持する atom

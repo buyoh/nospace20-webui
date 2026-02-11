@@ -24,8 +24,7 @@ export const CodeTextarea: React.FC<CodeTextareaProps> = ({
       const end = textarea.selectionEnd;
 
       // Insert 2 spaces at cursor position
-      const newValue =
-        value.substring(0, start) + '  ' + value.substring(end);
+      const newValue = value.substring(0, start) + '  ' + value.substring(end);
 
       onChange(newValue);
 

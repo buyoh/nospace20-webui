@@ -70,7 +70,10 @@ export const SplitPane: React.FC<SplitPaneProps> = ({
         {left}
       </div>
       <div className="split-pane-divider" onMouseDown={handleMouseDown} />
-      <div className="split-pane-right" style={{ width: `${100 - leftWidth}%` }}>
+      <div
+        className="split-pane-right"
+        style={{ width: `${100 - leftWidth}%` }}
+      >
         {right}
       </div>
     </div>
