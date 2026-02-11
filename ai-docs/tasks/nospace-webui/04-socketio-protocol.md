@@ -5,6 +5,8 @@
 クライアント・サーバー間の通信は Socket.IO で行う。
 既存の Counter アプリケーションと同じパターンを踏襲し、型安全な通信を実現する。
 
+現時点ではインタプリタ（実行）のみを対象とし、コンパイル関連のイベントは定義しない。
+
 ## 型定義
 
 ```typescript
@@ -13,19 +15,14 @@
 // --- Socket.IO イベント型 ---
 
 export interface NospaceClientToServerEvents {
-  /** コンパイル要求 */
-  nospace_compile: (payload: {
-    code: string;
-    options: CompileOptions;
-  }) => void;
-
   /** 実行要求 */
   nospace_run: (payload: {
     code: string;
     options: RunOptions;
+    stdinData?: string;  // batch モード時の一括入力データ
   }) => void;
 
-  /** 標準入力送信（実行中のプロセスへ） */
+  /** 標準入力送信（実行中のプロセスへ、interactive モード） */
   nospace_stdin: (payload: {
     sessionId: string;
     data: string;
@@ -38,14 +35,6 @@ export interface NospaceClientToServerEvents {
 }
 
 export interface NospaceServerToClientEvents {
-  /** コンパイル結果 */
-  nospace_compile_result: (payload: {
-    success: boolean;
-    output: string;
-    errors: string;
-    exitCode: number;
-  }) => void;
-
   /** 標準出力データ（ストリーミング） */
   nospace_stdout: (payload: {
     sessionId: string;
@@ -68,18 +57,6 @@ export interface NospaceServerToClientEvents {
 ```
 
 ## イベントフロー
-
-### コンパイルフロー
-
-```
-Client                              Server
-  |                                    |
-  |-- nospace_compile(code, opts) ---->|
-  |                                    |-- spawn nospace20 compile
-  |                                    |-- wait for process exit
-  |<-- nospace_compile_result ---------|
-  |                                    |
-```
 
 ### 実行フロー（batch stdin）
 
