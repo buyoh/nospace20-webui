@@ -87,6 +87,10 @@ export interface ExecutionBackendCapabilities {
   supportsInteractiveStdin: boolean;
   /** compile をサポートするか */
   supportsCompile: boolean;
+  /** ignoreDebug オプションをサポートするか */
+  supportsIgnoreDebug: boolean;
+  /** run 時に language subset を選択できるか */
+  supportsLanguageSubsetForRun: boolean;
   /** サーバー接続が必要か */
   requiresServer: boolean;
 }
@@ -112,6 +116,8 @@ export class ServerExecutionBackend implements ExecutionBackend {
   static capabilities: ExecutionBackendCapabilities = {
     supportsInteractiveStdin: true,
     supportsCompile: false,    // 将来実装
+    supportsIgnoreDebug: true,
+    supportsLanguageSubsetForRun: true,
     requiresServer: true,
   };
 
@@ -260,6 +266,8 @@ export class WasmExecutionBackend implements ExecutionBackend {
   static capabilities: ExecutionBackendCapabilities = {
     supportsInteractiveStdin: false,
     supportsCompile: true,
+    supportsIgnoreDebug: false,
+    supportsLanguageSubsetForRun: false,
     requiresServer: false,
   };
 
@@ -486,11 +494,18 @@ wasm-bindgen の `any` 型なので、実際に呼び出して返り値の形式
 
 ### Server flavor との違い
 
-| 機能 | Server | WASM |
-|------|--------|------|
-| interactive stdin | ○ | × |
-| compile | ×（将来） | ○ |
-| サーバー不要 | × | ○ |
-| 実行速度 | ネイティブ | WASM（やや遅い） |
-| タイムアウト | サーバー側で制御 | MAX_TOTAL_STEPS で制御 |
-| 同時実行 | サーバー側で制御 | シングル（ブラウザ制約） |
+| 機能 | Server | WASM | UI での対応 |
+|------|--------|------|------------|
+| Run（実行） | ○ | ○ | — |
+| Compile（コンパイルのみ） | ×（将来） | ○ | WASM 時のみ Compile ボタン表示 |
+| Interactive stdin | ○ | × | WASM 時は inputMode セレクター・interactive 入力欄を非表示 |
+| `--ignore-debug` | ○ | × | WASM 時はチェックボックス非表示 |
+| Language subset (run 時) | ○ | × | WASM 時は language セレクター非表示（run 時） |
+| Language subset (compile 時) | — | ○ | WASM 時のみ CompileOptions 内で表示 |
+| Compile target 選択 | × | ○ | WASM 時のみ CompileOptions 表示 |
+| Debug trace (`--debug`) | ○ | ○ | — |
+| Stop（実行中止） | ○ | ○ | — |
+| サーバー不要 | × | ○ | — |
+| 実行速度 | ネイティブ | WASM（やや遅い） | — |
+| タイムアウト | サーバー側で制御 | MAX_TOTAL_STEPS で制御 | — |
+| 同時実行 | サーバー側で制御 | シングル（ブラウザ制約） | — |

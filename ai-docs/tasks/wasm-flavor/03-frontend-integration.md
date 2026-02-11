@@ -154,6 +154,13 @@ Server flavor 利用時にも直接使用しなくなる。
 
 ## UI 変更
 
+### 機能差異に基づく UI 表示制御の方針
+
+flavor によって対応しない機能の UI 要素は **非表示（DOM から除去）** を基本とする。
+`disabled` ではなく非表示にすることで、対応しない機能がそもそも存在しないように見せ、ユーザーの混乱を避ける。
+
+ただし、リスト中の 1 項目のみが非対応の場合は `disabled` + 理由表記（例: `(Server only)`）を使う。
+
 ### Header に Flavor セレクター追加
 
 ```tsx
@@ -189,21 +196,105 @@ export const Header: React.FC = () => {
 
 ### ExecutionOptions の調整
 
-WASM flavor 時に interactive モードが選択できないようにする。
+WASM flavor 時に以下の変更を行う：
+
+#### 1. `--ignore-debug` チェックボックス → **非表示**
+
+WASM の `run()` / `WasmWhitespaceVM` に `ignoreDebug` パラメータが無いため。
+
+#### 2. `inputMode` セレクター → **非表示**
+
+WASM では batch モード固定のため、選択肢を出す意味がない。
+flavor 切り替え時に `inputMode` を `'batch'` に自動リセットする。
+
+#### 3. `language` セレクター → **コンテキスト依存**
+
+- **run 時**: WASM の `run()` / `WasmWhitespaceVM` に language パラメータが無いため **非表示**
+  （常に standard として動作。ws は language='ws' 選択時に `fromWhitespace` を使い分ける）
+- **compile 時**: `compile(source, target, lang_std)` は lang_std を受け付けるため **表示**
 
 ```tsx
-// ExecutionOptions.tsx の inputMode セレクトに disabled を追加
+// ExecutionOptions.tsx（変更後）
 
-<select
-  value={options.inputMode}
-  disabled={flavor === 'wasm'}
-  onChange={...}
->
-  <option value="batch">Batch</option>
-  <option value="interactive" disabled={flavor === 'wasm'}>
-    Interactive {flavor === 'wasm' ? '(Server only)' : ''}
-  </option>
-</select>
+import React from 'react';
+import { useAtom, useAtomValue } from 'jotai';
+import { executionOptionsAtom } from '../../stores/optionsAtom';
+import { flavorAtom } from '../../stores/flavorAtom';
+import './styles/ExecutionOptions.scss';
+
+export const ExecutionOptions: React.FC = () => {
+  const [options, setOptions] = useAtom(executionOptionsAtom);
+  const flavor = useAtomValue(flavorAtom);
+  const isWasm = flavor === 'wasm';
+
+  return (
+    <div className="execution-options">
+      <h3>Execution Options</h3>
+
+      {/* Debug trace — 両 flavor で利用可能 */}
+      <div className="option-group">
+        <label>
+          <input
+            type="checkbox"
+            checked={options.debug}
+            onChange={(e) =>
+              setOptions({ ...options, debug: e.target.checked })
+            }
+          />
+          <span>Debug trace (--debug)</span>
+        </label>
+      </div>
+
+      {/* Ignore debug — Server のみ */}
+      {!isWasm && (
+        <div className="option-group">
+          <label>
+            <input
+              type="checkbox"
+              checked={options.ignoreDebug}
+              onChange={(e) =>
+                setOptions({ ...options, ignoreDebug: e.target.checked })
+              }
+            />
+            <span>Ignore debug functions (--ignore-debug)</span>
+          </label>
+        </div>
+      )}
+
+      {/* Input Mode — Server のみ（WASM は batch 固定） */}
+      {!isWasm && (
+        <div className="option-group">
+          <label>
+            <span>Input Mode:</span>
+            <select
+              value={options.inputMode}
+              onChange={(e) =>
+                setOptions({
+                  ...options,
+                  inputMode: e.target.value as 'batch' | 'interactive',
+                })
+              }
+            >
+              <option value="batch">Batch</option>
+              <option value="interactive">Interactive</option>
+            </select>
+          </label>
+        </div>
+      )}
+    </div>
+  );
+};
+```
+
+### CompileOptions の表示制御
+
+CompileOptions（language / target セレクター）は WASM flavor の compile 時のみ表示する。
+
+```tsx
+// CompileOptions.tsx — WASM flavor でのみ表示
+// ExecutionContainer が flavor を見て表示/非表示を制御
+
+{flavor === 'wasm' && <CompileOptions />}
 ```
 
 ### ExecutionControls に Compile ボタン追加
@@ -249,24 +340,50 @@ export const ExecutionControls: React.FC<ExecutionControlsProps> = ({
 ### ExecutionContainer の変更
 
 `handleCompile` と `supportsCompile` を子コンポーネントに渡す。
+flavor に応じて CompileOptions、InputPanel の表示を制御する。
 
 ```tsx
 // ExecutionContainer.tsx（変更後）
 
+import React, { useState } from 'react';
 import { useAtomValue } from 'jotai';
+import { executionOptionsAtom } from '../stores/optionsAtom';
 import { flavorAtom } from '../stores/flavorAtom';
-import { WasmExecutionBackend } from '../services/WasmExecutionBackend';
+import { ExecutionOptions } from '../components/execution/ExecutionOptions';
+import { CompileOptions } from '../components/execution/CompileOptions';
+import { ExecutionControls } from '../components/execution/ExecutionControls';
+import { OutputPanel } from '../components/execution/OutputPanel';
+import { InputPanel } from '../components/execution/InputPanel';
+import { useNospaceExecution } from '../hooks/useNospaceExecution';
 
 export const ExecutionContainer: React.FC = () => {
   const flavor = useAtomValue(flavorAtom);
-  // ...
-  const { handleRun, handleCompile, handleKill, ... } = useNospaceExecution();
+  const executionOptions = useAtomValue(executionOptionsAtom);
+  const [batchInput, setBatchInput] = useState('');
+  const {
+    isRunning,
+    handleRun,
+    handleCompile,
+    handleKill,
+    handleSendStdin,
+    handleClearOutput,
+  } = useNospaceExecution();
 
-  const supportsCompile = flavor === 'wasm';
+  const isWasm = flavor === 'wasm';
+  const supportsCompile = isWasm;
+  const supportsInteractiveStdin = !isWasm;
+
+  const handleRunWithInput = () => {
+    // WASM flavor では常に batch、Server flavor では executionOptions.inputMode に従う
+    const inputMode = isWasm ? 'batch' : executionOptions.inputMode;
+    handleRun(inputMode === 'batch' ? batchInput : undefined);
+  };
 
   return (
     <div className="execution-container">
       <ExecutionOptions />
+      {/* CompileOptions は WASM flavor でのみ表示 */}
+      {supportsCompile && <CompileOptions />}
       <ExecutionControls
         isRunning={isRunning}
         onRun={handleRunWithInput}
@@ -274,10 +391,81 @@ export const ExecutionContainer: React.FC = () => {
         onKill={handleKill}
         supportsCompile={supportsCompile}
       />
-      {/* ... */}
+      <OutputPanel onClear={handleClearOutput} />
+      {/* InputPanel:
+          - WASM: batch input のみ表示
+          - Server: executionOptions.inputMode に応じて batch/interactive を表示 */}
+      <InputPanel
+        isRunning={isRunning}
+        onSendStdin={handleSendStdin}
+        batchInput={batchInput}
+        onBatchInputChange={setBatchInput}
+        forceBatchMode={isWasm}
+      />
     </div>
   );
 };
+```
+
+### InputPanel の変更
+
+`forceBatchMode` プロパティを追加。`true` の場合は `executionOptions.inputMode` を無視して
+常に batch UI を表示する（interactive 入力欄を非表示にする）。
+
+```tsx
+// InputPanel.tsx（変更後）
+
+interface InputPanelProps {
+  isRunning: boolean;
+  onSendStdin: (data: string) => void;
+  batchInput?: string;
+  onBatchInputChange?: (value: string) => void;
+  /** true の場合、inputMode に関わらず batch UI のみ表示 */
+  forceBatchMode?: boolean;
+}
+
+export const InputPanel: React.FC<InputPanelProps> = ({
+  isRunning,
+  onSendStdin,
+  batchInput = '',
+  onBatchInputChange,
+  forceBatchMode = false,
+}) => {
+  const executionOptions = useAtomValue(executionOptionsAtom);
+  // ...
+
+  // WASM flavor（forceBatchMode=true）の場合は常に batch UI
+  const effectiveInputMode = forceBatchMode ? 'batch' : executionOptions.inputMode;
+
+  if (effectiveInputMode === 'interactive') {
+    // Interactive 入力 UI（Server flavor のみ到達）
+    return ( /* ... interactive UI ... */ );
+  }
+
+  // Batch 入力 UI
+  return ( /* ... batch UI ... */ );
+};
+```
+
+### Flavor 切り替え時のオプション自動リセット
+
+flavor を WASM に切り替えた際、Server 専用オプションが不整合な値のままにならないよう
+自動リセットする。
+
+```typescript
+// flavorAtom.ts に派生 effect を追加するか、
+// useNospaceExecution 内で flavor 変更を検知してリセット
+
+useEffect(() => {
+  if (flavor === 'wasm') {
+    // interactive → batch に強制リセット
+    setExecutionOptions((prev) => ({
+      ...prev,
+      inputMode: 'batch',
+      ignoreDebug: false,  // WASM 非対応のためリセット
+    }));
+  }
+}, [flavor]);
 ```
 
 ## WASM 初期化タイミング

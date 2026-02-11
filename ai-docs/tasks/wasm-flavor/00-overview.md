@@ -45,21 +45,72 @@ nospace/whitespace の実行をブラウザ内の WASM で完結させる flavor
 | `current_instruction()` | 現在の命令ニーモニック |
 | `free()` / `[Symbol.dispose]()` | リソース解放 |
 
+## Flavor 間の機能差異
+
+WASM API のパラメータ制約により、Server と WASM で利用可能な機能が異なる。
+UI では flavor に応じて非対応機能のコントロールを **非表示または無効化** する。
+
+### 機能対応表
+
+| 機能 | Server | WASM | WASM API の制約理由 | UI での対応 |
+|------|--------|------|---------------------|-------------|
+| Run（実行） | ○ | ○ | — | — |
+| Compile（コンパイルのみ） | × | ○ | Server 側は未実装 | WASM 時のみ Compile ボタン表示 |
+| Interactive stdin | ○ | **×** | VM の stdin は constructor で一括供給のみ | WASM 時は inputMode セレクターで interactive を **非表示** |
+| Interactive InputPanel | ○ | **×** | 同上 | WASM 時は interactive 入力欄を **非表示**（batch のみ） |
+| `--ignore-debug` オプション | ○ | **×** | `run(source, stdin, debug)` に ignoreDebug パラメータなし | WASM 時はチェックボックスを **非表示** |
+| Language subset (standard/min) | ○ | **△** | `compile()` は `lang_std` を受け付けるが、`run()` と `WasmWhitespaceVM` constructor にはパラメータなし | WASM 時: compile は選択可。run 時は language セレクターを **非表示**（常に standard） |
+| Language 'ws' (Whitespace直接実行) | ○ | ○ | `WasmWhitespaceVM.fromWhitespace()` で対応 | — |
+| Compile target 選択 | × | ○ | Server 側は未実装 | WASM 時のみ target セレクター表示 |
+| Debug trace (`--debug`) | ○ | ○ | `run(source, stdin, debug)` に対応 | — |
+| Stop（実行中止） | ○ | ○ | Server: SIGTERM / WASM: AbortController | — |
+| サーバー接続 | 必要 | 不要 | — | — |
+
+### UI 非表示/無効化ルールまとめ
+
+#### WASM flavor 選択時に非表示にする要素
+
+1. **InputPanel の interactive モード UI** — 1 行入力 + Send ボタン
+2. **ExecutionOptions の `--ignore-debug` チェックボックス**
+3. **ExecutionOptions の `inputMode` セレクター**（常に batch 固定のため選択肢を出す意味がない）
+4. **ExecutionOptions の `language` セレクター**（run 時。compile 時は表示）
+
+#### WASM flavor 選択時に表示する要素
+
+1. **Compile ボタン** — ExecutionControls に追加
+2. **CompileOptions（target セレクター）** — ws / mnemonic / ex-ws / json
+3. **CompileOptions の `language` セレクター** — compile 時に standard / min / ws を選択
+
+#### Server flavor 選択時に非表示にする要素
+
+1. **Compile ボタン** — Server 側は未実装
+2. **CompileOptions（target セレクター）**
+
+詳細なコンポーネント変更は [03-frontend-integration.md](03-frontend-integration.md) を参照。
+
 ## 設計上の制約
 
 ### 1. stdin は事前供給のみ
 
 `WasmWhitespaceVM` のコンストラクタで stdin を一括で渡す。実行中にインクリメンタルに stdin を供給する API は無い。
 
-**対応**: WASM flavor では **batch モードのみサポート**。interactive モードは Server flavor 限定とする。
+**対応**: WASM flavor では **batch モードのみサポート**。interactive モードの UI 要素は非表示にする。
 
-### 2. WASM JS バインディングが Node.js 向け
+### 2. run / VM に ignoreDebug・language パラメータがない
+
+WASM の `run(source, stdin, debug)` および `WasmWhitespaceVM(source, stdin)` には
+`ignoreDebug` や `language` パラメータが存在しない。
+
+**対応**: WASM flavor の run 時はこれらのオプション UI を非表示にする。
+`compile(source, target, lang_std)` には `lang_std` があるため、compile 時のみ language を選択可能。
+
+### 3. WASM JS バインディングが Node.js 向け
 
 現在の `nospace20.js` は末尾で `require('fs').readFileSync` を使って WASM をロードしている。ブラウザでは動作しない。
 
 **対応**: ブラウザ向けの WASM ローダーモジュールを作成する（詳細は [01-wasm-loader.md](01-wasm-loader.md)）。
 
-### 3. メインスレッドブロック
+### 4. メインスレッドブロック
 
 WASM 実行はメインスレッドで行われるため、長時間実行するとUIがフリーズする。
 
@@ -137,11 +188,18 @@ src/web/
 - Vite 設定変更（WASM アセット対応）
 - WASM flavor で compile / run が動作する状態
 
-### Phase 11: Flavor 切り替え UI
+### Phase 11: Flavor 切り替え UI + 機能差異対応
 
 - Header に flavor セレクター追加
-- WASM flavor 時の UI 調整（interactive モード非表示など）
-- flavor に応じたオプション制御
+- WASM flavor 時の非対応機能 UI を非表示化
+  - `--ignore-debug` チェックボックス非表示
+  - `inputMode` セレクター非表示（batch 固定）
+  - `language` セレクター非表示（run 時）
+  - InteractiveInput 非表示
+- Server flavor 時の非対応機能 UI を非表示化
+  - Compile ボタン非表示
+  - CompileOptions（target セレクター）非表示
+- flavor に応じたオプション自動リセット（WASM に切り替え時に inputMode を batch に強制）
 
 ## 新規依存パッケージ
 
