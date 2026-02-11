@@ -41,3 +41,7 @@ pnpm-debug.log*
 # Temporary files
 *.tmp
 .cache/
+
+
+/.trash/
+/.tmp/

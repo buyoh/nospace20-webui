@@ -1,6 +1,4 @@
-# Counter App
-
-WebSocket経由で共有されるカウンターアプリケーション
+# nospace20-webui
 
 ## 技術スタック
 
