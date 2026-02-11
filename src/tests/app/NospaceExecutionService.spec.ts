@@ -259,7 +259,7 @@ describe('NospaceExecutionService', () => {
         fakeConfig.nospaceBinPath,
         expect.arrayContaining([
           '--std',
-          'whitespace',
+          'ws',
           '--debug',
           '--ignore-debug',
         ])

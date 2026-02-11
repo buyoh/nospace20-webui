@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { CodeTextarea } from '../../web/components/editor/CodeTextarea';
 import '@testing-library/jest-dom';
 
@@ -33,9 +33,9 @@ describe('CodeTextarea', () => {
 
     // ユーザーがテキストを入力する動作をシミュレート
     const newValue = 'test';
-    textarea.value = newValue;
-    textarea.dispatchEvent(new Event('change', { bubbles: true }));
+    fireEvent.change(textarea, { target: { value: newValue } });
 
     expect(mockOnChange).toHaveBeenCalled();
+    expect(mockOnChange).toHaveBeenCalledWith(newValue);
   });
 });
