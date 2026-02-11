@@ -1,18 +1,23 @@
 import React from 'react';
-import { CounterContainer } from '../containers/CounterContainer';
+import { Header } from '../components/layout/Header';
+import { SplitPane } from '../components/layout/SplitPane';
+import { EditorContainer } from '../containers/EditorContainer';
+import { ExecutionContainer } from '../containers/ExecutionContainer';
+import './styles/index.scss';
 
 export default function IndexPage(): React.ReactNode {
   return (
     <div className="app">
-      <header className="app-header">
-        <h1>カウンターアプリ</h1>
-      </header>
+      <Header />
       <main className="app-main">
-        <CounterContainer />
+        <SplitPane
+          left={<EditorContainer />}
+          right={<ExecutionContainer />}
+          initialLeftWidth={50}
+          minLeftWidth={300}
+          minRightWidth={300}
+        />
       </main>
-      <footer className="app-footer">
-        <p>Powered by React + Jotai + WebSocket</p>
-      </footer>
     </div>
   );
 }

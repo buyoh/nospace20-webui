@@ -1,0 +1,40 @@
+.execution-options {
+  padding: 0.5rem 0;
+
+  h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.9rem;
+    color: #ccc;
+  }
+}
+
+.option-group {
+  margin-bottom: 0.5rem;
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+
+    input[type='checkbox'] {
+      cursor: pointer;
+    }
+
+    select {
+      padding: 0.25rem;
+      background-color: #3c3c3c;
+      color: #d4d4d4;
+      border: 1px solid #555;
+      border-radius: 3px;
+      font-size: 0.85rem;
+      cursor: pointer;
+
+      &:focus {
+        outline: none;
+        border-color: #007acc;
+      }
+    }
+  }
+}

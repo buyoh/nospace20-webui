@@ -1,0 +1,10 @@
+.execution-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #252526;
+  color: #d4d4d4;
+  padding: 1rem;
+  overflow-y: auto;
+}

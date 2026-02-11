@@ -4,8 +4,21 @@ import {
   ClientToServerEvents,
   ServerToClientEvents,
 } from '../../interfaces/CounterTypes';
+import {
+  NospaceClientToServerEvents,
+  NospaceServerToClientEvents,
+} from '../../interfaces/NospaceTypes';
 
-export type AppSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
+// Combine event types
+type CombinedClientToServerEvents = ClientToServerEvents &
+  NospaceClientToServerEvents;
+type CombinedServerToClientEvents = ServerToClientEvents &
+  NospaceServerToClientEvents;
+
+export type AppSocket = Socket<
+  CombinedServerToClientEvents,
+  CombinedClientToServerEvents
+>;
 
 // Socket インスタンスを保持する atom
 export const socketAtom = atom<AppSocket | null>(null);

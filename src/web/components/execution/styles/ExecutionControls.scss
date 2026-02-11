@@ -1,0 +1,37 @@
+.execution-controls {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+
+  button {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 3px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  .btn-run {
+    background-color: #0e7a0d;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background-color: #0f9d0c;
+    }
+  }
+
+  .btn-kill {
+    background-color: #a1260d;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background-color: #c72e0d;
+    }
+  }
+}

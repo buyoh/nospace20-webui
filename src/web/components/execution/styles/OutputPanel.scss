@@ -1,0 +1,77 @@
+.output-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  flex: 1;
+  margin-top: 1rem;
+  border: 1px solid #444;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.output-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  background-color: #2d2d2d;
+  border-bottom: 1px solid #444;
+
+  h3 {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #ccc;
+  }
+
+  .btn-clear {
+    padding: 0.25rem 0.5rem;
+    background-color: #3c3c3c;
+    color: #d4d4d4;
+    border: 1px solid #555;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    cursor: pointer;
+
+    &:hover {
+      background-color: #4a4a4a;
+    }
+  }
+}
+
+.output-panel-content {
+  flex: 1;
+  padding: 0.5rem;
+  overflow-y: auto;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  background-color: #1e1e1e;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.output-empty {
+  color: #888;
+  font-style: italic;
+}
+
+.output-entry {
+  margin: 0;
+
+  &.output-stdout {
+    color: #d4d4d4;
+  }
+
+  &.output-stderr {
+    color: #f48771;
+  }
+
+  &.output-stdin-echo {
+    color: #888;
+    font-style: italic;
+  }
+
+  &.output-system {
+    color: #4ec9b0;
+  }
+}
