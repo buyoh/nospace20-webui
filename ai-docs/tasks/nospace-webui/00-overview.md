@@ -13,9 +13,9 @@ nospace 言語のコードを編集・コンパイル・実行できるシング
 |  ヘッダー (タイトル・設定)                                      |
 +-------------------------------+------------------------------+
 |                               |                              |
-|   コードエディタ (Ace)          |   実行パネル                  |
-|                               |   ┌────────────────────────┐ |
-|                               |   │ コンパイルオプション      │ |
+|   コードエディタ               |   実行パネル                  |
+|   (初期: textarea)            |   ┌────────────────────────┐ |
+|   (後期: Ace Editor)          |   │ コンパイルオプション      │ |
 |                               |   │ 実行オプション            │ |
 |                               |   │ [Compile] [Run] [Stop]  │ |
 |                               |   ├────────────────────────┤ |
@@ -27,7 +27,7 @@ nospace 言語のコードを編集・コンパイル・実行できるシング
 ```
 
 - 左右 2 ペイン構成（リサイズ可能）
-- 左: Ace Editor（nospace syntax highlighting 付き）
+- 左: エディタ（初期は `<textarea>`、後に Ace Editor へ差し替え）
 - 右: 実行パネル（オプション・出力・入力）
 
 ### 2 つの Flavor
@@ -45,7 +45,7 @@ nospace 言語のコードを編集・コンパイル・実行できるシング
 - 状態管理: Jotai
 - バックエンド: Node.js + Express + Socket.IO
 - スタイル: SCSS
-- エディタ: Ace Editor（新規追加）
+- エディタ: 初期は `<textarea>`、後に Ace Editor に移行
 
 ## ドキュメント一覧
 
@@ -82,7 +82,8 @@ src/
 └── web/
     ├── components/
     │   ├── editor/
-    │   │   └── NospaceEditor.tsx     # Ace Editor ラッパー
+    │   │   ├── CodeTextarea.tsx      # textarea ベースのエディタ（初期実装）
+    │   │   └── NospaceEditor.tsx     # Ace Editor ラッパー（Phase 8）
     │   ├── execution/
     │   │   ├── CompileOptions.tsx    # コンパイルオプション UI
     │   │   ├── ExecutionOptions.tsx  # 実行オプション UI
@@ -111,20 +112,80 @@ src/
     └── styles/
 ```
 
-## 新規依存パッケージ
+## 実装フェーズ
 
-| パッケージ | 用途 |
-|-----------|------|
-| `ace-builds` | Ace Editor 本体 |
-| `react-ace` | React 向け Ace Editor ラッパー |
-| `dotenv` | サーバー側 .env ファイル読み込み |
+以下の方針で段階的に実装する:
+- **動くものを最速で作る**ことを優先
+- 初期フェーズでは **新規パッケージを追加しない**（既存依存のみ）
+- Ace Editor は後フェーズで導入（初期は `<textarea>` で代用）
 
-## 実装順序（推奨）
+### Phase 1: 環境設定 + 共通型定義
 
-1. 環境設定（.env / Config）
-2. サーバーサイド実行サービス + Socket.IO プロトコル
-3. フロントエンドレイアウト（SplitPane）
-4. Ace Editor 統合（syntax highlighting）
-5. 実行パネル UI（オプション・ボタン・出力）
-6. 標準入出力のインタラクション
-7. サンプルコード（Counter の削除も含む）
+- `Config.ts` に nospace 設定を追加（`process.env` から直接読み取り、`dotenv` は後で導入）
+- `.env.example` を作成（ドキュメント目的）
+- `NospaceTypes.ts` を作成（共通型・Socket.IO イベント型）
+- **新規依存: なし**
+
+### Phase 2: サーバーサイド実行サービス
+
+- `NospaceExecutionService.ts` 作成
+- `child_process.spawn` で nospace20 を実行
+- 一時ファイルの作成・削除（`./tmp/` ディレクトリ）
+- セッション管理・タイムアウト制御
+- **新規依存: なし**（Node.js 標準モジュールのみ）
+
+### Phase 3: Socket.IO プロトコル拡張
+
+- `NospaceController.ts` 作成
+- `ExpressSocketIO.ts` を拡張（Counter と共存させる）
+- `MainServer.ts` を拡張
+- **新規依存: なし**（既存の socket.io を使用）
+
+### Phase 4: フロントエンド基本構成
+
+- ページレイアウト作成（`SplitPane`, `Header`）— CSS Flexbox で自前実装
+- `CodeTextarea.tsx`（`<textarea>` ベースのシンプルなエディタ）
+- `EditorContainer.tsx`
+- Jotai atoms（`editorAtom`, `optionsAtom`, `executionAtom`）
+- **新規依存: なし**
+
+### Phase 5: 実行パネル UI + 通信接続
+
+- `ExecutionControls`, `CompileOptions`, `ExecutionOptions`
+- `OutputPanel`（基本的な stdout/stderr 表示）
+- `ExecutionContainer.tsx`
+- `ServerExecutionBackend.ts`（Socket.IO クライアント通信）
+- `useNospaceExecution`, `useNospaceSocket` フック
+- **End-to-end で動作する最小構成の完成**
+- **新規依存: なし**
+
+### Phase 6: 標準入出力のインタラクション
+
+- `InputPanel`（batch / interactive モード切り替え）
+- stdin エコー表示
+- 出力パネルの自動スクロール
+- **新規依存: なし**
+
+### Phase 7: dotenv 導入・Counter 削除・クリーンアップ
+
+- `dotenv` パッケージを導入し `.env.local` 対応
+- Counter 関連コード削除
+- コード整理・リファクタリング
+- **新規依存: `dotenv`**
+
+### Phase 8: Ace Editor 統合
+
+- tmLanguage → Ace Mode 変換ツールのセットアップ
+- `NospaceEditor.tsx`（Ace Editor ラッパー）
+- `CodeTextarea` → `NospaceEditor` に差し替え
+- **新規依存: `ace-builds`, `react-ace`**
+
+## 新規依存パッケージ（全フェーズ合計）
+
+| パッケージ | 用途 | 導入フェーズ |
+|-----------|------|-------------|
+| `dotenv` | サーバー側 .env ファイル読み込み | Phase 7 |
+| `ace-builds` | Ace Editor 本体 | Phase 8 |
+| `react-ace` | React 向け Ace Editor ラッパー | Phase 8 |
+
+Phase 1〜6 の間は **新規パッケージの追加なし**。

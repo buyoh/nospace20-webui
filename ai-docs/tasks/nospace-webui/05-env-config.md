@@ -4,6 +4,34 @@
 
 サーバーサイドの設定（nospace20 実行ファイルパス等）を `.env` ファイルで管理する。
 
+## 実装段階
+
+### Phase 1: process.env から直接読み取り（dotenv なし）
+
+初期フェーズでは新規パッケージを追加せず、`process.env` から直接読み取る。
+開発時は環境変数を手動で設定するか、シェルの `.env` 読み込み等で対応する。
+
+```typescript
+// src/app/Config.ts（Phase 1）
+
+export default {
+  production: process.env.NODE_ENV === 'production',
+  httpPort: parseInt(process.env.PORT ?? '8080'),
+  frontend: (process.env.FRONTEND ?? 'vite') as 'vite' | 'static',
+
+  // nospace20 関連
+  nospaceBinPath: process.env.NOSPACE_BIN_PATH ?? './components/nospace20/bin/nospace20',
+  nospaceTimeout: parseInt(process.env.NOSPACE_TIMEOUT ?? '30') * 1000,
+  nospaceMaxProcesses: parseInt(process.env.NOSPACE_MAX_PROCESSES ?? '5'),
+};
+```
+
+`.env.example` はドキュメント目的で Phase 1 の時点で作成する。
+
+### Phase 7: dotenv 導入
+
+`dotenv` パッケージを導入し、`.env.local` からの自動読み込みに対応する。
+
 ## .env 読み込み戦略
 
 ### 考察
@@ -83,17 +111,42 @@ NOSPACE_MAX_PROCESSES=5
 
 既存の `Config.ts` を拡張する。
 
+### Phase 1 版（dotenv なし）
+
+```typescript
+// src/app/Config.ts
+
+const production = process.env.NODE_ENV === 'production';
+
+export default {
+  production,
+  develop: !production,
+  httpPort: parseInt(process.env.PORT ?? '8080'),
+  frontend: (process.env.FRONTEND ?? 'vite') as 'vite' | 'static',
+
+  // nospace20 関連
+  nospaceBinPath: process.env.NOSPACE_BIN_PATH ?? './components/nospace20/bin/nospace20',
+  nospaceTimeout: parseInt(process.env.NOSPACE_TIMEOUT ?? '30') * 1000, // ms に変換
+  nospaceMaxProcesses: parseInt(process.env.NOSPACE_MAX_PROCESSES ?? '5'),
+};
+```
+
+### Phase 7 版（dotenv 導入後）
+
 ```typescript
 // src/app/Config.ts
 
 import dotenv from 'dotenv';
 
-// .env 読み込み
+// .env 読み込み（.env.local を優先、.env.example をデフォルト値として）
 dotenv.config({ path: '.env.local' });
 dotenv.config({ path: '.env.example' });
 
+const production = process.env.NODE_ENV === 'production';
+
 export default {
-  production: process.env.NODE_ENV === 'production',
+  production,
+  develop: !production,
   httpPort: parseInt(process.env.PORT ?? '8080'),
   frontend: (process.env.FRONTEND ?? 'vite') as 'vite' | 'static',
 
@@ -115,8 +168,10 @@ export default {
 ## 依存パッケージ
 
 ```
-npm install dotenv
+npm install dotenv   # Phase 7 で導入
 ```
+
+Phase 1 では `dotenv` を追加しない。`process.env` から直接読み取る。
 
 ## Vite クライアント側の設定
 

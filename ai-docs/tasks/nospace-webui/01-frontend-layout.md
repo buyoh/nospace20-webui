@@ -11,7 +11,7 @@ pages/index.tsx
 ├── Header
 └── SplitPane (左右リサイズ可能)
     ├── EditorContainer
-    │   └── NospaceEditor (Ace Editor)
+    │   └── CodeTextarea (初期: textarea / 後期: NospaceEditor に差し替え)
     └── ExecutionContainer
         ├── CompileOptions
         ├── ExecutionOptions
@@ -41,12 +41,23 @@ pages/index.tsx
 
 ### `EditorContainer`
 
-container 層。Jotai atom からエディタ状態（コード）を読み書きし、`NospaceEditor` に渡す。
+container 層。Jotai atom からエディタ状態（コード）を読み書きし、エディタコンポーネントに渡す。
+初期は `CodeTextarea` を使用し、Phase 8 で `NospaceEditor` に差し替え。
+
+### `CodeTextarea`（Phase 4 初期実装）
+
+- `<textarea>` ベースのシンプルなコードエディタ
+- モノスペースフォントで表示
+- タブキー入力でスペース 2 文字を挿入
+- 行番号表示なし（シンプルさ優先）
+- 高さ: 親要素に合わせて 100%
+- props: `value: string`, `onChange: (value: string) => void`
 
 ### `NospaceEditor`
 
-- `react-ace` を使用した Ace Editor ラッパー
-- nospace syntax highlighting モードを適用
+- **Phase 4（初期）**: `CodeTextarea` を使用。`<textarea>` ベースのシンプルなエディタ
+- **Phase 8（後期）**: `NospaceEditor` に差し替え。`react-ace` を使用した Ace Editor ラッパー
+- nospace syntax highlighting モードを適用（Phase 8）
 - 詳細は [02-ace-editor.md](02-ace-editor.md)
 
 ### `ExecutionContainer`
