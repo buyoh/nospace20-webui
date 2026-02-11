@@ -1,0 +1,13 @@
+{
+  "name": "tmlanguage-converter",
+  "private": true,
+  "description": "nospace.tmLanguage.json を Ace Editor Mode に変換するツール",
+  "scripts": {
+    "setup": "bash setup.sh",
+    "convert": "bash convert.sh"
+  },
+  "dependencies": {
+    "ace-builds": "^1.43.6",
+    "react-ace": "^14.0.1"
+  }
+}

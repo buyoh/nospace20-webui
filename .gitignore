@@ -45,3 +45,7 @@ pnpm-debug.log*
 
 /.trash/
 /.tmp/
+
+# tools/tmlanguage-converter: ace リポジトリのクローンと node_modules
+tools/tmlanguage-converter/ace-repo/
+tools/tmlanguage-converter/node_modules/

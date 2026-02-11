@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAtom } from 'jotai';
 import { sourceCodeAtom } from '../stores/editorAtom';
-import { CodeTextarea } from '../components/editor/CodeTextarea';
+import { NospaceEditor } from '../components/editor/NospaceEditor';
 import './styles/EditorContainer.scss';
 
 export const EditorContainer: React.FC = () => {
@@ -9,7 +9,7 @@ export const EditorContainer: React.FC = () => {
 
   return (
     <div className="editor-container">
-      <CodeTextarea value={sourceCode} onChange={setSourceCode} />
+      <NospaceEditor value={sourceCode} onChange={setSourceCode} />
     </div>
   );
 };
