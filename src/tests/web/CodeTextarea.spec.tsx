@@ -38,4 +38,44 @@ describe('CodeTextarea', () => {
     expect(mockOnChange).toHaveBeenCalled();
     expect(mockOnChange).toHaveBeenCalledWith(newValue);
   });
+
+  it('Tabキー押下でスペース2つが挿入される', () => {
+    const mockOnChange = jest.fn();
+    const initialValue = 'hello';
+    render(<CodeTextarea value={initialValue} onChange={mockOnChange} />);
+
+    const textarea = screen.getByPlaceholderText(
+      /Write your nospace code here.../i
+    ) as HTMLTextAreaElement;
+
+    // カーソル位置を設定（文字列の末尾）
+    textarea.setSelectionRange(5, 5);
+
+    // Tabキーを押下
+    fireEvent.keyDown(textarea, { key: 'Tab', code: 'Tab' });
+
+    // onChangeが2つのスペースを挿入した新しい値で呼ばれることを確認
+    expect(mockOnChange).toHaveBeenCalled();
+    expect(mockOnChange).toHaveBeenCalledWith('hello  ');
+  });
+
+  it('Tabキー押下でテキスト選択範囲が置き換えられる', () => {
+    const mockOnChange = jest.fn();
+    const initialValue = 'hello world';
+    render(<CodeTextarea value={initialValue} onChange={mockOnChange} />);
+
+    const textarea = screen.getByPlaceholderText(
+      /Write your nospace code here.../i
+    ) as HTMLTextAreaElement;
+
+    // "world" を選択（6文字目から11文字目）
+    textarea.setSelectionRange(6, 11);
+
+    // Tabキーを押下
+    fireEvent.keyDown(textarea, { key: 'Tab', code: 'Tab' });
+
+    // 選択範囲が2つのスペースに置き換えられることを確認
+    expect(mockOnChange).toHaveBeenCalled();
+    expect(mockOnChange).toHaveBeenCalledWith('hello   ');
+  });
 });

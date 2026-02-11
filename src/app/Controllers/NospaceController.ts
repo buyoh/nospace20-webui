@@ -8,8 +8,12 @@ import type {
 type EmitFunction = Socket['emit'];
 
 export class NospaceController {
-  private executionService = new NospaceExecutionService();
+  private executionService: NospaceExecutionService;
   private sessionsBySocket = new Map<string, string>(); // socketId -> sessionId
+
+  constructor(executionService?: NospaceExecutionService) {
+    this.executionService = executionService ?? new NospaceExecutionService();
+  }
 
   handleConnection(socket: Socket): void {
     // Handle run request
