@@ -5,6 +5,41 @@ import { join } from 'path';
 import Config from '../Config';
 import type { RunOptions } from '../../interfaces/NospaceTypes';
 
+/** ファイルシステム操作の抽象 */
+export interface FileSystem {
+  existsSync(path: string): boolean;
+  writeFileSync(path: string, data: string, encoding: string): void;
+  unlinkSync(path: string): void;
+  mkdirSync(path: string, options?: { recursive: boolean }): void;
+}
+
+/** プロセス生成の抽象 */
+export interface ProcessSpawner {
+  spawn(command: string, args: string[]): ChildProcess;
+}
+
+/** 設定値の抽象 */
+export interface ExecutionConfig {
+  nospaceBinPath: string;
+  nospaceTimeout: number;
+}
+
+/** デフォルトのFileSystem実装 */
+const defaultFileSystem: FileSystem = {
+  existsSync,
+  writeFileSync,
+  unlinkSync,
+  mkdirSync,
+};
+
+/** デフォルトのProcessSpawner実装 */
+const defaultProcessSpawner: ProcessSpawner = {
+  spawn,
+};
+
+/** デフォルトのExecutionConfig実装 */
+const defaultExecutionConfig: ExecutionConfig = Config;
+
 export type SessionStatus = 'running' | 'finished' | 'error' | 'killed';
 
 export interface NospaceSession {
@@ -32,7 +67,9 @@ class NospaceSessionImpl implements NospaceSession {
     public readonly sessionId: string,
     process: ChildProcess,
     tempFilePath: string,
-    private callbacks: SessionCallbacks
+    private callbacks: SessionCallbacks,
+    private config: ExecutionConfig,
+    private fs: FileSystem
   ) {
     this.process = process;
     this.tempFilePath = tempFilePath;
@@ -50,7 +87,10 @@ class NospaceSessionImpl implements NospaceSession {
     // Setup exit handler
     process.on('exit', (code: number | null) => {
       this._exitCode = code;
-      this._status = code === 0 ? 'finished' : 'error';
+      // Don't overwrite 'killed' status
+      if (this._status !== 'killed') {
+        this._status = code === 0 ? 'finished' : 'error';
+      }
       this.cleanup();
       this.callbacks.onExit(code);
     });
@@ -59,11 +99,11 @@ class NospaceSessionImpl implements NospaceSession {
     this.timeoutHandle = setTimeout(() => {
       if (this.process && !this.process.killed) {
         this.callbacks.onStderr(
-          `\nProcess timeout (${Config.nospaceTimeout / 1000}s). Killing...\n`
+          `\nProcess timeout (${this.config.nospaceTimeout / 1000}s). Killing...\n`
         );
         this.kill();
       }
-    }, Config.nospaceTimeout);
+    }, this.config.nospaceTimeout);
   }
 
   get status(): SessionStatus {
@@ -102,8 +142,8 @@ class NospaceSessionImpl implements NospaceSession {
 
     // Delete temporary file
     try {
-      if (existsSync(this.tempFilePath)) {
-        unlinkSync(this.tempFilePath);
+      if (this.fs.existsSync(this.tempFilePath)) {
+        this.fs.unlinkSync(this.tempFilePath);
       }
     } catch (error) {
       console.error(`Failed to delete temp file ${this.tempFilePath}:`, error);
@@ -113,6 +153,12 @@ class NospaceSessionImpl implements NospaceSession {
 
 export class NospaceExecutionService {
   private sessions = new Map<string, NospaceSession>();
+
+  constructor(
+    private readonly config: ExecutionConfig = defaultExecutionConfig,
+    private readonly fs: FileSystem = defaultFileSystem,
+    private readonly spawner: ProcessSpawner = defaultProcessSpawner
+  ) {}
 
   /**
    * Run source code with nospace20 interpreter
@@ -126,14 +172,14 @@ export class NospaceExecutionService {
 
     // Create tmp directory if not exists
     const tmpDir = './tmp';
-    if (!existsSync(tmpDir)) {
-      mkdirSync(tmpDir, { recursive: true });
+    if (!this.fs.existsSync(tmpDir)) {
+      this.fs.mkdirSync(tmpDir, { recursive: true });
     }
 
     // Write code to temporary file
     const tempFilePath = join(tmpDir, `nospace-${sessionId}.ns`);
     try {
-      writeFileSync(tempFilePath, code, 'utf8');
+      this.fs.writeFileSync(tempFilePath, code, 'utf8');
     } catch (error) {
       callbacks.onStderr(`Failed to write temporary file: ${error}\n`);
       callbacks.onExit(1);
@@ -158,14 +204,14 @@ export class NospaceExecutionService {
     args.push(tempFilePath);
 
     // Check if binary exists
-    if (!existsSync(Config.nospaceBinPath)) {
-      const errorMsg = `nospace20 binary not found at: ${Config.nospaceBinPath}\n`;
+    if (!this.fs.existsSync(this.config.nospaceBinPath)) {
+      const errorMsg = `nospace20 binary not found at: ${this.config.nospaceBinPath}\n`;
       callbacks.onStderr(errorMsg);
       callbacks.onExit(1);
 
       // Cleanup temp file
       try {
-        unlinkSync(tempFilePath);
+        this.fs.unlinkSync(tempFilePath);
       } catch {}
 
       // Create error session
@@ -181,13 +227,15 @@ export class NospaceExecutionService {
     }
 
     // Spawn process
-    const process = spawn(Config.nospaceBinPath, args);
+    const process = this.spawner.spawn(this.config.nospaceBinPath, args);
 
     const session = new NospaceSessionImpl(
       sessionId,
       process,
       tempFilePath,
-      callbacks
+      callbacks,
+      this.config,
+      this.fs
     );
 
     this.sessions.set(sessionId, session);
