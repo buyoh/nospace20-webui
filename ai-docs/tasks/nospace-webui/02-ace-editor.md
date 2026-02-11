@@ -46,39 +46,116 @@ interface NospaceEditorProps {
 nospace の syntax 定義は TextMate Grammar 形式（`components/nospace20/nospace.tmLanguage.json`）で提供されている。
 Ace Editor は独自の highlight ルール形式を使うため、変換が必要。
 
-### 方針: ace リポジトリの変換ツールを使用し、生成結果を手動調整
+### 方針: tools ディレクトリで変換、生成結果をコミット
 
 ace のソースリポジトリ（`ajaxorg/ace`）には `tool/tmlanguage.js` という tmLanguage → Ace Mode の変換ツールが存在する。
-このツールを使って初期変換を行い、生成されたコードを手動で調整・組み込む。
+このツールを `tools/tmlanguage-converter/` ディレクトリに設置した変換スクリプトから利用し、
+生成結果を手動調整のうえコミットする。
 
-> **注意**: `ace-builds` npm パッケージにはこのツールは含まれない。ace ソースリポジトリをクローンして使う必要がある。
+> **注意**: `ace-builds` npm パッケージにはこのツールは含まれない。ace ソースリポジトリが必要。
+
+### ディレクトリ構成
+
+```
+tools/
+└── tmlanguage-converter/
+    ├── package.json          # 変換スクリプトの依存管理
+    ├── convert.sh            # 変換実行スクリプト
+    ├── ace-repo/             # ace リポジトリのクローン（.gitignore で除外）
+    └── output/               # 変換結果の出力先（コミット対象）
+        ├── nospace.js                    # Ace Mode 定義
+        └── nospace_highlight_rules.js    # ハイライトルール
+```
+
+### .gitignore への追加
+
+```
+# tools/tmlanguage-converter: ace リポジトリのクローンと node_modules
+tools/tmlanguage-converter/ace-repo/
+tools/tmlanguage-converter/node_modules/
+```
+
+`tools/tmlanguage-converter/output/` はコミット対象とする。
+
+### ツールセットアップ
+
+#### package.json
+
+```json
+{
+  "name": "tmlanguage-converter",
+  "private": true,
+  "description": "nospace.tmLanguage.json を Ace Editor Mode に変換するツール",
+  "scripts": {
+    "setup": "bash setup.sh",
+    "convert": "bash convert.sh"
+  }
+}
+```
+
+#### setup.sh — ace リポジトリの準備
+
+```bash
+#!/bin/bash
+set -euo pipefail
+cd "$(dirname "$0")"
+
+if [ ! -d ace-repo ]; then
+  echo "Cloning ace repository..."
+  git clone --depth 1 https://github.com/ajaxorg/ace.git ace-repo
+fi
+
+echo "Installing ace dependencies..."
+cd ace-repo
+npm install
+echo "Setup complete."
+```
+
+#### convert.sh — 変換実行
+
+```bash
+#!/bin/bash
+set -euo pipefail
+cd "$(dirname "$0")"
+
+TMLANGUAGE_PATH="../../components/nospace20/nospace.tmLanguage.json"
+OUTPUT_DIR="./output"
+
+if [ ! -d ace-repo ]; then
+  echo "Error: ace-repo not found. Run 'npm run setup' first."
+  exit 1
+fi
+
+mkdir -p "$OUTPUT_DIR"
+
+echo "Converting tmLanguage to Ace Mode..."
+cd ace-repo/tool
+node tmlanguage.js "../../$TMLANGUAGE_PATH"
+
+echo "Copying generated files..."
+cd ..
+cp src/mode/nospace.js "../$OUTPUT_DIR/"
+cp src/mode/nospace_highlight_rules.js "../$OUTPUT_DIR/"
+
+echo "Conversion complete. Output files:"
+ls -la "../$OUTPUT_DIR/"
+echo ""
+echo "Next steps:"
+echo "  1. Review and adjust the generated files in $OUTPUT_DIR/"
+echo "  2. Integrate into src/web/components/editor/nospace-ace-mode.ts"
+```
 
 ### 変換手順
 
-#### 1. ace リポジトリの変換ツールを準備
-
 ```bash
-# ace ソースリポジトリをクローン（ツール利用のみ）
-git clone --depth 1 https://github.com/ajaxorg/ace.git tmp/ace-tool
-cd tmp/ace-tool
-npm install
+cd tools/tmlanguage-converter
+npm run setup    # 初回のみ: ace リポジトリをクローン & 依存インストール
+npm run convert  # tmLanguage → Ace Mode 変換を実行
 ```
 
-#### 2. tmLanguage ファイルを変換
+### 生成結果の手動調整
 
-```bash
-# .tmLanguage.json (JSON形式) を入力として変換
-cd tmp/ace-tool/tool
-node tmlanguage.js ../../../components/nospace20/nospace.tmLanguage.json
-```
-
-変換ツールは 2 つのファイルを生成する:
-- `src/mode/nospace.js` — Ace Mode 定義
-- `src/mode/nospace_highlight_rules.js` — ハイライトルール
-
-#### 3. 生成結果の手動調整
-
-変換ツールは完全ではないため、以下の調整が必要になる可能性がある:
+変換ツールは完全ではないため、`output/` 内のファイルに以下の調整が必要になる可能性がある:
 
 | 調整項目 | 理由 |
 |---------|------|
@@ -87,23 +164,26 @@ node tmlanguage.js ../../../components/nospace20/nospace.tmLanguage.json
 | コメント記法の設定 | `blockComment` (`#...#`) の設定が正しいか検証 |
 | 正規表現の互換性修正 | tmLanguage の正規表現と JavaScript の正規表現の差異を修正 |
 
-#### 4. Ace Mode ファイルの配置と組み込み
+調整後の `output/` ファイルをコミットする。
 
-生成・調整後のコードをプロジェクト内に配置する。
+### Ace Mode の組み込み
+
+生成・調整後のファイルをアプリケーションに組み込む。
 Vite + ES modules 環境で動作させるため、`ace.define` を使った AMD スタイルでラップする。
 
-### Ace Mode 実装ファイル
+#### 配置先
 
 ```
 src/web/components/editor/nospace-ace-mode.ts
 ```
 
-変換ツールの出力を元に、以下のように `ace.define` でラップして配置する:
+`tools/tmlanguage-converter/output/` の生成コード（CommonJS 形式）を元に、
+以下のように `ace.define` でラップして配置する:
 
 ```typescript
 import ace from 'ace-builds';
 
-// ツール生成の highlight rules を ace.define でラップ
+// output/nospace_highlight_rules.js の内容を ace.define でラップ
 ace.define(
   'ace/mode/nospace_highlight_rules',
   ['require', 'exports', 'ace/lib/oop', 'ace/mode/text_highlight_rules'],
@@ -112,7 +192,7 @@ ace.define(
     const TextHighlightRules = require('ace/mode/text_highlight_rules').TextHighlightRules;
 
     const NospaceHighlightRules = function () {
-      // ツール生成の this.$rules をここに貼り付け・調整
+      // output/nospace_highlight_rules.js の this.$rules をここに配置
       this.$rules = {
         // ... 変換ツールの出力を調整して配置 ...
       };
@@ -122,7 +202,7 @@ ace.define(
   }
 );
 
-// ツール生成の mode 定義を ace.define でラップ
+// output/nospace.js の内容を ace.define でラップ
 ace.define(
   'ace/mode/nospace',
   ['require', 'exports', 'ace/lib/oop', 'ace/mode/text', 'ace/mode/nospace_highlight_rules'],
@@ -168,5 +248,5 @@ ace.define(
 
 - `ace.define` は AMD スタイルのモジュール定義。Vite（ES modules）環境では `ace-builds/src-noconflict/ace` を先にインポートしておく必要がある
 - ブロックコメント `#...#` は複数行に跨る可能性がある（ステート遷移で対応）
-- 変換ツールで生成したコードは `tmp/ace-tool/` に出力される。`tmp/` はリポジトリから除外されている前提
-- 将来 tmLanguage の更新があった場合は、再度変換ツールを実行して差分を確認し、Ace Mode に反映する
+- 将来 tmLanguage の更新があった場合は、`npm run convert` を再実行して差分を確認し、`output/` と Ace Mode に反映する
+- ace リポジトリ (`ace-repo/`) と `node_modules/` は `.gitignore` で除外されるため、`npm run setup` は各開発者が初回に実行する必要がある
