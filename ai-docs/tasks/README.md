@@ -2,7 +2,6 @@
 
 ## タスク一覧
 
-- [hooks-unit-tests.md](hooks-unit-tests.md) hooks（useNospaceSocket / useNospaceExecution）ユニットテスト設計
 - [test-review-phase3-4.md](test-review-phase3-4.md) テストコード レビュー・改善計画（フェーズ3-4）
 - [nospace-webui/](nospace-webui/) nospace Web UI の設計・実装タスク
   - [00-overview.md](nospace-webui/00-overview.md) 全体概要・実装フェーズ定義
