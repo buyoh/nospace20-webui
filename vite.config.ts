@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import wasm from 'vite-plugin-wasm';
 
 export default defineConfig({
   server: {
@@ -7,7 +8,10 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    wasm(),
   ],
-  // Ensure WASM files are treated as assets
-  assetsInclude: ['**/*.wasm'],
+  build: {
+    // vite-plugin-wasm が生成する top-level await に必要
+    target: 'esnext',
+  },
 });
