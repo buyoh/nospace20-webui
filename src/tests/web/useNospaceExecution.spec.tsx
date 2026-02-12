@@ -1,23 +1,93 @@
 import React from 'react';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { Provider, createStore } from 'jotai';
-import { useNospaceExecution } from '../../web/hooks/useNospaceExecution';
-import { useNospaceSocket } from '../../web/hooks/useNospaceSocket';
+import {
+  useNospaceExecution,
+  type BackendFactory,
+} from '../../web/hooks/useNospaceExecution';
 import { sourceCodeAtom } from '../../web/stores/editorAtom';
-import { executionOptionsAtom } from '../../web/stores/optionsAtom';
+import { executionOptionsAtom, compileOptionsAtom } from '../../web/stores/optionsAtom';
 import {
   executionStatusAtom,
   currentSessionIdAtom,
   outputEntriesAtom,
+  exitCodeAtom,
 } from '../../web/stores/executionAtom';
-import type { AppSocket } from '../../web/stores/socketAtom';
+import { flavorAtom } from '../../web/stores/flavorAtom';
+import type { ExecutionBackend } from '../../web/services/ExecutionBackend';
+import type { OutputEntry, ExecutionStatus, Flavor } from '../../interfaces/NospaceTypes';
 
-// Mock useNospaceSocket
-jest.mock('../../web/hooks/useNospaceSocket');
+/** テスト用の Fake ExecutionBackend */
+class FakeExecutionBackend implements ExecutionBackend {
+  readonly flavor: Flavor = 'wasm';
 
-const mockUseNospaceSocket = useNospaceSocket as jest.MockedFunction<
-  typeof useNospaceSocket
->;
+  isReadyValue = false;
+  initCalled = false;
+  disposeCalled = false;
+  outputCallback: ((entry: OutputEntry) => void) | null = null;
+  statusCallback:
+    | ((status: ExecutionStatus, sessionId: string, exitCode?: number | null) => void)
+    | null = null;
+
+  runMock = jest.fn();
+  compileMock = jest.fn();
+  sendStdinMock = jest.fn();
+  killMock = jest.fn();
+
+  async init(): Promise<void> {
+    this.initCalled = true;
+    this.isReadyValue = true;
+  }
+
+  isReady(): boolean {
+    return this.isReadyValue;
+  }
+
+  run(code: string, options: any, stdinData?: string): void {
+    this.runMock(code, options, stdinData);
+  }
+
+  compile(code: string, options: any): void {
+    this.compileMock(code, options);
+  }
+
+  sendStdin(data: string): void {
+    this.sendStdinMock(data);
+  }
+
+  kill(): void {
+    this.killMock();
+  }
+
+  dispose(): void {
+    this.disposeCalled = true;
+    this.isReadyValue = false;
+  }
+
+  onOutput(callback: (entry: OutputEntry) => void): void {
+    this.outputCallback = callback;
+  }
+
+  onStatusChange(
+    callback: (status: ExecutionStatus, sessionId: string, exitCode?: number | null) => void,
+  ): void {
+    this.statusCallback = callback;
+  }
+
+  /** テストヘルパー: output コールバックをトリガー */
+  triggerOutput(entry: OutputEntry): void {
+    this.outputCallback?.(entry);
+  }
+
+  /** テストヘルパー: status コールバックをトリガー */
+  triggerStatusChange(
+    status: ExecutionStatus,
+    sessionId: string,
+    exitCode?: number | null,
+  ): void {
+    this.statusCallback?.(status, sessionId, exitCode);
+  }
+}
 
 function createTestWrapper() {
   const store = createStore();
@@ -28,46 +98,107 @@ function createTestWrapper() {
 }
 
 describe('useNospaceExecution', () => {
-  let mockSocket: jest.Mocked<AppSocket>;
+  let fakeBackend: FakeExecutionBackend;
+  let backendFactory: BackendFactory;
 
   beforeEach(() => {
-    // Create mock socket
-    mockSocket = {
-      emit: jest.fn(),
-      on: jest.fn(),
-      close: jest.fn(),
-      id: 'mock-socket-id',
-    } as unknown as jest.Mocked<AppSocket>;
-
-    mockUseNospaceSocket.mockReturnValue(mockSocket);
+    fakeBackend = new FakeExecutionBackend();
+    backendFactory = jest.fn(async () => fakeBackend);
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
+  describe('backend initialization', () => {
+    it('backend が初期化される', async () => {
+      const { wrapper } = createTestWrapper();
+
+      renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+
+      await waitFor(() => {
+        expect(fakeBackend.initCalled).toBe(true);
+      });
+    });
+
+    it('backend のコールバックが設定される', async () => {
+      const { wrapper } = createTestWrapper();
+
+      renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+
+      await waitFor(() => {
+        expect(fakeBackend.outputCallback).not.toBeNull();
+        expect(fakeBackend.statusCallback).not.toBeNull();
+      });
+    });
+
+    it('unmount 時に backend が dispose される', async () => {
+      const { wrapper } = createTestWrapper();
+
+      const { unmount } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+
+      await waitFor(() => {
+        expect(fakeBackend.initCalled).toBe(true);
+      });
+
+      unmount();
+
+      expect(fakeBackend.disposeCalled).toBe(true);
+    });
+
+    it('flavor が変更されると backend が再生成される', async () => {
+      const { store, wrapper } = createTestWrapper();
+      store.set(flavorAtom, 'wasm');
+
+      const oldBackend = fakeBackend;
+      const newBackend = new FakeExecutionBackend();
+      const factoryMock = jest
+        .fn()
+        .mockResolvedValueOnce(oldBackend)
+        .mockResolvedValueOnce(newBackend);
+
+      const { rerender } = renderHook(() => useNospaceExecution(factoryMock), { wrapper });
+
+      await waitFor(() => {
+        expect(oldBackend.initCalled).toBe(true);
+      });
+
+      // flavor を変更
+      act(() => {
+        store.set(flavorAtom, 'server');
+      });
+
+      await waitFor(() => {
+        expect(newBackend.initCalled).toBe(true);
+      });
+
+      expect(oldBackend.disposeCalled).toBe(true);
+      expect(factoryMock).toHaveBeenCalledTimes(2);
+    });
+  });
+
   describe('isRunning', () => {
-    it('executionStatus が running のとき true を返す', () => {
+    it('executionStatus が running のとき true を返す', async () => {
       const { store, wrapper } = createTestWrapper();
       store.set(executionStatusAtom, 'running');
 
-      const { result } = renderHook(() => useNospaceExecution(), { wrapper });
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
 
       expect(result.current.isRunning).toBe(true);
     });
 
-    it('executionStatus が idle のとき false を返す', () => {
+    it('executionStatus が idle のとき false を返す', async () => {
       const { store, wrapper } = createTestWrapper();
       store.set(executionStatusAtom, 'idle');
 
-      const { result } = renderHook(() => useNospaceExecution(), { wrapper });
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
 
       expect(result.current.isRunning).toBe(false);
     });
   });
 
   describe('handleRun', () => {
-    it('socket 存在 & 非実行中で emit される', () => {
+    it('backend.run が正しい引数で呼ばれる', async () => {
       const { store, wrapper } = createTestWrapper();
       store.set(sourceCodeAtom, 'print "test"');
       store.set(executionStatusAtom, 'idle');
@@ -76,26 +207,34 @@ describe('useNospaceExecution', () => {
         ignoreDebug: false,
         inputMode: 'batch',
       });
+      store.set(compileOptionsAtom, {
+        language: 'standard',
+        target: 'ws',
+      });
 
-      const { result } = renderHook(() => useNospaceExecution(), { wrapper });
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+
+      await waitFor(() => {
+        expect(fakeBackend.isReadyValue).toBe(true);
+      });
 
       act(() => {
         result.current.handleRun();
       });
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('nospace_run', {
-        code: 'print "test"',
-        options: {
+      expect(fakeBackend.runMock).toHaveBeenCalledWith(
+        'print "test"',
+        {
           language: 'standard',
           debug: false,
           ignoreDebug: false,
           inputMode: 'batch',
         },
-        stdinData: undefined,
-      });
+        undefined,
+      );
     });
 
-    it('batch モードで stdinData が含まれる', () => {
+    it('stdinData が渡される', async () => {
       const { store, wrapper } = createTestWrapper();
       store.set(sourceCodeAtom, 'code');
       store.set(executionStatusAtom, 'idle');
@@ -105,61 +244,36 @@ describe('useNospaceExecution', () => {
         inputMode: 'batch',
       });
 
-      const { result } = renderHook(() => useNospaceExecution(), { wrapper });
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+
+      await waitFor(() => {
+        expect(fakeBackend.isReadyValue).toBe(true);
+      });
 
       act(() => {
         result.current.handleRun('input data');
       });
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('nospace_run', {
-        code: 'code',
-        options: {
-          language: 'standard',
-          debug: true,
-          ignoreDebug: true,
+      expect(fakeBackend.runMock).toHaveBeenCalledWith(
+        'code',
+        expect.objectContaining({
           inputMode: 'batch',
-        },
-        stdinData: 'input data',
-      });
+        }),
+        'input data',
+      );
     });
 
-    it('interactive モードで stdinData が undefined', () => {
+    it('実行前に outputEntries がクリアされる', async () => {
       const { store, wrapper } = createTestWrapper();
       store.set(sourceCodeAtom, 'code');
       store.set(executionStatusAtom, 'idle');
-      store.set(executionOptionsAtom, {
-        debug: false,
-        ignoreDebug: false,
-        inputMode: 'interactive',
+      store.set(outputEntriesAtom, [{ type: 'stdout', data: 'old', timestamp: 123 }]);
+
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+
+      await waitFor(() => {
+        expect(fakeBackend.isReadyValue).toBe(true);
       });
-
-      const { result } = renderHook(() => useNospaceExecution(), { wrapper });
-
-      act(() => {
-        result.current.handleRun('should be ignored');
-      });
-
-      expect(mockSocket.emit).toHaveBeenCalledWith('nospace_run', {
-        code: 'code',
-        options: {
-          language: 'standard',
-          debug: false,
-          ignoreDebug: false,
-          inputMode: 'interactive',
-        },
-        stdinData: undefined,
-      });
-    });
-
-    it('実行前に outputEntries がクリアされる', () => {
-      const { store, wrapper } = createTestWrapper();
-      store.set(sourceCodeAtom, 'code');
-      store.set(executionStatusAtom, 'idle');
-      store.set(outputEntriesAtom, [
-        { type: 'stdout', data: 'old', timestamp: 123 },
-      ]);
-
-      const { result } = renderHook(() => useNospaceExecution(), { wrapper });
 
       act(() => {
         result.current.handleRun();
@@ -168,177 +282,144 @@ describe('useNospaceExecution', () => {
       expect(store.get(outputEntriesAtom)).toEqual([]);
     });
 
-    it('socket が null のとき emit されない', () => {
-      mockUseNospaceSocket.mockReturnValue(null);
-
+    it('backend が ready でない場合は呼ばれない', async () => {
       const { store, wrapper } = createTestWrapper();
       store.set(sourceCodeAtom, 'code');
       store.set(executionStatusAtom, 'idle');
 
-      const { result } = renderHook(() => useNospaceExecution(), { wrapper });
+      fakeBackend.isReadyValue = false;
+
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
 
       act(() => {
         result.current.handleRun();
       });
 
-      expect(mockSocket.emit).not.toHaveBeenCalled();
+      expect(fakeBackend.runMock).not.toHaveBeenCalled();
     });
 
-    it('実行中のとき emit されない', () => {
+    it('実行中の場合は呼ばれない', async () => {
       const { store, wrapper } = createTestWrapper();
       store.set(sourceCodeAtom, 'code');
       store.set(executionStatusAtom, 'running');
 
-      const { result } = renderHook(() => useNospaceExecution(), { wrapper });
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+
+      await waitFor(() => {
+        expect(fakeBackend.isReadyValue).toBe(true);
+      });
 
       act(() => {
         result.current.handleRun();
       });
 
-      expect(mockSocket.emit).not.toHaveBeenCalled();
+      expect(fakeBackend.runMock).not.toHaveBeenCalled();
     });
   });
 
   describe('handleKill', () => {
-    it('正常系で emit される', () => {
-      const { store, wrapper } = createTestWrapper();
-      store.set(executionStatusAtom, 'running');
-      store.set(currentSessionIdAtom, 'session-123');
+    it('backend.kill が呼ばれる', async () => {
+      const { wrapper } = createTestWrapper();
 
-      const { result } = renderHook(() => useNospaceExecution(), { wrapper });
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+
+      await waitFor(() => {
+        expect(fakeBackend.initCalled).toBe(true);
+      });
 
       act(() => {
         result.current.handleKill();
       });
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('nospace_kill', {
-        sessionId: 'session-123',
-      });
-    });
-
-    it('socket が null のとき emit されない', () => {
-      mockUseNospaceSocket.mockReturnValue(null);
-
-      const { store, wrapper } = createTestWrapper();
-      store.set(executionStatusAtom, 'running');
-      store.set(currentSessionIdAtom, 'session-123');
-
-      const { result } = renderHook(() => useNospaceExecution(), { wrapper });
-
-      act(() => {
-        result.current.handleKill();
-      });
-
-      expect(mockSocket.emit).not.toHaveBeenCalled();
-    });
-
-    it('sessionId が null のとき emit されない', () => {
-      const { store, wrapper } = createTestWrapper();
-      store.set(executionStatusAtom, 'running');
-      store.set(currentSessionIdAtom, null);
-
-      const { result } = renderHook(() => useNospaceExecution(), { wrapper });
-
-      act(() => {
-        result.current.handleKill();
-      });
-
-      expect(mockSocket.emit).not.toHaveBeenCalled();
-    });
-
-    it('非実行中のとき emit されない', () => {
-      const { store, wrapper } = createTestWrapper();
-      store.set(executionStatusAtom, 'idle');
-      store.set(currentSessionIdAtom, 'session-123');
-
-      const { result } = renderHook(() => useNospaceExecution(), { wrapper });
-
-      act(() => {
-        result.current.handleKill();
-      });
-
-      expect(mockSocket.emit).not.toHaveBeenCalled();
+      expect(fakeBackend.killMock).toHaveBeenCalled();
     });
   });
 
   describe('handleSendStdin', () => {
-    it('正常系で emit される', () => {
-      const { store, wrapper } = createTestWrapper();
-      store.set(executionStatusAtom, 'running');
-      store.set(currentSessionIdAtom, 'session-456');
+    it('backend.sendStdin が呼ばれる', async () => {
+      const { wrapper } = createTestWrapper();
 
-      const { result } = renderHook(() => useNospaceExecution(), { wrapper });
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+
+      await waitFor(() => {
+        expect(fakeBackend.initCalled).toBe(true);
+      });
 
       act(() => {
         result.current.handleSendStdin('input line\n');
       });
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('nospace_stdin', {
-        sessionId: 'session-456',
-        data: 'input line\n',
-      });
-    });
-
-    it('socket が null のとき emit されない', () => {
-      mockUseNospaceSocket.mockReturnValue(null);
-
-      const { store, wrapper } = createTestWrapper();
-      store.set(executionStatusAtom, 'running');
-      store.set(currentSessionIdAtom, 'session-456');
-
-      const { result } = renderHook(() => useNospaceExecution(), { wrapper });
-
-      act(() => {
-        result.current.handleSendStdin('data');
-      });
-
-      expect(mockSocket.emit).not.toHaveBeenCalled();
-    });
-
-    it('sessionId が null のとき emit されない', () => {
-      const { store, wrapper } = createTestWrapper();
-      store.set(executionStatusAtom, 'running');
-      store.set(currentSessionIdAtom, null);
-
-      const { result } = renderHook(() => useNospaceExecution(), { wrapper });
-
-      act(() => {
-        result.current.handleSendStdin('data');
-      });
-
-      expect(mockSocket.emit).not.toHaveBeenCalled();
-    });
-
-    it('非実行中のとき emit されない', () => {
-      const { store, wrapper } = createTestWrapper();
-      store.set(executionStatusAtom, 'idle');
-      store.set(currentSessionIdAtom, 'session-456');
-
-      const { result } = renderHook(() => useNospaceExecution(), { wrapper });
-
-      act(() => {
-        result.current.handleSendStdin('data');
-      });
-
-      expect(mockSocket.emit).not.toHaveBeenCalled();
+      expect(fakeBackend.sendStdinMock).toHaveBeenCalledWith('input line\n');
     });
   });
 
   describe('handleClearOutput', () => {
-    it('outputEntries が空になる', () => {
+    it('outputEntries が空になる', async () => {
       const { store, wrapper } = createTestWrapper();
       store.set(outputEntriesAtom, [
         { type: 'stdout', data: 'line1', timestamp: 100 },
         { type: 'stderr', data: 'error', timestamp: 200 },
       ]);
 
-      const { result } = renderHook(() => useNospaceExecution(), { wrapper });
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
 
       act(() => {
         result.current.handleClearOutput();
       });
 
       expect(store.get(outputEntriesAtom)).toEqual([]);
+    });
+  });
+
+  describe('backend callbacks', () => {
+    it('output コールバックが outputEntries に追加される', async () => {
+      const { store, wrapper } = createTestWrapper();
+
+      renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+
+      await waitFor(() => {
+        expect(fakeBackend.outputCallback).not.toBeNull();
+      });
+
+      act(() => {
+        fakeBackend.triggerOutput({
+          type: 'stdout',
+          data: 'output data',
+          timestamp: 12345,
+        });
+      });
+
+      const entries = store.get(outputEntriesAtom);
+      expect(entries).toHaveLength(1);
+      expect(entries[0]).toEqual({
+        type: 'stdout',
+        data: 'output data',
+        timestamp: 12345,
+      });
+    });
+
+    it('status コールバックが atom を更新する', async () => {
+      const { store, wrapper } = createTestWrapper();
+
+      renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+
+      await waitFor(() => {
+        expect(fakeBackend.statusCallback).not.toBeNull();
+      });
+
+      act(() => {
+        fakeBackend.triggerStatusChange('running', 'session-123', null);
+      });
+
+      expect(store.get(executionStatusAtom)).toBe('running');
+      expect(store.get(currentSessionIdAtom)).toBe('session-123');
+
+      act(() => {
+        fakeBackend.triggerStatusChange('finished', 'session-123', 0);
+      });
+
+      expect(store.get(executionStatusAtom)).toBe('finished');
+      expect(store.get(exitCodeAtom)).toBe(0);
     });
   });
 });

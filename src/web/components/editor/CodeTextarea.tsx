@@ -1,6 +1,7 @@
 import React, { useRef, KeyboardEvent } from 'react';
 import './styles/CodeTextarea.scss';
 
+/** テキストエリア形式のコードエディタの Props */
 interface CodeTextareaProps {
   value: string;
   onChange: (value: string) => void;

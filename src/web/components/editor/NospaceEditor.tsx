@@ -4,6 +4,7 @@ import 'ace-builds/src-noconflict/theme-monokai';
 import './nospace-ace-mode';
 import './styles/NospaceEditor.scss';
 
+/** Ace Editor を使用した Nospace エディタの Props */
 interface NospaceEditorProps {
   value: string;
   onChange: (value: string) => void;

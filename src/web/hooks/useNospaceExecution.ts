@@ -10,10 +10,32 @@ import {
 } from '../stores/executionAtom';
 import { flavorAtom } from '../stores/flavorAtom';
 import type { ExecutionBackend } from '../services/ExecutionBackend';
+import type { Flavor } from '../../interfaces/NospaceTypes';
 // Note: ServerExecutionBackend is dynamically imported for tree-shaking
 // import { WasmExecutionBackend } from '../services/WasmExecutionBackend';
 
-export function useNospaceExecution() {
+/** ExecutionBackend を生成するファクトリ関数 */
+export type BackendFactory = (flavor: Flavor) => Promise<ExecutionBackend>;
+
+/** デフォルトの BackendFactory（動的インポートを使用） */
+const defaultBackendFactory: BackendFactory = async (flavor: Flavor) => {
+  if (flavor === 'server') {
+    const { ServerExecutionBackend } = await import(
+      '../services/ServerExecutionBackend'
+    );
+    return new ServerExecutionBackend();
+  } else {
+    // WASM backend
+    const { WasmExecutionBackend } = await import(
+      '../services/WasmExecutionBackend'
+    );
+    return new WasmExecutionBackend();
+  }
+};
+
+export function useNospaceExecution(
+  backendFactory: BackendFactory = defaultBackendFactory,
+) {
   const flavor = useAtomValue(flavorAtom);
   const sourceCode = useAtomValue(sourceCodeAtom);
   const executionOptions = useAtomValue(executionOptionsAtom);
@@ -34,19 +56,7 @@ export function useNospaceExecution() {
     let cancelled = false;
 
     (async () => {
-      let backend: ExecutionBackend;
-      if (flavor === 'server') {
-        const { ServerExecutionBackend } = await import(
-          '../services/ServerExecutionBackend'
-        );
-        backend = new ServerExecutionBackend();
-      } else {
-        // WASM backend
-        const { WasmExecutionBackend } = await import(
-          '../services/WasmExecutionBackend'
-        );
-        backend = new WasmExecutionBackend();
-      }
+      const backend = await backendFactory(flavor);
 
       if (cancelled) {
         backend.dispose();
@@ -90,6 +100,7 @@ export function useNospaceExecution() {
     };
   }, [
     flavor,
+    backendFactory,
     setOutputEntries,
     setExecutionStatus,
     setCurrentSessionId,

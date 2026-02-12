@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, ReactNode } from 'react';
 import './styles/SplitPane.scss';
 
+/** リサイズ可能な2ペイン分割レイアウトの Props */
 interface SplitPaneProps {
   left: ReactNode;
   right: ReactNode;

@@ -1,6 +1,7 @@
 import React from 'react';
 import './styles/ExecutionControls.scss';
 
+/** 実行コントロール（Run/Kill ボタン）の Props */
 interface ExecutionControlsProps {
   isRunning: boolean;
   onRun: () => void;

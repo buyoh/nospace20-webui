@@ -2,29 +2,38 @@
 
 import { ServerExecutionBackend } from '../../web/services/ServerExecutionBackend';
 import type { ExecutionStatus, OutputEntry } from '../../interfaces/NospaceTypes';
-import { Socket } from 'socket.io-client';
+import type { Socket } from 'socket.io-client';
+import type {
+  NospaceClientToServerEvents,
+  NospaceServerToClientEvents,
+} from '../../interfaces/NospaceTypes';
 
-// Mock socket.io-client
-jest.mock('socket.io-client');
+type AppSocket = Socket<
+  NospaceServerToClientEvents,
+  NospaceClientToServerEvents
+>;
+
+/** テスト用の Fake Socket を作成 */
+function createFakeSocket(): jest.Mocked<AppSocket> {
+  return {
+    id: 'mock-socket-id',
+    connected: false,
+    on: jest.fn(),
+    emit: jest.fn(),
+    close: jest.fn(),
+  } as any;
+}
 
 describe('ServerExecutionBackend', () => {
   let backend: ServerExecutionBackend;
-  let mockSocket: jest.Mocked<any>;
+  let mockSocket: jest.Mocked<AppSocket>;
 
   beforeEach(() => {
-    // Create mock socket
-    mockSocket = {
-      id: 'mock-socket-id',
-      connected: false,
-      on: jest.fn(),
-      emit: jest.fn(),
-      close: jest.fn(),
-    };
+    // Create fake socket
+    mockSocket = createFakeSocket();
 
-    // Mock io() to return our mock socket
-    (require('socket.io-client').io as jest.Mock).mockReturnValue(mockSocket);
-
-    backend = new ServerExecutionBackend();
+    // Create backend with fake socket factory
+    backend = new ServerExecutionBackend(() => mockSocket);
   });
 
   afterEach(() => {

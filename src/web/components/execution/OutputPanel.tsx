@@ -3,6 +3,7 @@ import { useAtomValue } from 'jotai';
 import { outputEntriesAtom } from '../../stores/executionAtom';
 import './styles/OutputPanel.scss';
 
+/** 出力パネル（stdout/stderr 表示）の Props */
 interface OutputPanelProps {
   onClear: () => void;
 }

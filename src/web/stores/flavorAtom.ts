@@ -3,7 +3,7 @@ import { isServerFlavorEnabled } from '../libs/env';
 
 export type Flavor = 'wasm' | 'server';
 
-/** Determine available flavors at build time */
+/** Determine available flavors */
 function getAvailableFlavors(): readonly Flavor[] {
   if (isServerFlavorEnabled()) {
     return ['wasm', 'server'];
@@ -11,10 +11,11 @@ function getAvailableFlavors(): readonly Flavor[] {
   return ['wasm'];
 }
 
-const AVAILABLE_FLAVORS: readonly Flavor[] = getAvailableFlavors();
-
-/** List of available flavors */
-export const availableFlavorsAtom = atom<readonly Flavor[]>(AVAILABLE_FLAVORS);
+/** List of available flavors (computed on first access) */
+export const availableFlavorsAtom = atom<readonly Flavor[]>((get) => {
+  // Compute on first access to allow env setup in tests
+  return getAvailableFlavors();
+});
 
 /**
  * Currently selected flavor.

@@ -19,6 +19,14 @@ type AppSocket = Socket<
   NospaceClientToServerEvents
 >;
 
+/** Socket を生成するファクトリ関数 */
+export interface SocketFactory {
+  (): AppSocket;
+}
+
+/** デフォルトの Socket ファクトリ（Socket.IO クライアントを使用） */
+const defaultSocketFactory: SocketFactory = () => io();
+
 export class ServerExecutionBackend implements ExecutionBackend {
   readonly flavor = 'server' as const;
 
@@ -41,8 +49,10 @@ export class ServerExecutionBackend implements ExecutionBackend {
     requiresServer: true,
   };
 
+  constructor(private socketFactory: SocketFactory = defaultSocketFactory) {}
+
   async init(): Promise<void> {
-    this.socket = io();
+    this.socket = this.socketFactory();
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         reject(new Error('Socket.IO connection timeout'));

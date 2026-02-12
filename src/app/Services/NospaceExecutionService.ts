@@ -46,6 +46,7 @@ const defaultExecutionConfig: ExecutionConfig = Config;
 
 export type SessionStatus = 'running' | 'finished' | 'error' | 'killed';
 
+/** Nospace 実行セッションの公開インターフェース */
 export interface NospaceSession {
   readonly sessionId: string;
   readonly status: SessionStatus;
@@ -54,12 +55,14 @@ export interface NospaceSession {
   sendStdin(data: string): void;
 }
 
+/** セッションのイベントコールバック */
 interface SessionCallbacks {
   onStdout: (data: string) => void;
   onStderr: (data: string) => void;
   onExit: (code: number | null) => void;
 }
 
+/** NospaceSession の実装クラス */
 class NospaceSessionImpl implements NospaceSession {
   private process: ChildProcess | null;
   private tempFilePath: string;

@@ -5,6 +5,7 @@ import { outputEntriesAtom } from '../../stores/executionAtom';
 import type { OutputEntry } from '../../../interfaces/NospaceTypes';
 import './styles/InputPanel.scss';
 
+/** 入力パネル（バッチ/インタラクティブ入力）の Props */
 interface InputPanelProps {
   isRunning: boolean;
   onSendStdin: (data: string) => void;
