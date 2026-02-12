@@ -8,4 +8,6 @@ export default defineConfig({
   plugins: [
     react(),
   ],
+  // Ensure WASM files are treated as assets
+  assetsInclude: ['**/*.wasm'],
 });

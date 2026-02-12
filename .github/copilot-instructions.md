@@ -56,3 +56,11 @@ src/
 
 - name: buyoh
 - email: 15198247+buyoh@users.noreply.github.com
+
+## SKILL について
+
+以下に関連するタスクの場合、該当のドキュメントを参照するべし
+
+`.github/skills/add-test-spec/SKILL.md` : `/resources/tests/` 以下にテストケースを追加するときに使う
+`.github/skills/design-architecture/SKILL.md` : 仕様を基にソフトウェアの設計・コード変更方法を検討するときに使う
+`.github/skills/update-code/SKILL.md` : アプリケーションに使用されるコードを更新する際に使う

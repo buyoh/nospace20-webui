@@ -1,76 +1,159 @@
+import { useEffect, useRef, useCallback } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { sourceCodeAtom } from '../stores/editorAtom';
-import { executionOptionsAtom } from '../stores/optionsAtom';
+import { executionOptionsAtom, compileOptionsAtom } from '../stores/optionsAtom';
 import {
   executionStatusAtom,
   currentSessionIdAtom,
   outputEntriesAtom,
+  exitCodeAtom,
 } from '../stores/executionAtom';
-import { useNospaceSocket } from './useNospaceSocket';
-import type { RunOptions } from '../../interfaces/NospaceTypes';
+import { flavorAtom } from '../stores/flavorAtom';
+import type { ExecutionBackend } from '../services/ExecutionBackend';
+// Note: ServerExecutionBackend is dynamically imported for tree-shaking
+// import { WasmExecutionBackend } from '../services/WasmExecutionBackend';
 
 export function useNospaceExecution() {
-  const socket = useNospaceSocket();
+  const flavor = useAtomValue(flavorAtom);
   const sourceCode = useAtomValue(sourceCodeAtom);
   const executionOptions = useAtomValue(executionOptionsAtom);
+  const compileOptions = useAtomValue(compileOptionsAtom);
   const executionStatus = useAtomValue(executionStatusAtom);
-  const currentSessionId = useAtomValue(currentSessionIdAtom);
+  const setExecutionStatus = useSetAtom(executionStatusAtom);
+  const setCurrentSessionId = useSetAtom(currentSessionIdAtom);
   const setOutputEntries = useSetAtom(outputEntriesAtom);
+  const setExitCode = useSetAtom(exitCodeAtom);
 
-  const isRunning = executionStatus === 'running';
+  const backendRef = useRef<ExecutionBackend | null>(null);
 
-  const handleRun = (stdinData?: string) => {
-    console.log('[useNospaceExecution] handleRun called', {
-      socket: !!socket,
-      isRunning,
-      sourceCode: sourceCode.substring(0, 50),
-    });
-    if (!socket || isRunning) {
-      console.warn('[useNospaceExecution] handleRun blocked:', {
-        socketExists: !!socket,
-        isRunning,
+  const isRunning =
+    executionStatus === 'running' || executionStatus === 'compiling';
+
+  // Switch backend when flavor changes
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      let backend: ExecutionBackend;
+      if (flavor === 'server') {
+        const { ServerExecutionBackend } = await import(
+          '../services/ServerExecutionBackend'
+        );
+        backend = new ServerExecutionBackend();
+      } else {
+        // WASM backend
+        const { WasmExecutionBackend } = await import(
+          '../services/WasmExecutionBackend'
+        );
+        backend = new WasmExecutionBackend();
+      }
+
+      if (cancelled) {
+        backend.dispose();
+        return;
+      }
+
+      // Setup callbacks
+      backend.onOutput((entry) => {
+        setOutputEntries((prev) => [...prev, entry]);
       });
-      return;
-    }
 
-    // Clear output
-    setOutputEntries([]);
+      backend.onStatusChange((status, sessionId, exitCode) => {
+        setExecutionStatus(status);
+        setCurrentSessionId(sessionId);
+        if (exitCode !== undefined) {
+          setExitCode(exitCode ?? null);
+        }
+      });
 
-    // Create run options
-    const runOptions: RunOptions = {
-      language: 'standard', // Default for now
-      debug: executionOptions.debug,
-      ignoreDebug: executionOptions.ignoreDebug,
-      inputMode: executionOptions.inputMode,
+      // Initialize
+      try {
+        await backend.init();
+      } catch (err) {
+        console.error(
+          `[useNospaceExecution] Failed to initialize ${flavor} backend:`,
+          err,
+        );
+      }
+
+      // Dispose old backend
+      backendRef.current?.dispose();
+      backendRef.current = backend;
+    })();
+
+    return () => {
+      cancelled = true;
+      if (backendRef.current) {
+        backendRef.current.dispose();
+        backendRef.current = null;
+      }
     };
+  }, [
+    flavor,
+    setOutputEntries,
+    setExecutionStatus,
+    setCurrentSessionId,
+    setExitCode,
+  ]);
 
-    // Send run request
-    socket.emit('nospace_run', {
-      code: sourceCode,
-      options: runOptions,
-      stdinData: executionOptions.inputMode === 'batch' ? stdinData : undefined,
-    });
-  };
+  const handleRun = useCallback(
+    (stdinData?: string) => {
+      const backend = backendRef.current;
+      if (!backend || !backend.isReady() || isRunning) {
+        console.warn('[useNospaceExecution] handleRun blocked:', {
+          backendExists: !!backend,
+          backendReady: backend?.isReady() ?? false,
+          isRunning,
+        });
+        return;
+      }
 
-  const handleKill = () => {
-    if (!socket || !currentSessionId || !isRunning) return;
+      setOutputEntries([]);
 
-    socket.emit('nospace_kill', { sessionId: currentSessionId });
-  };
+      backend.run(
+        sourceCode,
+        {
+          language: compileOptions.language,
+          debug: executionOptions.debug,
+          ignoreDebug: executionOptions.ignoreDebug,
+          inputMode: executionOptions.inputMode,
+        },
+        stdinData,
+      );
+    },
+    [
+      sourceCode,
+      executionOptions,
+      compileOptions,
+      isRunning,
+      setOutputEntries,
+    ],
+  );
 
-  const handleSendStdin = (data: string) => {
-    if (!socket || !currentSessionId || !isRunning) return;
+  const handleCompile = useCallback(() => {
+    const backend = backendRef.current;
+    if (!backend || !backend.isReady() || isRunning) return;
 
-    socket.emit('nospace_stdin', { sessionId: currentSessionId, data });
-  };
-
-  const handleClearOutput = () => {
     setOutputEntries([]);
-  };
+    backend.compile(sourceCode, compileOptions);
+  }, [sourceCode, compileOptions, isRunning, setOutputEntries]);
+
+  const handleKill = useCallback(() => {
+    backendRef.current?.kill();
+  }, []);
+
+  const handleSendStdin = useCallback((data: string) => {
+    backendRef.current?.sendStdin(data);
+  }, []);
+
+  const handleClearOutput = useCallback(() => {
+    setOutputEntries([]);
+  }, [setOutputEntries]);
 
   return {
     isRunning,
     handleRun,
+    handleCompile,
     handleKill,
     handleSendStdin,
     handleClearOutput,
