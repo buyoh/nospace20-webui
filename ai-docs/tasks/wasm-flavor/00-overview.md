@@ -201,6 +201,29 @@ src/web/
   - CompileOptions（target セレクター）非表示
 - flavor に応じたオプション自動リセット（WASM に切り替え時に inputMode を batch に強制）
 
+## WASM-only デプロイ（静的ホスティング）
+
+Web 公開時に Server flavor を無効化し、WASM のみで動作させることが可能。
+
+### 方式
+
+ビルド時の環境変数 `VITE_ENABLE_SERVER` で利用可能な flavor を制御する。
+
+| 環境変数 | 利用可能 flavor | 用途 |
+|---------|----------------|------|
+| `VITE_ENABLE_SERVER=true` | WASM + Server | 開発環境・サーバー付きデプロイ |
+| 未設定 or `false` | WASM のみ | 静的ホスティング（GitHub Pages 等） |
+
+### 効果
+
+- `VITE_ENABLE_SERVER` が無効の場合:
+  - flavor セレクター（Header）が非表示になる（選択肢が 1 つのみのため）
+  - `ServerExecutionBackend` が import されない → Vite の tree-shaking で `socket.io-client` がバンドルから除外される
+  - `vite build` の出力（`dist/`）を静的ホスティングに配置するだけで動作
+  - サーバーサイドコード（Express, Socket.IO サーバー）は一切不要
+
+詳細は [03-frontend-integration.md](03-frontend-integration.md) を参照。
+
 ## 新規依存パッケージ
 
 なし。WASM ロードは標準の `WebAssembly` API と `fetch` で行う。

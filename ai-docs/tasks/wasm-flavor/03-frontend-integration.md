@@ -14,6 +14,15 @@ import { atom } from 'jotai';
 
 export type Flavor = 'wasm' | 'server';
 
+/** ビルド時に利用可能な flavor を決定する */
+const AVAILABLE_FLAVORS: readonly Flavor[] =
+  import.meta.env.VITE_ENABLE_SERVER === 'true'
+    ? ['wasm', 'server']
+    : ['wasm'];
+
+/** 利用可能な flavor のリスト */
+export const availableFlavorsAtom = atom<readonly Flavor[]>(AVAILABLE_FLAVORS);
+
 /**
  * 現在選択されている flavor。
  * デフォルトは 'wasm'（サーバー不要でどこでも動作するため）。
@@ -26,6 +35,18 @@ export const flavorAtom = atom<Flavor>('wasm');
 - サーバーが利用可能なら 'server' へ自動切り替え…は行わない（ユーザーの明示的選択を尊重）
 - デフォルトは **'wasm'**（サーバー不要で即座に使えるため）
 - ユーザーが明示的に 'server' を選択した場合のみ Socket.IO 接続を試行
+
+### WASM-only デプロイ
+
+環境変数 `VITE_ENABLE_SERVER` で利用可能な flavor をビルド時に制御する。
+
+- `VITE_ENABLE_SERVER=true`: WASM + Server 両方を有効化
+- 未設定 or `false`: WASM のみ有効（デフォルト）
+
+これにより:
+- `ServerExecutionBackend` の動的 import パスに到達しなくなり、tree-shaking で除外される
+- `socket.io-client` がバンドルに含まれなくなりバンドルサイズが削減される
+- `vite build` の出力を静的ホスティングに配置するだけで動作する
 
 ## Hook のリファクタリング
 
@@ -48,7 +69,7 @@ import {
 } from '../stores/executionAtom';
 import { flavorAtom } from '../stores/flavorAtom';
 import type { ExecutionBackend } from '../services/ExecutionBackend';
-import { ServerExecutionBackend } from '../services/ServerExecutionBackend';
+// ServerExecutionBackend は動的 import（tree-shaking のため静的 import しない）
 import { WasmExecutionBackend } from '../services/WasmExecutionBackend';
 
 export function useNospaceExecution() {
@@ -67,10 +88,23 @@ export function useNospaceExecution() {
   const isRunning = executionStatus === 'running' || executionStatus === 'compiling';
 
   // flavor 変更時にバックエンドを切り替え
+  // ServerExecutionBackend は動的 import で tree-shaking 可能にする
   useEffect(() => {
-    const backend = flavor === 'wasm'
-      ? new WasmExecutionBackend()
-      : new ServerExecutionBackend();
+    let cancelled = false;
+
+    (async () => {
+      let backend: ExecutionBackend;
+      if (flavor === 'server') {
+        const { ServerExecutionBackend } = await import('../services/ServerExecutionBackend');
+        backend = new ServerExecutionBackend();
+      } else {
+        backend = new WasmExecutionBackend();
+      }
+
+      if (cancelled) {
+        backend.dispose();
+        return;
+      }
 
     // コールバック設定
     backend.onOutput((entry) => {
@@ -167,27 +201,35 @@ flavor によって対応しない機能の UI 要素は **非表示（DOM か�
 // src/web/components/layout/Header.tsx（変更後）
 
 import React from 'react';
-import { useAtom } from 'jotai';
-import { flavorAtom, Flavor } from '../../stores/flavorAtom';
+import { useAtom, useAtomValue } from 'jotai';
+import { flavorAtom, availableFlavorsAtom, Flavor } from '../../stores/flavorAtom';
 import './styles/Header.scss';
 
 export const Header: React.FC = () => {
   const [flavor, setFlavor] = useAtom(flavorAtom);
+  const availableFlavors = useAtomValue(availableFlavorsAtom);
 
   return (
     <header className="header">
       <h1>nospace Web IDE</h1>
       <div className="header-controls">
-        <label className="flavor-selector">
-          <span>Backend:</span>
-          <select
-            value={flavor}
-            onChange={(e) => setFlavor(e.target.value as Flavor)}
-          >
-            <option value="wasm">WASM (Browser)</option>
-            <option value="server">Server (Socket.IO)</option>
-          </select>
-        </label>
+        {/* flavor が 1 つしか無い場合（WASM-only デプロイ）はセレクターを非表示 */}
+        {availableFlavors.length > 1 && (
+          <label className="flavor-selector">
+            <span>Backend:</span>
+            <select
+              value={flavor}
+              onChange={(e) => setFlavor(e.target.value as Flavor)}
+            >
+              {availableFlavors.includes('wasm') && (
+                <option value="wasm">WASM (Browser)</option>
+              )}
+              {availableFlavors.includes('server') && (
+                <option value="server">Server (Socket.IO)</option>
+              )}
+            </select>
+          </label>
+        )}
       </div>
     </header>
   );
