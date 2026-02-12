@@ -43,3 +43,11 @@ Phase 7-8 の実装で Ace Editor を導入した際、ソースコードに `re
 2. `npm install` を実行
 3. `npm run build` で成功を確認
 4. 修正したファイルをコミット
+
+## 進捗
+
+- [x] `package.json` に `ace-builds` (`^1.36.5`) と `react-ace` (`^13.0.0`) を追加
+- [x] `npm install` 成功
+- [x] `npm run build` 成功（vite build + tsc 両方通過）
+- [x] 既存テスト 67 passed, 6 suites — 全合格
+- [x] コミット完了

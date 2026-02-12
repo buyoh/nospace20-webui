@@ -17,10 +17,12 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
+    "ace-builds": "^1.36.5",
     "dotenv": "^17.2.4",
     "express": "^4.22.1",
     "jotai": "^2.12.5",
     "react": "^18.3.1",
+    "react-ace": "^13.0.0",
     "react-dom": "^18.3.1",
     "sass": "^1.90.0",
     "socket.io": "^4.8.1",
