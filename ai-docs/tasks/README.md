@@ -5,6 +5,7 @@
 - [test-review-phase3-4.md](test-review-phase3-4.md) テストコード レビュー・改善計画（フェーズ3-4）
 - [nospace-webui/](nospace-webui/) nospace Web UI の設計・実装タスク
 - [wasm-flavor/](wasm-flavor/) WASM Flavor 設計（Phase 9〜11）
+- [fix-build-missing-ace-deps.md](fix-build-missing-ace-deps.md) npm run build 失敗の修正: ace-builds / react-ace 依存不足
 
 ## 完了済みタスク
 
