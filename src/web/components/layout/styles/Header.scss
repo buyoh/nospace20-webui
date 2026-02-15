@@ -3,10 +3,43 @@
   color: #ffffff;
   padding: 1rem 2rem;
   border-bottom: 1px solid #444;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 
   h1 {
     margin: 0;
     font-size: 1.5rem;
     font-weight: 500;
+  }
+}
+
+.header-flavor {
+  display: flex;
+  align-items: center;
+}
+
+.header-flavor-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  background-color: #007acc;
+  color: #ffffff;
+  letter-spacing: 0.05em;
+}
+
+.header-flavor-select {
+  padding: 0.25rem 0.5rem;
+  background-color: #3c3c3c;
+  color: #d4d4d4;
+  border: 1px solid #555;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: #007acc;
   }
 }
