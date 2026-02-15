@@ -15,6 +15,7 @@ import {
   NospaceSocketClient,
   type SocketFactory,
 } from './NospaceSocketClient';
+import { tryFormatNospaceErrorJson } from '../libs/formatNospaceErrors';
 
 const defaultSocketFactory: SocketFactory = () => io();
 
@@ -59,9 +60,12 @@ export class ServerExecutionBackend implements ExecutionBackend {
         });
       },
       onStderr: (payload) => {
+        // BUG FIX: nospace バイナリがコンパイルエラー時に JSON を stderr に出力するため、
+        // JSON をパースして整形されたメッセージに変換する。パースに失敗した場合はそのまま表示。
+        const formatted = tryFormatNospaceErrorJson(payload.data);
         this.outputCallback?.({
           type: 'stderr',
-          data: payload.data,
+          data: formatted ?? payload.data,
           timestamp: Date.now(),
         });
       },

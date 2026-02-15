@@ -11,6 +11,7 @@ import type {
   ExecutionBackend,
   ExecutionBackendCapabilities,
 } from './ExecutionBackend';
+import { formatErrorEntries } from '../libs/formatNospaceErrors';
 
 const STEP_BUDGET = 10000;
 const MAX_TOTAL_STEPS = 100_000_000;
@@ -201,15 +202,7 @@ export class WasmExecutionBackend implements ExecutionBackend {
           });
           this.statusCallback?.('finished', sessionId, 0);
         } else {
-          const errorMessages = result.errors
-            .map((e) => {
-              const loc =
-                e.line != null
-                  ? `:${e.line}${e.column != null ? ':' + e.column : ''}`
-                  : '';
-              return `${e.message}${loc}`;
-            })
-            .join('\n');
+          const errorMessages = formatErrorEntries(result.errors);
           this.outputCallback?.({
             type: 'stderr',
             data: errorMessages + '\n',

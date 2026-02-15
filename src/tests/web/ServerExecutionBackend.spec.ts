@@ -196,6 +196,44 @@ describe('ServerExecutionBackend', () => {
       );
     });
 
+    it('should format nospace error JSON in stderr', async () => {
+      await connectBackend(backend, fakeSocket, listeners);
+
+      const outputCallback = jest.fn();
+      backend.onOutput(outputCallback);
+
+      const errorJson =
+        '{"success":false,"errors":[{"message":"undefined function: sdf__puti"}]}';
+      listeners['nospace_stderr']({ sessionId: 's1', data: errorJson });
+
+      expect(outputCallback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'stderr',
+          data: 'undefined function: sdf__puti',
+        }),
+      );
+    });
+
+    it('should format nospace error JSON with location info in stderr', async () => {
+      await connectBackend(backend, fakeSocket, listeners);
+
+      const outputCallback = jest.fn();
+      backend.onOutput(outputCallback);
+
+      const errorJson = JSON.stringify({
+        success: false,
+        errors: [{ message: 'syntax error', line: 5, column: 3 }],
+      });
+      listeners['nospace_stderr']({ sessionId: 's1', data: errorJson });
+
+      expect(outputCallback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'stderr',
+          data: 'syntax error:5:3',
+        }),
+      );
+    });
+
     it('should call status callback on nospace_execution_status', async () => {
       await connectBackend(backend, fakeSocket, listeners);
 
