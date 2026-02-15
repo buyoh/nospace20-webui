@@ -11,7 +11,7 @@ import type {
   ExecutionBackend,
   ExecutionBackendCapabilities,
 } from './ExecutionBackend';
-import { formatErrorEntries } from '../libs/formatNospaceErrors';
+import { formatErrorEntries, isNospaceErrorResult } from '../libs/formatNospaceErrors';
 
 const STEP_BUDGET = 10000;
 const MAX_TOTAL_STEPS = 100_000_000;
@@ -162,9 +162,11 @@ export class WasmExecutionBackend implements ExecutionBackend {
       }
     } catch (e) {
       // NOTE: wasm が throw する値は Error インスタンスではない場合がある。
-      // String(obj) は [object Object] になるため、JSON.stringify で表示する。
-      const message =
-        e instanceof Error
+      // ResultErr 型 ({ success: false, errors: [...] }) の場合は整形して表示する。
+      // String(obj) は [object Object] になるため、それ以外は JSON.stringify で表示する。
+      const message = isNospaceErrorResult(e)
+        ? formatErrorEntries(e.errors)
+        : e instanceof Error
           ? e.message
           : typeof e === 'string'
             ? e
@@ -212,9 +214,11 @@ export class WasmExecutionBackend implements ExecutionBackend {
         }
       } catch (e) {
         // NOTE: wasm が throw する値は Error インスタンスではない場合がある。
-        // String(obj) は [object Object] になるため、JSON.stringify で表示する。
-        const message =
-          e instanceof Error
+        // ResultErr 型 ({ success: false, errors: [...] }) の場合は整形して表示する。
+        // String(obj) は [object Object] になるため、それ以外は JSON.stringify で表示する。
+        const message = isNospaceErrorResult(e)
+          ? formatErrorEntries(e.errors)
+          : e instanceof Error
             ? e.message
             : typeof e === 'string'
               ? e

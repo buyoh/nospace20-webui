@@ -3,6 +3,7 @@
 import {
   formatErrorEntries,
   tryFormatNospaceErrorJson,
+  isNospaceErrorResult,
 } from '../../web/libs/formatNospaceErrors';
 
 describe('formatErrorEntries', () => {
@@ -88,5 +89,48 @@ describe('tryFormatNospaceErrorJson', () => {
     expect(tryFormatNospaceErrorJson('"just a string"')).toBeNull();
     expect(tryFormatNospaceErrorJson('42')).toBeNull();
     expect(tryFormatNospaceErrorJson('null')).toBeNull();
+  });
+});
+
+describe('isNospaceErrorResult', () => {
+  it('should return true for valid ResultErr object', () => {
+    expect(
+      isNospaceErrorResult({
+        success: false,
+        errors: [{ message: 'error' }],
+      }),
+    ).toBe(true);
+  });
+
+  it('should return true for ResultErr with location info', () => {
+    expect(
+      isNospaceErrorResult({
+        success: false,
+        errors: [{ message: 'error', line: 1, column: 2 }],
+      }),
+    ).toBe(true);
+  });
+
+  it('should return false for success=true', () => {
+    expect(
+      isNospaceErrorResult({ success: true, output: 'ok' }),
+    ).toBe(false);
+  });
+
+  it('should return false for non-object values', () => {
+    expect(isNospaceErrorResult(null)).toBe(false);
+    expect(isNospaceErrorResult(undefined)).toBe(false);
+    expect(isNospaceErrorResult('string')).toBe(false);
+    expect(isNospaceErrorResult(42)).toBe(false);
+  });
+
+  it('should return false for object without errors array', () => {
+    expect(isNospaceErrorResult({ success: false })).toBe(false);
+  });
+
+  it('should return false for errors without message field', () => {
+    expect(
+      isNospaceErrorResult({ success: false, errors: [{ foo: 'bar' }] }),
+    ).toBe(false);
   });
 });

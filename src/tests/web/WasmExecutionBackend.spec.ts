@@ -143,5 +143,31 @@ describe('WasmExecutionBackend', () => {
       expect(stderrEntry!.data).not.toContain('[object Object]');
       expect(stderrEntry!.data).toContain('wasm panic');
     });
+
+    it('should format ResultErr object exception', async () => {
+      fakeCompileShouldThrow = {
+        success: false,
+        errors: [{ message: 'undefined function: sdf__puti' }],
+      };
+      backend.compile('code', options);
+      await flushAsync();
+
+      const stderrEntry = outputEntries.find((e) => e.type === 'stderr');
+      expect(stderrEntry).toBeDefined();
+      expect(stderrEntry!.data).toBe('undefined function: sdf__puti\n');
+    });
+
+    it('should format ResultErr with location in exception', async () => {
+      fakeCompileShouldThrow = {
+        success: false,
+        errors: [{ message: 'parse error', line: 3, column: 7 }],
+      };
+      backend.compile('code', options);
+      await flushAsync();
+
+      const stderrEntry = outputEntries.find((e) => e.type === 'stderr');
+      expect(stderrEntry).toBeDefined();
+      expect(stderrEntry!.data).toBe('parse error:3:7\n');
+    });
   });
 });

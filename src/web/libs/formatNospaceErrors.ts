@@ -59,7 +59,7 @@ export function tryFormatNospaceErrorJson(text: string): string | null {
 }
 
 /** 値が NospaceErrorResult であるかを判定する型ガード */
-function isNospaceErrorResult(value: unknown): value is NospaceErrorResult {
+export function isNospaceErrorResult(value: unknown): value is NospaceErrorResult {
   if (typeof value !== 'object' || value === null) return false;
   const obj = value as Record<string, unknown>;
   if (obj.success !== false) return false;
