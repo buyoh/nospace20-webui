@@ -55,8 +55,8 @@ describe('WasmExecutionBackend', () => {
   describe('compile - result handling', () => {
     const options: CompileOptions = { language: 'standard', target: 'ws' };
 
-    it('should output string result to stdout', async () => {
-      fakeCompileResult = 'compiled output';
+    it('should output successful compile result to stdout', async () => {
+      fakeCompileResult = { success: true, output: 'compiled output' };
       backend.compile('code', options);
       await flushAsync();
 
@@ -65,18 +65,11 @@ describe('WasmExecutionBackend', () => {
       expect(stdoutEntry!.data).toBe('compiled output\n');
     });
 
-    it('should output result.ok string to stdout', async () => {
-      fakeCompileResult = { ok: 'success output' };
-      backend.compile('code', options);
-      await flushAsync();
-
-      const stdoutEntry = outputEntries.find((e) => e.type === 'stdout');
-      expect(stdoutEntry).toBeDefined();
-      expect(stdoutEntry!.data).toBe('success output\n');
-    });
-
-    it('should output result.error string to stderr', async () => {
-      fakeCompileResult = { error: 'parse error at line 1' };
+    it('should output single error to stderr', async () => {
+      fakeCompileResult = {
+        success: false,
+        errors: [{ message: 'parse error at line 1' }],
+      };
       backend.compile('code', options);
       await flushAsync();
 
@@ -85,36 +78,35 @@ describe('WasmExecutionBackend', () => {
       expect(stderrEntry!.data).toBe('parse error at line 1\n');
     });
 
-    it('should stringify result.error object instead of [object Object]', async () => {
-      fakeCompileResult = { error: { message: 'syntax error', line: 5, col: 3 } };
+    it('should format error with line and column info', async () => {
+      fakeCompileResult = {
+        success: false,
+        errors: [{ message: 'syntax error', line: 5, column: 3 }],
+      };
       backend.compile('code', options);
       await flushAsync();
 
       const stderrEntry = outputEntries.find((e) => e.type === 'stderr');
       expect(stderrEntry).toBeDefined();
-      expect(stderrEntry!.data).not.toContain('[object Object]');
       expect(stderrEntry!.data).toContain('syntax error');
+      expect(stderrEntry!.data).toContain(':5:3');
     });
 
-    it('should stringify result.ok object instead of [object Object]', async () => {
-      fakeCompileResult = { ok: { instructions: ['push 1', 'push 2'] } };
+    it('should join multiple errors with newline', async () => {
+      fakeCompileResult = {
+        success: false,
+        errors: [
+          { message: 'error one' },
+          { message: 'error two', line: 10 },
+        ],
+      };
       backend.compile('code', options);
       await flushAsync();
 
-      const stdoutEntry = outputEntries.find((e) => e.type === 'stdout');
-      expect(stdoutEntry).toBeDefined();
-      expect(stdoutEntry!.data).not.toContain('[object Object]');
-      expect(stdoutEntry!.data).toContain('push 1');
-    });
-
-    it('should JSON.stringify unknown result shape', async () => {
-      fakeCompileResult = { unknown: 'shape' };
-      backend.compile('code', options);
-      await flushAsync();
-
-      const stdoutEntry = outputEntries.find((e) => e.type === 'stdout');
-      expect(stdoutEntry).toBeDefined();
-      expect(stdoutEntry!.data).not.toContain('[object Object]');
+      const stderrEntry = outputEntries.find((e) => e.type === 'stderr');
+      expect(stderrEntry).toBeDefined();
+      expect(stderrEntry!.data).toContain('error one');
+      expect(stderrEntry!.data).toContain('error two:10');
     });
   });
 

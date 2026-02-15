@@ -10,7 +10,7 @@ import {
 } from '../stores/executionAtom';
 import { flavorAtom } from '../stores/flavorAtom';
 import type { ExecutionBackend } from '../services/ExecutionBackend';
-import type { Flavor } from '../../interfaces/NospaceTypes';
+import type { Flavor } from '../stores/flavorAtom';
 // Note: ServerExecutionBackend is dynamically imported for tree-shaking
 // import { WasmExecutionBackend } from '../services/WasmExecutionBackend';
 

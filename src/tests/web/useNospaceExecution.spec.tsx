@@ -15,7 +15,8 @@ import {
 } from '../../web/stores/executionAtom';
 import { flavorAtom } from '../../web/stores/flavorAtom';
 import type { ExecutionBackend } from '../../web/services/ExecutionBackend';
-import type { OutputEntry, ExecutionStatus, Flavor } from '../../interfaces/NospaceTypes';
+import type { OutputEntry, ExecutionStatus } from '../../interfaces/NospaceTypes';
+import type { Flavor } from '../../web/stores/flavorAtom';
 
 /** テスト用の Fake ExecutionBackend */
 class FakeExecutionBackend implements ExecutionBackend {

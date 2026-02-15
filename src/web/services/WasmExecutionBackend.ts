@@ -191,43 +191,31 @@ export class WasmExecutionBackend implements ExecutionBackend {
 
         const result = nospace20.compile(code, options.target, options.language);
 
-        // Handle result format: { ok: string } | { error: string } | string
-        // NOTE: wasm の返却値は型が any であり、error/ok が文字列でない場合がある。
-        // オブジェクトの場合は JSON.stringify でシリアライズして表示する。
-        let output: string;
-        let isError = false;
-
-        if (typeof result === 'string') {
-          output = result;
-        } else if (result.error) {
-          output =
-            typeof result.error === 'string'
-              ? result.error
-              : JSON.stringify(result.error);
-          isError = true;
-        } else if (result.ok) {
-          output =
-            typeof result.ok === 'string'
-              ? result.ok
-              : JSON.stringify(result.ok);
-        } else {
-          output = JSON.stringify(result);
-        }
-
-        if (isError) {
-          this.outputCallback?.({
-            type: 'stderr',
-            data: output + '\n',
-            timestamp: Date.now(),
-          });
-          this.statusCallback?.('error', sessionId);
-        } else {
+        // CompileResult は discriminated union:
+        //   { success: true, output: string } | { success: false, errors: WasmError[] }
+        if (result.success) {
           this.outputCallback?.({
             type: 'stdout',
-            data: output + '\n',
+            data: result.output + '\n',
             timestamp: Date.now(),
           });
           this.statusCallback?.('finished', sessionId, 0);
+        } else {
+          const errorMessages = result.errors
+            .map((e) => {
+              const loc =
+                e.line != null
+                  ? `:${e.line}${e.column != null ? ':' + e.column : ''}`
+                  : '';
+              return `${e.message}${loc}`;
+            })
+            .join('\n');
+          this.outputCallback?.({
+            type: 'stderr',
+            data: errorMessages + '\n',
+            timestamp: Date.now(),
+          });
+          this.statusCallback?.('error', sessionId);
         }
       } catch (e) {
         // NOTE: wasm が throw する値は Error インスタンスではない場合がある。

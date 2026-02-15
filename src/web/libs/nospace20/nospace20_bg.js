@@ -44,7 +44,7 @@ export class WasmWhitespaceVM {
     }
     /**
      * 命令列全体のニーモニック表現を取得
-     * @returns {any}
+     * @returns {string[]}
      */
     disassemble() {
         const ret = wasm.wasmwhitespacevm_disassemble(this.__wbg_ptr);
@@ -87,7 +87,7 @@ export class WasmWhitespaceVM {
      * ヒープの現在の内容
      *
      * 戻り値: { [address: string]: number }
-     * @returns {any}
+     * @returns {Record<string, number>}
      */
     get_heap() {
         const ret = wasm.wasmwhitespacevm_get_heap(this.__wbg_ptr);
@@ -97,7 +97,7 @@ export class WasmWhitespaceVM {
      * データスタックの現在の内容
      *
      * 戻り値: number[] (i64 → JS number に変換。53bit 超は精度が落ちる)
-     * @returns {any}
+     * @returns {number[]}
      */
     get_stack() {
         const ret = wasm.wasmwhitespacevm_get_stack(this.__wbg_ptr);
@@ -107,7 +107,7 @@ export class WasmWhitespaceVM {
      * トレース情報を取得
      *
      * 戻り値: { [key: string]: number }
-     * @returns {any}
+     * @returns {Record<string, number>}
      */
     get_traced() {
         const ret = wasm.wasmwhitespacevm_get_traced(this.__wbg_ptr);
@@ -152,7 +152,7 @@ export class WasmWhitespaceVM {
      *
      * 戻り値: { status: "suspended" | "complete" | "error", error?: string }
      * @param {number} budget
-     * @returns {any}
+     * @returns {VmStepResult}
      */
     step(budget) {
         const ret = wasm.wasmwhitespacevm_step(this.__wbg_ptr, budget);
@@ -175,7 +175,7 @@ if (Symbol.dispose) WasmWhitespaceVM.prototype[Symbol.dispose] = WasmWhitespaceV
  * @param {string} source
  * @param {string} target
  * @param {string} lang_std
- * @returns {any}
+ * @returns {CompileResult}
  */
 export function compile(source, target, lang_std) {
     const ptr0 = passStringToWasm0(source, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
@@ -191,7 +191,7 @@ export function compile(source, target, lang_std) {
 /**
  * nospace ソースコードをニーモニックにコンパイル（ヘルパー関数）
  * @param {string} source
- * @returns {any}
+ * @returns {CompileResult}
  */
 export function compile_to_mnemonic_string(source) {
     const ptr0 = passStringToWasm0(source, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
@@ -203,7 +203,7 @@ export function compile_to_mnemonic_string(source) {
 /**
  * nospace ソースコードを Whitespace にコンパイル（ヘルパー関数）
  * @param {string} source
- * @returns {any}
+ * @returns {CompileResult}
  */
 export function compile_to_whitespace_string(source) {
     const ptr0 = passStringToWasm0(source, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
@@ -215,7 +215,7 @@ export function compile_to_whitespace_string(source) {
 /**
  * nospace ソースコードの構文チェックのみ行う。
  * @param {string} source
- * @returns {any}
+ * @returns {ParseResult}
  */
 export function parse(source) {
     const ptr0 = passStringToWasm0(source, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
@@ -230,7 +230,7 @@ export function parse(source) {
  * @param {string} source
  * @param {string} stdin
  * @param {boolean} debug
- * @returns {any}
+ * @returns {RunResult}
  */
 export function run(source, stdin, debug) {
     const ptr0 = passStringToWasm0(source, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
