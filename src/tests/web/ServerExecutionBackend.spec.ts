@@ -14,26 +14,45 @@ type AppSocket = Socket<
 >;
 
 /** テスト用の Fake Socket を作成 */
-function createFakeSocket(): jest.Mocked<AppSocket> {
-  return {
+function createFakeSocket(): {
+  socket: AppSocket;
+  listeners: Record<string, Function>;
+} {
+  const listeners: Record<string, Function> = {};
+  const socket = {
     id: 'mock-socket-id',
     connected: false,
-    on: jest.fn(),
+    on: (event: string, handler: Function) => {
+      listeners[event] = handler;
+    },
     emit: jest.fn(),
     close: jest.fn(),
-  } as any;
+  } as unknown as AppSocket;
+  return { socket, listeners };
+}
+
+/** Fake Socket を接続済みにするヘルパー */
+async function connectBackend(
+  backend: ServerExecutionBackend,
+  socket: AppSocket,
+  listeners: Record<string, Function>,
+): Promise<void> {
+  const initPromise = backend.init();
+  (socket as any).connected = true;
+  listeners['connect']();
+  await initPromise;
 }
 
 describe('ServerExecutionBackend', () => {
   let backend: ServerExecutionBackend;
-  let mockSocket: jest.Mocked<AppSocket>;
+  let fakeSocket: AppSocket;
+  let listeners: Record<string, Function>;
 
   beforeEach(() => {
-    // Create fake socket
-    mockSocket = createFakeSocket();
-
-    // Create backend with fake socket factory
-    backend = new ServerExecutionBackend(() => mockSocket);
+    const fake = createFakeSocket();
+    fakeSocket = fake.socket;
+    listeners = fake.listeners;
+    backend = new ServerExecutionBackend(() => fakeSocket);
   });
 
   afterEach(() => {
@@ -43,30 +62,15 @@ describe('ServerExecutionBackend', () => {
 
   describe('init', () => {
     it('should initialize socket connection', async () => {
-      const initPromise = backend.init();
-
-      // Simulate connect event
-      const connectHandler = mockSocket.on.mock.calls.find(
-        (call: any[]) => call[0] === 'connect',
-      )?.[1];
-      expect(connectHandler).toBeDefined();
-      mockSocket.connected = true;
-      connectHandler!();
-
-      await initPromise;
+      await connectBackend(backend, fakeSocket, listeners);
       expect(backend.isReady()).toBe(true);
     });
 
     it('should reject on connection error', async () => {
       const initPromise = backend.init();
 
-      // Simulate connect_error event
-      const errorHandler = mockSocket.on.mock.calls.find(
-        (call: any[]) => call[0] === 'connect_error',
-      )?.[1];
-      expect(errorHandler).toBeDefined();
       const mockError = new Error('Connection failed');
-      errorHandler!(mockError);
+      listeners['connect_error'](mockError);
 
       await expect(initPromise).rejects.toThrow('Connection failed');
     });
@@ -81,16 +85,8 @@ describe('ServerExecutionBackend', () => {
 
   describe('run', () => {
     it('should emit nospace_run with correct payload', async () => {
-      // Setup connected state
-      mockSocket.connected = true;
-      const initPromise = backend.init();
-      const connectHandler = mockSocket.on.mock.calls.find(
-        (call: any[]) => call[0] === 'connect',
-      )?.[1];
-      connectHandler!();
-      await initPromise;
+      await connectBackend(backend, fakeSocket, listeners);
 
-      // Run
       const code = 'nospace code';
       const options = {
         language: 'standard' as const,
@@ -102,7 +98,7 @@ describe('ServerExecutionBackend', () => {
 
       backend.run(code, options, stdinData);
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('nospace_run', {
+      expect((fakeSocket as any).emit).toHaveBeenCalledWith('nospace_run', {
         code,
         options,
         stdinData,
@@ -117,7 +113,7 @@ describe('ServerExecutionBackend', () => {
           ignoreDebug: false,
           inputMode: 'batch',
         });
-      }).toThrow('Not initialized');
+      }).toThrow('Socket not connected');
     });
   });
 
@@ -131,26 +127,17 @@ describe('ServerExecutionBackend', () => {
 
   describe('sendStdin', () => {
     it('should emit nospace_stdin', async () => {
-      mockSocket.connected = true;
-      const initPromise = backend.init();
-      const connectHandler = mockSocket.on.mock.calls.find(
-        (call: any[]) => call[0] === 'connect',
-      )?.[1];
-      connectHandler!();
-      await initPromise;
+      await connectBackend(backend, fakeSocket, listeners);
 
-      // Simulate session start
-      const statusHandler = mockSocket.on.mock.calls.find(
-        (call: any[]) => call[0] === 'nospace_execution_status',
-      )?.[1];
-      statusHandler!({
+      // Simulate session start via execution_status event
+      listeners['nospace_execution_status']({
         sessionId: 'test-session',
         status: 'running',
       });
 
       backend.sendStdin('input\n');
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('nospace_stdin', {
+      expect((fakeSocket as any).emit).toHaveBeenCalledWith('nospace_stdin', {
         sessionId: 'test-session',
         data: 'input\n',
       });
@@ -159,26 +146,17 @@ describe('ServerExecutionBackend', () => {
 
   describe('kill', () => {
     it('should emit nospace_kill', async () => {
-      mockSocket.connected = true;
-      const initPromise = backend.init();
-      const connectHandler = mockSocket.on.mock.calls.find(
-        (call: any[]) => call[0] === 'connect',
-      )?.[1];
-      connectHandler!();
-      await initPromise;
+      await connectBackend(backend, fakeSocket, listeners);
 
       // Simulate session start
-      const statusHandler = mockSocket.on.mock.calls.find(
-        (call: any[]) => call[0] === 'nospace_execution_status',
-      )?.[1];
-      statusHandler!({
+      listeners['nospace_execution_status']({
         sessionId: 'test-session',
         status: 'running',
       });
 
       backend.kill();
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('nospace_kill', {
+      expect((fakeSocket as any).emit).toHaveBeenCalledWith('nospace_kill', {
         sessionId: 'test-session',
       });
     });
@@ -186,22 +164,13 @@ describe('ServerExecutionBackend', () => {
 
   describe('event callbacks', () => {
     it('should call output callback on nospace_stdout', async () => {
-      mockSocket.connected = true;
-      const initPromise = backend.init();
-      const connectHandler = mockSocket.on.mock.calls.find(
-        (call: any[]) => call[0] === 'connect',
-      )?.[1];
-      connectHandler!();
-      await initPromise;
+      await connectBackend(backend, fakeSocket, listeners);
 
       const outputCallback = jest.fn();
       backend.onOutput(outputCallback);
 
       // Trigger stdout event
-      const stdoutHandler = mockSocket.on.mock.calls.find(
-        (call: any[]) => call[0] === 'nospace_stdout',
-      )?.[1];
-      stdoutHandler!({ data: 'output data' });
+      listeners['nospace_stdout']({ sessionId: 's1', data: 'output data' });
 
       expect(outputCallback).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -211,47 +180,66 @@ describe('ServerExecutionBackend', () => {
       );
     });
 
-    it('should call status callback on nospace_execution_status', async () => {
-      mockSocket.connected = true;
-      const initPromise = backend.init();
-      const connectHandler = mockSocket.on.mock.calls.find(
-        (call: any[]) => call[0] === 'connect',
-      )?.[1];
-      connectHandler!();
-      await initPromise;
-
-      const statusCallback = jest.fn();
-      backend.onStatusChange(statusCallback);
-
-      // Trigger status event
-      const statusHandler = mockSocket.on.mock.calls.find(
-        (call: any[]) => call[0] === 'nospace_execution_status',
-      )?.[1];
-      statusHandler!({
-        sessionId: 'test-session',
-        status: 'running',
-      });
-
-      expect(statusCallback).toHaveBeenCalledWith('running', 'test-session', undefined);
-    });
-
-    it('should emit system message on status change', async () => {
-      mockSocket.connected = true;
-      const initPromise = backend.init();
-      const connectHandler = mockSocket.on.mock.calls.find(
-        (call: any[]) => call[0] === 'connect',
-      )?.[1];
-      connectHandler!();
-      await initPromise;
+    it('should call output callback on nospace_stderr', async () => {
+      await connectBackend(backend, fakeSocket, listeners);
 
       const outputCallback = jest.fn();
       backend.onOutput(outputCallback);
 
-      // Trigger status event
-      const statusHandler = mockSocket.on.mock.calls.find(
-        (call: any[]) => call[0] === 'nospace_execution_status',
-      )?.[1];
-      statusHandler!({
+      listeners['nospace_stderr']({ sessionId: 's1', data: 'error data' });
+
+      expect(outputCallback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'stderr',
+          data: 'error data',
+        }),
+      );
+    });
+
+    it('should call status callback on nospace_execution_status', async () => {
+      await connectBackend(backend, fakeSocket, listeners);
+
+      const statusCallback = jest.fn();
+      backend.onStatusChange(statusCallback);
+
+      listeners['nospace_execution_status']({
+        sessionId: 'test-session',
+        status: 'running',
+      });
+
+      expect(statusCallback).toHaveBeenCalledWith(
+        'running',
+        'test-session',
+        undefined,
+      );
+    });
+
+    it('should emit system message on status change to running', async () => {
+      await connectBackend(backend, fakeSocket, listeners);
+
+      const outputCallback = jest.fn();
+      backend.onOutput(outputCallback);
+
+      listeners['nospace_execution_status']({
+        sessionId: 'test-session',
+        status: 'running',
+      });
+
+      expect(outputCallback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'system',
+          data: expect.stringContaining('Process started'),
+        }),
+      );
+    });
+
+    it('should emit system message on status change to finished', async () => {
+      await connectBackend(backend, fakeSocket, listeners);
+
+      const outputCallback = jest.fn();
+      backend.onOutput(outputCallback);
+
+      listeners['nospace_execution_status']({
         sessionId: 'test-session',
         status: 'finished',
         exitCode: 0,
@@ -264,21 +252,53 @@ describe('ServerExecutionBackend', () => {
         }),
       );
     });
+
+    it('should emit system message on status change to killed', async () => {
+      await connectBackend(backend, fakeSocket, listeners);
+
+      const outputCallback = jest.fn();
+      backend.onOutput(outputCallback);
+
+      listeners['nospace_execution_status']({
+        sessionId: 'test-session',
+        status: 'killed',
+      });
+
+      expect(outputCallback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'system',
+          data: expect.stringContaining('Process killed'),
+        }),
+      );
+    });
+
+    it('should emit system message on status change to error', async () => {
+      await connectBackend(backend, fakeSocket, listeners);
+
+      const outputCallback = jest.fn();
+      backend.onOutput(outputCallback);
+
+      listeners['nospace_execution_status']({
+        sessionId: 'test-session',
+        status: 'error',
+      });
+
+      expect(outputCallback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'system',
+          data: expect.stringContaining('Process error'),
+        }),
+      );
+    });
   });
 
   describe('dispose', () => {
     it('should close socket', async () => {
-      mockSocket.connected = true;
-      const initPromise = backend.init();
-      const connectHandler = mockSocket.on.mock.calls.find(
-        (call: any[]) => call[0] === 'connect',
-      )?.[1];
-      connectHandler!();
-      await initPromise;
+      await connectBackend(backend, fakeSocket, listeners);
 
       backend.dispose();
 
-      expect(mockSocket.close).toHaveBeenCalled();
+      expect((fakeSocket as any).close).toHaveBeenCalled();
       expect(backend.isReady()).toBe(false);
     });
   });

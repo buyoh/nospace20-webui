@@ -1,36 +1,32 @@
 // Server flavor execution backend using Socket.IO
 
-import { io, Socket } from 'socket.io-client';
+import { io } from 'socket.io-client';
 import type {
   ExecutionStatus,
   OutputEntry,
   CompileOptions,
   RunOptions,
-  NospaceClientToServerEvents,
-  NospaceServerToClientEvents,
 } from '../../interfaces/NospaceTypes';
 import type {
   ExecutionBackend,
   ExecutionBackendCapabilities,
 } from './ExecutionBackend';
+import {
+  NospaceSocketClient,
+  type SocketFactory,
+} from './NospaceSocketClient';
 
-type AppSocket = Socket<
-  NospaceServerToClientEvents,
-  NospaceClientToServerEvents
->;
-
-/** Socket を生成するファクトリ関数 */
-export interface SocketFactory {
-  (): AppSocket;
-}
-
-/** デフォルトの Socket ファクトリ（Socket.IO クライアントを使用） */
 const defaultSocketFactory: SocketFactory = () => io();
 
+/**
+ * サーバー (Socket.IO) を使用した実行バックエンド。
+ * NospaceSocketClient に接続管理を委譲し、ビジネスロジック
+ * （OutputEntry 変換、システムメッセージ生成、セッション管理）のみを担当する。
+ */
 export class ServerExecutionBackend implements ExecutionBackend {
   readonly flavor = 'server' as const;
 
-  private socket: AppSocket | null = null;
+  private client: NospaceSocketClient;
   private currentSessionId: string | null = null;
   private outputCallback: ((entry: OutputEntry) => void) | null = null;
   private statusCallback:
@@ -43,48 +39,53 @@ export class ServerExecutionBackend implements ExecutionBackend {
 
   static capabilities: ExecutionBackendCapabilities = {
     supportsInteractiveStdin: true,
-    supportsCompile: false, // Future implementation
+    supportsCompile: false,
     supportsIgnoreDebug: true,
     supportsLanguageSubsetForRun: true,
     requiresServer: true,
   };
 
-  constructor(private socketFactory: SocketFactory = defaultSocketFactory) {}
+  constructor(socketFactory: SocketFactory = defaultSocketFactory) {
+    this.client = new NospaceSocketClient(socketFactory);
+  }
 
   async init(): Promise<void> {
-    this.socket = this.socketFactory();
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error('Socket.IO connection timeout'));
-      }, 10000);
-
-      this.socket!.on('connect', () => {
-        clearTimeout(timeout);
-        console.log('[ServerExecutionBackend] Socket connected:', this.socket!.id);
-        this.setupEventListeners();
-        resolve();
-      });
-
-      this.socket!.on('connect_error', (error) => {
-        clearTimeout(timeout);
-        console.error('[ServerExecutionBackend] Connection error:', error);
-        reject(error);
-      });
+    await this.client.connect({
+      onStdout: (payload) => {
+        this.outputCallback?.({
+          type: 'stdout',
+          data: payload.data,
+          timestamp: Date.now(),
+        });
+      },
+      onStderr: (payload) => {
+        this.outputCallback?.({
+          type: 'stderr',
+          data: payload.data,
+          timestamp: Date.now(),
+        });
+      },
+      onExecutionStatus: (payload) => {
+        this.currentSessionId = payload.sessionId;
+        this.statusCallback?.(
+          payload.status as ExecutionStatus,
+          payload.sessionId,
+          payload.exitCode,
+        );
+        this.emitSystemMessage(
+          payload.status as ExecutionStatus,
+          payload.exitCode,
+        );
+      },
     });
   }
 
   isReady(): boolean {
-    return this.socket?.connected ?? false;
+    return this.client.connected;
   }
 
   run(code: string, options: RunOptions, stdinData?: string): void {
-    if (!this.socket) throw new Error('Not initialized');
-    console.log('[ServerExecutionBackend] Emitting nospace_run', {
-      codeLength: code.length,
-      options,
-      stdinDataLength: stdinData?.length ?? 0,
-    });
-    this.socket.emit('nospace_run', { code, options, stdinData });
+    this.client.emitRun(code, options, stdinData);
   }
 
   compile(_code: string, _options: CompileOptions): void {
@@ -92,24 +93,17 @@ export class ServerExecutionBackend implements ExecutionBackend {
   }
 
   sendStdin(data: string): void {
-    if (!this.socket || !this.currentSessionId) return;
-    this.socket.emit('nospace_stdin', {
-      sessionId: this.currentSessionId,
-      data,
-    });
+    if (!this.currentSessionId) return;
+    this.client.emitStdin(this.currentSessionId, data);
   }
 
   kill(): void {
-    if (!this.socket || !this.currentSessionId) return;
-    this.socket.emit('nospace_kill', {
-      sessionId: this.currentSessionId,
-    });
+    if (!this.currentSessionId) return;
+    this.client.emitKill(this.currentSessionId);
   }
 
   dispose(): void {
-    console.log('[ServerExecutionBackend] Disposing');
-    this.socket?.close();
-    this.socket = null;
+    this.client.close();
   }
 
   onOutput(callback: (entry: OutputEntry) => void): void {
@@ -126,48 +120,27 @@ export class ServerExecutionBackend implements ExecutionBackend {
     this.statusCallback = callback;
   }
 
-  private setupEventListeners(): void {
-    if (!this.socket) return;
-
-    this.socket.on('nospace_stdout', (payload) => {
+  /** ステータス変更時にシステムメッセージを出力する */
+  private emitSystemMessage(
+    status: ExecutionStatus,
+    exitCode?: number | null,
+  ): void {
+    let systemMessage: string | null = null;
+    if (status === 'running') {
+      systemMessage = `[Process started: ${this.currentSessionId}]\n`;
+    } else if (status === 'finished') {
+      systemMessage = `\n[Process exited with code: ${exitCode ?? 'unknown'}]\n`;
+    } else if (status === 'killed') {
+      systemMessage = `\n[Process killed]\n`;
+    } else if (status === 'error') {
+      systemMessage = `\n[Process error]\n`;
+    }
+    if (systemMessage) {
       this.outputCallback?.({
-        type: 'stdout',
-        data: payload.data,
+        type: 'system',
+        data: systemMessage,
         timestamp: Date.now(),
       });
-    });
-
-    this.socket.on('nospace_stderr', (payload) => {
-      this.outputCallback?.({
-        type: 'stderr',
-        data: payload.data,
-        timestamp: Date.now(),
-      });
-    });
-
-    this.socket.on('nospace_execution_status', (payload) => {
-      this.currentSessionId = payload.sessionId;
-      this.statusCallback?.(payload.status, payload.sessionId, payload.exitCode);
-
-      // Generate system messages
-      let systemMessage: string | null = null;
-      if (payload.status === 'running') {
-        systemMessage = `[Process started: ${payload.sessionId}]\n`;
-      } else if (payload.status === 'finished') {
-        systemMessage = `\n[Process exited with code: ${payload.exitCode ?? 'unknown'}]\n`;
-      } else if (payload.status === 'killed') {
-        systemMessage = `\n[Process killed]\n`;
-      } else if (payload.status === 'error') {
-        systemMessage = `\n[Process error]\n`;
-      }
-
-      if (systemMessage) {
-        this.outputCallback?.({
-          type: 'system',
-          data: systemMessage,
-          timestamp: Date.now(),
-        });
-      }
-    });
+    }
   }
 }
