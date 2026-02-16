@@ -31,7 +31,7 @@ export const ExecutionOptions: React.FC = () => {
         </label>
       </div>
 
-      {/* Ignore debug — Server のみ */}
+      {/* Ignore debug — WebSocket のみ */}
       {!isWasm && (
         <div className="option-group">
           <label>
@@ -47,7 +47,7 @@ export const ExecutionOptions: React.FC = () => {
         </div>
       )}
 
-      {/* Input Mode — Server のみ（WASM は batch 固定） */}
+      {/* Input Mode — WebSocket のみ（WASM は batch 固定） */}
       {!isWasm && (
         <div className="option-group">
           <label>

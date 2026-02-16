@@ -1,4 +1,6 @@
 // Mock for env.ts in test environment
-export function isServerFlavorEnabled(): boolean {
-  return false;
+import type { Flavor } from '../../stores/flavorAtom';
+
+export function getApplicationFlavor(): Flavor {
+  return 'wasm';
 }

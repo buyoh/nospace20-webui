@@ -1,4 +1,4 @@
-// ExecutionBackend abstraction for server and WASM execution environments
+// ExecutionBackend abstraction for websocket and WASM execution environments
 
 import type {
   ExecutionStatus,
@@ -9,11 +9,11 @@ import type {
 
 /**
  * Execution backend abstract interface.
- * Provides a common API for Server flavor and WASM flavor.
+ * Provides a common API for WebSocket flavor and WASM flavor.
  */
 export interface ExecutionBackend {
   /** Backend flavor type */
-  readonly flavor: 'server' | 'wasm';
+  readonly flavor: 'websocket' | 'wasm';
 
   /**
    * Initialize the backend.
@@ -34,7 +34,7 @@ export interface ExecutionBackend {
 
   /**
    * Compile only (no execution).
-   * Server flavor: not supported (future implementation)
+   * WebSocket flavor: not supported (future implementation)
    * WASM flavor: use compile() API
    */
   compile(code: string, options: CompileOptions): void;

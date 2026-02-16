@@ -167,7 +167,7 @@ describe('useNospaceExecution', () => {
 
       // flavor を変更
       act(() => {
-        store.set(flavorAtom, 'server');
+        store.set(flavorAtom, 'websocket');
       });
 
       await waitFor(() => {

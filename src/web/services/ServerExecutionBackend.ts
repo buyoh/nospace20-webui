@@ -1,4 +1,4 @@
-// Server flavor execution backend using Socket.IO
+// WebSocket flavor execution backend using Socket.IO
 
 import { io } from 'socket.io-client';
 import type {
@@ -25,7 +25,7 @@ const defaultSocketFactory: SocketFactory = () => io();
  * （OutputEntry 変換、システムメッセージ生成、セッション管理）のみを担当する。
  */
 export class ServerExecutionBackend implements ExecutionBackend {
-  readonly flavor = 'server' as const;
+  readonly flavor = 'websocket' as const;
 
   private client: NospaceSocketClient;
   private currentSessionId: string | null = null;
@@ -93,7 +93,7 @@ export class ServerExecutionBackend implements ExecutionBackend {
   }
 
   compile(_code: string, _options: CompileOptions): void {
-    throw new Error('Compile not supported in server flavor');
+    throw new Error('Compile not supported in websocket flavor');
   }
 
   sendStdin(data: string): void {

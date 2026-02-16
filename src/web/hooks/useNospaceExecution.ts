@@ -21,7 +21,7 @@ export type BackendFactory = (flavor: Flavor) => Promise<ExecutionBackend>;
 
 /** デフォルトの BackendFactory（動的インポートを使用） */
 const defaultBackendFactory: BackendFactory = async (flavor: Flavor) => {
-  if (flavor === 'server') {
+  if (flavor === 'websocket') {
     const { ServerExecutionBackend } = await import(
       '../services/ServerExecutionBackend'
     );

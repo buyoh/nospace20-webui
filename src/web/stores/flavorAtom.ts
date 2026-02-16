@@ -1,12 +1,13 @@
 import { atom } from 'jotai';
-import { isServerFlavorEnabled } from '../libs/env';
+import { getApplicationFlavor } from '../libs/env';
 
-export type Flavor = 'wasm' | 'server';
+export type Flavor = 'wasm' | 'websocket';
 
 /** Determine available flavors */
 function getAvailableFlavors(): readonly Flavor[] {
-  if (isServerFlavorEnabled()) {
-    return ['wasm', 'server'];
+  const flavor = getApplicationFlavor();
+  if (flavor === 'websocket') {
+    return ['wasm', 'websocket'];
   }
   return ['wasm'];
 }

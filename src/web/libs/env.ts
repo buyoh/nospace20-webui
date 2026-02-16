@@ -2,22 +2,23 @@
 // This file is separated to allow mocking in test environment
 
 import type { ExpectedEnvVars } from '../../interfaces/EnvConfig';
+import type { Flavor } from '../stores/flavorAtom';
 
-let serverFlavorEnabled: boolean | null = null;
+let applicationFlavorOverride: Flavor | null = null;
 
 /**
- * テスト等で Server Flavor の有効状態を設定する
- * @param value 有効状態
+ * テスト等でアプリケーション実行フレーバーを設定する
+ * @param value 実行フレーバー
  */
-export function setServerFlavorEnabled(value: boolean): void {
-  serverFlavorEnabled = value;
+export function setApplicationFlavor(value: Flavor): void {
+  applicationFlavorOverride = value;
 }
 
 /** ブラウザ/Vite/Node 環境から環境変数を読み込む */
 function readWebEnvVars(): ExpectedEnvVars {
   // Jest/Node 環境では process.env を使用
-  if (typeof process !== 'undefined' && process.env?.VITE_ENABLE_SERVER) {
-    return { VITE_ENABLE_SERVER: process.env.VITE_ENABLE_SERVER };
+  if (typeof process !== 'undefined' && process.env?.VITE_APPLICATION_FLAVOR) {
+    return { VITE_APPLICATION_FLAVOR: process.env.VITE_APPLICATION_FLAVOR };
   }
 
   // Vite/ブラウザ環境では import.meta.env を使用
@@ -25,22 +26,26 @@ function readWebEnvVars(): ExpectedEnvVars {
   try {
     const getImportMetaEnv = new Function('return import.meta.env');
     const env = getImportMetaEnv();
-    return { VITE_ENABLE_SERVER: env.VITE_ENABLE_SERVER };
+    return { VITE_APPLICATION_FLAVOR: env.VITE_APPLICATION_FLAVOR };
   } catch {
     return {};
   }
 }
 
-/** 環境変数をパースして Server Flavor の有効状態を返す */
-export function parseEnableServer(env: ExpectedEnvVars): boolean {
-  return env.VITE_ENABLE_SERVER === 'true';
+/** 環境変数をパースしてアプリケーション実行フレーバーを返す */
+export function parseApplicationFlavor(env: ExpectedEnvVars): Flavor {
+  const value = env.VITE_APPLICATION_FLAVOR;
+  if (value === 'websocket' || value === 'wasm') {
+    return value;
+  }
+  return 'wasm';
 }
 
 /**
- * Server Flavor が有効かどうかを返す
- * @returns Server Flavor が有効な場合 true
+ * アプリケーション実行フレーバーを返す
+ * @returns 現在の実行フレーバー
  */
-export function isServerFlavorEnabled(): boolean {
-  if (serverFlavorEnabled !== null) return serverFlavorEnabled;
-  return parseEnableServer(readWebEnvVars());
+export function getApplicationFlavor(): Flavor {
+  if (applicationFlavorOverride !== null) return applicationFlavorOverride;
+  return parseApplicationFlavor(readWebEnvVars());
 }

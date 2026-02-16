@@ -1,13 +1,15 @@
 // Mock for Jest environment
 
-let serverFlavorEnabled: boolean | null = null;
+import type { Flavor } from '../../../web/stores/flavorAtom';
 
-export function setServerFlavorEnabled(value: boolean): void {
-  serverFlavorEnabled = value;
+let applicationFlavorOverride: Flavor | null = null;
+
+export function setApplicationFlavor(value: Flavor): void {
+  applicationFlavorOverride = value;
 }
 
-export function isServerFlavorEnabled(): boolean {
-  if (serverFlavorEnabled !== null) return serverFlavorEnabled;
-  // Default to false in test environment
-  return false;
+export function getApplicationFlavor(): Flavor {
+  if (applicationFlavorOverride !== null) return applicationFlavorOverride;
+  // Default to 'wasm' in test environment
+  return 'wasm';
 }

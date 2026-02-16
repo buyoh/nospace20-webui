@@ -6,8 +6,8 @@
 export interface ExpectedEnvVars {
   /** (web, app)実行環境 ('production' | 'development' 等) */
   NODE_ENV?: string;
-  /** (web, app)Server Flavor の有効化 ('true' | 'false') */
-  VITE_ENABLE_SERVER?: string;
+  /** (web) アプリケーション実行フレーバー ('websocket' | 'wasm') */
+  VITE_APPLICATION_FLAVOR?: string;
   /** (app)HTTP サーバーポート */
   PORT?: string;
   /** (app)フロントエンド配信モード ('vite' | 'static') */

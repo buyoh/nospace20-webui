@@ -3,16 +3,16 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { Provider, createStore } from 'jotai';
 import { Header } from '../../web/components/layout/Header';
 import { flavorAtom, availableFlavorsAtom } from '../../web/stores/flavorAtom';
-import { setServerFlavorEnabled } from '../../web/libs/env';
+import { setApplicationFlavor } from '../../web/libs/env';
 import '@testing-library/jest-dom';
 
 /**
  * Jotai Store を作成し、Provider でラップしてレンダリングするヘルパー。
- * serverEnabled=true の場合、availableFlavors に 'server' が含まれる。
+ * flavor='websocket' の場合、availableFlavors に 'websocket' が含まれる。
  */
-function renderHeader(options?: { serverEnabled?: boolean }) {
-  if (options?.serverEnabled) {
-    setServerFlavorEnabled(true);
+function renderHeader(options?: { flavor?: 'wasm' | 'websocket' }) {
+  if (options?.flavor) {
+    setApplicationFlavor(options.flavor);
   }
   const store = createStore();
   const result = render(
@@ -21,8 +21,8 @@ function renderHeader(options?: { serverEnabled?: boolean }) {
     </Provider>,
   );
   // テスト後にリセット
-  if (options?.serverEnabled) {
-    setServerFlavorEnabled(false);
+  if (options?.flavor) {
+    setApplicationFlavor('wasm');
   }
   return { ...result, store };
 }
@@ -46,15 +46,15 @@ describe('Header', () => {
   });
 
   it('server有効時、セレクタが表示される', () => {
-    renderHeader({ serverEnabled: true });
+    renderHeader({ flavor: 'websocket' });
     const select = screen.getByLabelText('Execution flavor');
     expect(select).toBeInTheDocument();
   });
 
   it('server有効時、フレーバーを切り替えられる', () => {
-    const { store } = renderHeader({ serverEnabled: true });
+    const { store } = renderHeader({ flavor: 'websocket' });
     const select = screen.getByLabelText('Execution flavor') as HTMLSelectElement;
-    fireEvent.change(select, { target: { value: 'server' } });
-    expect(store.get(flavorAtom)).toBe('server');
+    fireEvent.change(select, { target: { value: 'websocket' } });
+    expect(store.get(flavorAtom)).toBe('websocket');
   });
 });
