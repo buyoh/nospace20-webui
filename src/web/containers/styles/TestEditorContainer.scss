@@ -1,0 +1,17 @@
+.test-editor-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+
+  .test-editor-list {
+    flex: 0 0 300px;
+    border-bottom: 1px solid #ccc;
+    overflow: hidden;
+  }
+
+  .test-editor-panel-wrapper {
+    flex: 1;
+    overflow: hidden;
+  }
+}

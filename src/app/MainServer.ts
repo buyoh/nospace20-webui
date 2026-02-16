@@ -7,7 +7,8 @@ import Config from './Config';
     await setupExpressServer(
       Config.httpPort,
       null, // SSLは必要に応じて設定
-      Config.frontend
+      Config.frontend,
+      Config.nospaceTestDir
     );
 
     // trap

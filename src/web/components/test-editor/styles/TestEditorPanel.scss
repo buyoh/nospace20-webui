@@ -1,0 +1,14 @@
+.test-editor-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  .test-editor-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #666;
+    font-size: 14px;
+  }
+}

@@ -18,5 +18,7 @@ export interface ExpectedEnvVars {
   NOSPACE_TIMEOUT?: string;
   /** (app)同時実行プロセス数の上限 */
   NOSPACE_MAX_PROCESSES?: string;
+  /** (app)テストファイルディレクトリのパス */
+  NOSPACE_TEST_DIR?: string;
 }
 // 修正後、.env.example も更新すること

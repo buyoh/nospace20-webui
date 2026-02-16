@@ -9,9 +9,10 @@ import { ExecutionControls } from '../components/execution/ExecutionControls';
 import { OutputPanel } from '../components/execution/OutputPanel';
 import { InputPanel } from '../components/execution/InputPanel';
 import { useNospaceExecution } from '../hooks/useNospaceExecution';
+import { TestEditorContainer } from './TestEditorContainer';
 import './styles/ExecutionContainer.scss';
 
-type OperationMode = 'execution' | 'compile';
+type OperationMode = 'execution' | 'compile' | 'test-editor';
 
 /**
  * 実行パネル全体を統括するコンテナ。
@@ -37,14 +38,20 @@ export const ExecutionContainer: React.FC = () => {
   } = useNospaceExecution();
 
   const isWasm = flavor === 'wasm';
+  const isWebSocket = flavor === 'websocket';
   const supportsCompileMode = isWasm;
+  const supportsTestEditor = isWebSocket;
+  const showModeTabs = supportsCompileMode || supportsTestEditor;
 
   // Server flavor ではコンパイルモード非対応のため、実行モードに強制
   useEffect(() => {
-    if (!supportsCompileMode) {
+    if (!supportsCompileMode && operationMode === 'compile') {
       setOperationMode('execution');
     }
-  }, [supportsCompileMode]);
+    if (!supportsTestEditor && operationMode === 'test-editor') {
+      setOperationMode('execution');
+    }
+  }, [supportsCompileMode, supportsTestEditor]);
 
   const handleRunWithInput = () => {
     const inputMode = isWasm ? 'batch' : executionOptions.inputMode;
@@ -52,28 +59,41 @@ export const ExecutionContainer: React.FC = () => {
   };
 
   const handleRunCompiled = () => {
-    if (compileOutput?.target === 'ws') {
-      handleRunCompileOutput(compileOutput.output, batchInput);
-    }
-  };
-
-  const isCompileMode = operationMode === 'compile';
+  const isTestEditorMode = operationMode === 'test-editor';
 
   return (
     <div className="execution-container">
-      {/* モード切り替えタブ（WASM flavor でのみ表示） */}
-      {supportsCompileMode && (
+      {/* モード切り替えタブ（複数モード対応の場合のみ表示） */}
+      {showModeTabs && (
         <div className="operation-mode-tabs">
           <button
-            className={`mode-tab ${!isCompileMode ? 'active' : ''}`}
+            className={`mode-tab ${operationMode === 'execution' ? 'active' : ''}`}
             onClick={() => setOperationMode('execution')}
           >
             Execution
           </button>
-          <button
-            className={`mode-tab ${isCompileMode ? 'active' : ''}`}
-            onClick={() => setOperationMode('compile')}
-          >
+          {supportsCompileMode && (
+            <button
+              className={`mode-tab ${isCompileMode ? 'active' : ''}`}
+              onClick={() => setOperationMode('compile')}
+            >
+              Compile
+            </button>
+          )}
+          {supportsTestEditor && (
+            <button
+              className={`mode-tab ${isTestEditorMode ? 'active' : ''}`}
+              onClick={() => setOperationMode('test-editor')}
+            >
+              Test Editor
+            </button>
+          )}
+        </div>
+      )}
+
+      {isTestEditorMode ? (
+        <TestEditorContainer />
+      ) :    >
             Compile
           </button>
         </div>

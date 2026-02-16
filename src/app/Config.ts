@@ -18,6 +18,7 @@ function readEnvVars(): ExpectedEnvVars {
     NOSPACE_BIN_PATH: process.env.NOSPACE_BIN_PATH,
     NOSPACE_TIMEOUT: process.env.NOSPACE_TIMEOUT,
     NOSPACE_MAX_PROCESSES: process.env.NOSPACE_MAX_PROCESSES,
+    NOSPACE_TEST_DIR: process.env.NOSPACE_TEST_DIR,
   };
 }
 
@@ -35,6 +36,7 @@ export function parseAppConfig(env: ExpectedEnvVars) {
       env.NOSPACE_BIN_PATH ?? './components/nospace20/bin/nospace20',
     nospaceTimeout: parseInt(env.NOSPACE_TIMEOUT ?? '30') * 1000, // in ms
     nospaceMaxProcesses: parseInt(env.NOSPACE_MAX_PROCESSES ?? '5'),
+    nospaceTestDir: env.NOSPACE_TEST_DIR ?? './resources/tests',
   };
 }
 
