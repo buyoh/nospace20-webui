@@ -26,15 +26,22 @@
   - [src/web/libs/__mocks__/env.ts](../../src/web/libs/__mocks__/env.ts): テスト用モック
   - [src/tests/setupTests.ts](../../src/tests/setupTests.ts): グローバルモック設定
 
-### Phase 11: Flavor 切り替え UI + 機能差異対応 (未完了)
+### Phase 11: Flavor 切り替え UI + 機能差異対応 ✅
 
-**未実装:**
-- Header に flavor セレクター追加
-- ExecutionOptions の調整 (WASM 時に非対応オプションを非表示)
-- CompileOptions コンポーネント追加
-- ExecutionControls に Compile ボタン追加
-- InputPanel の調整 (WASM 時は batch モードのみ)
-- ExecutionContainer の更新
+**実装完了:**
+- Header に flavor セレクター追加 - [src/web/components/layout/Header.tsx](../../src/web/components/layout/Header.tsx) (既に実装済み)
+- CompileOptions コンポーネント作成 - [src/web/components/execution/CompileOptions.tsx](../../src/web/components/execution/CompileOptions.tsx)
+- ExecutionOptions の調整 (WASM 時に非対応オプションを非表示) - [src/web/components/execution/ExecutionOptions.tsx](../../src/web/components/execution/ExecutionOptions.tsx)
+- ExecutionControls に Compile ボタン追加 - [src/web/components/execution/ExecutionControls.tsx](../../src/web/components/execution/ExecutionControls.tsx)
+- InputPanel の調整 (forceBatchMode prop) - [src/web/components/execution/InputPanel.tsx](../../src/web/components/execution/InputPanel.tsx)
+- ExecutionContainer の更新 - [src/web/containers/ExecutionContainer.tsx](../../src/web/containers/ExecutionContainer.tsx)
+- Flavor 切り替え時のオプション自動リセット - [src/web/hooks/useNospaceExecution.ts](../../src/web/hooks/useNospaceExecution.ts)
+- CompileOptions のユニットテスト追加 - [src/tests/web/CompileOptions.spec.tsx](../../src/tests/web/CompileOptions.spec.tsx)
+- ExecutionControls のテスト更新 (Compile ボタン対応) - [src/tests/web/ExecutionControls.spec.tsx](../../src/tests/web/ExecutionControls.spec.tsx)
+
+**テスト結果:**
+- 全テスト成功 (PASS)
+- カバレッジ: 83.47% (CompileOptions: 100%, ExecutionControls: 100%)
 
 ## 技術的な決定事項
 
@@ -57,12 +64,14 @@
 
 ## 残課題
 
-1. **Phase 11 の UI 実装完了** (最優先)
-   - flavor セレクター、機能差異に応じた UI の表示/非表示制御
+1. ~~**Phase 11 の UI 実装完了** (最優先)~~ ✅ 完了
+   - ~~flavor セレクター、機能差異に応じた UI の表示/非表示制御~~
 
-2. **テストの更新** (高)
-   - useNospaceExecution.spec.tsx を新しい実装に対応
-   - WasmExecutionBackend のユニットテスト追加
+2. ~~**テストの更新** (高)~~ ✅ 完了
+   - ~~useNospaceExecution.spec.tsx を新しい実装に対応~~
+   - ~~WasmExecutionBackend のユニットテスト追加~~
+   - ~~CompileOptions のユニットテスト追加~~
+   - ~~ExecutionControls のテスト更新~~
 
 3. **動作検証** (高)
    - WASM flavor で compile / run が正常に動作するか
@@ -74,8 +83,8 @@
 
 ## 次のステップ
 
-1. Phase 11 の UI 実装を完了
-2. 全テストを実行してエラーを確認・修正
+1. ~~Phase 11 の UI 実装を完了~~ ✅ 完了
+2. ~~全テストを実行してエラーを確認・修正~~ ✅ 完了
 3. 動作検証 (手動テスト)
 4. コミット & タスクを done-tasks/ に移動
 

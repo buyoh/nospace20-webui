@@ -45,11 +45,24 @@ export function useNospaceExecution(
   const setCurrentSessionId = useSetAtom(currentSessionIdAtom);
   const setOutputEntries = useSetAtom(outputEntriesAtom);
   const setExitCode = useSetAtom(exitCodeAtom);
+  const setExecutionOptions = useSetAtom(executionOptionsAtom);
 
   const backendRef = useRef<ExecutionBackend | null>(null);
 
   const isRunning =
     executionStatus === 'running' || executionStatus === 'compiling';
+
+  // Flavor 切り替え時にオプションを自動リセット
+  useEffect(() => {
+    if (flavor === 'wasm') {
+      // WASM 非対応のオプションをリセット
+      setExecutionOptions((prev) => ({
+        ...prev,
+        inputMode: 'batch',
+        ignoreDebug: false,
+      }));
+    }
+  }, [flavor, setExecutionOptions]);
 
   // Switch backend when flavor changes
   useEffect(() => {

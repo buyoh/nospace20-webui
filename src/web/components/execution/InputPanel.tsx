@@ -11,6 +11,8 @@ interface InputPanelProps {
   onSendStdin: (data: string) => void;
   batchInput?: string;
   onBatchInputChange?: (value: string) => void;
+  /** true の場合、inputMode に関わらず batch UI のみ表示 */
+  forceBatchMode?: boolean;
 }
 
 export const InputPanel: React.FC<InputPanelProps> = ({
@@ -18,6 +20,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({
   onSendStdin,
   batchInput = '',
   onBatchInputChange,
+  forceBatchMode = false,
 }) => {
   const executionOptions = useAtomValue(executionOptionsAtom);
   const [interactiveInput, setInteractiveInput] = useState('');
@@ -47,7 +50,10 @@ export const InputPanel: React.FC<InputPanelProps> = ({
     }
   };
 
-  if (executionOptions.inputMode === 'interactive') {
+  // WASM flavor（forceBatchMode=true）の場合は常に batch UI
+  const effectiveInputMode = forceBatchMode ? 'batch' : executionOptions.inputMode;
+
+  if (effectiveInputMode === 'interactive') {
     return (
       <div className="input-panel">
         <h3>Interactive Input</h3>
