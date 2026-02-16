@@ -4,18 +4,19 @@
  * Web 側は src/web/libs/env.ts、App 側は src/app/Config.ts で読み込む。
  */
 export interface ExpectedEnvVars {
-  /** 実行環境 ('production' | 'development' 等) */
+  /** (web, app)実行環境 ('production' | 'development' 等) */
   NODE_ENV?: string;
-  /** Server Flavor の有効化 ('true' | 'false') */
+  /** (web, app)Server Flavor の有効化 ('true' | 'false') */
   VITE_ENABLE_SERVER?: string;
-  /** HTTP サーバーポート */
+  /** (app)HTTP サーバーポート */
   PORT?: string;
-  /** フロントエンド配信モード ('vite' | 'static') */
+  /** (app)フロントエンド配信モード ('vite' | 'static') */
   FRONTEND?: string;
-  /** nospace20 実行ファイルのパス */
+  /** (app)nospace20 実行ファイルのパス */
   NOSPACE_BIN_PATH?: string;
-  /** プロセス実行タイムアウト（秒） */
+  /** (app)プロセス実行タイムアウト（秒） */
   NOSPACE_TIMEOUT?: string;
-  /** 同時実行プロセス数の上限 */
+  /** (app)同時実行プロセス数の上限 */
   NOSPACE_MAX_PROCESSES?: string;
 }
+// 修正後、.env.example も更新すること
