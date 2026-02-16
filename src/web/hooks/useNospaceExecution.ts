@@ -13,11 +13,32 @@ import { flavorAtom } from '../stores/flavorAtom';
 import type { ExecutionBackend } from '../services/ExecutionBackend';
 import type { Flavor } from '../stores/flavorAtom';
 import type { CompileTarget } from '../../interfaces/NospaceTypes';
+import type { CompileOutput } from '../stores/compileOutputAtom';
 // Note: ServerExecutionBackend is dynamically imported for tree-shaking
 // import { WasmExecutionBackend } from '../services/WasmExecutionBackend';
 
 /** ExecutionBackend を生成するファクトリ関数 */
 export type BackendFactory = (flavor: Flavor) => Promise<ExecutionBackend>;
+
+/** useNospaceExecution フックの返り値 */
+export interface UseNospaceExecutionResult {
+  /** 実行中またはコンパイル中かどうか */
+  isRunning: boolean;
+  /** ソースコードを実行する */
+  handleRun: (stdinData?: string) => void;
+  /** ソースコードをコンパイルする */
+  handleCompile: () => void;
+  /** コンパイル済みコードを実行する（Whitespace ターゲット時のみ） */
+  handleRunCompileOutput: (compiledCode: string, stdinData?: string) => void;
+  /** 実行中のプロセスを停止する */
+  handleKill: () => void;
+  /** 標準入力にデータを送信する */
+  handleSendStdin: (data: string) => void;
+  /** 出力をクリアする */
+  handleClearOutput: () => void;
+  /** コンパイル結果 */
+  compileOutput: CompileOutput | null;
+}
 
 /** デフォルトの BackendFactory（動的インポートを使用） */
 const defaultBackendFactory: BackendFactory = async (flavor: Flavor) => {
@@ -37,7 +58,7 @@ const defaultBackendFactory: BackendFactory = async (flavor: Flavor) => {
 
 export function useNospaceExecution(
   backendFactory: BackendFactory = defaultBackendFactory,
-) {
+): UseNospaceExecutionResult {
   const flavor = useAtomValue(flavorAtom);
   const sourceCode = useAtomValue(sourceCodeAtom);
   const executionOptions = useAtomValue(executionOptionsAtom);
