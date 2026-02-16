@@ -8,9 +8,11 @@ import {
   outputEntriesAtom,
   exitCodeAtom,
 } from '../stores/executionAtom';
+import { compileOutputAtom } from '../stores/compileOutputAtom';
 import { flavorAtom } from '../stores/flavorAtom';
 import type { ExecutionBackend } from '../services/ExecutionBackend';
 import type { Flavor } from '../stores/flavorAtom';
+import type { CompileTarget } from '../../interfaces/NospaceTypes';
 // Note: ServerExecutionBackend is dynamically imported for tree-shaking
 // import { WasmExecutionBackend } from '../services/WasmExecutionBackend';
 
@@ -46,8 +48,12 @@ export function useNospaceExecution(
   const setOutputEntries = useSetAtom(outputEntriesAtom);
   const setExitCode = useSetAtom(exitCodeAtom);
   const setExecutionOptions = useSetAtom(executionOptionsAtom);
+  const compileOutput = useAtomValue(compileOutputAtom);
+  const setCompileOutput = useSetAtom(compileOutputAtom);
 
   const backendRef = useRef<ExecutionBackend | null>(null);
+  /** コンパイル中のターゲット。null 以外の場合、stdout を compileOutputAtom にルーティングする */
+  const compileTargetRef = useRef<CompileTarget | null>(null);
 
   const isRunning =
     executionStatus === 'running' || executionStatus === 'compiling';
@@ -77,11 +83,24 @@ export function useNospaceExecution(
       }
 
       // Setup callbacks
+      // コンパイル中は stdout を compileOutputAtom にルーティングし、
+      // それ以外は outputEntriesAtom に送る
       backend.onOutput((entry) => {
-        setOutputEntries((prev) => [...prev, entry]);
+        if (compileTargetRef.current !== null && entry.type === 'stdout') {
+          setCompileOutput((prev) => ({
+            output: (prev?.output ?? '') + entry.data,
+            target: compileTargetRef.current!,
+          }));
+        } else {
+          setOutputEntries((prev) => [...prev, entry]);
+        }
       });
 
       backend.onStatusChange((status, sessionId, exitCode) => {
+        // コンパイル完了後に compileTargetRef をリセット
+        if (status !== 'compiling') {
+          compileTargetRef.current = null;
+        }
         setExecutionStatus(status);
         setCurrentSessionId(sessionId);
         if (exitCode !== undefined) {
@@ -115,6 +134,7 @@ export function useNospaceExecution(
     flavor,
     backendFactory,
     setOutputEntries,
+    setCompileOutput,
     setExecutionStatus,
     setCurrentSessionId,
     setExitCode,
@@ -158,9 +178,33 @@ export function useNospaceExecution(
     const backend = backendRef.current;
     if (!backend || !backend.isReady() || isRunning) return;
 
+    compileTargetRef.current = compileOptions.target;
+    setCompileOutput(null);
     setOutputEntries([]);
     backend.compile(sourceCode, compileOptions);
-  }, [sourceCode, compileOptions, isRunning, setOutputEntries]);
+  }, [sourceCode, compileOptions, isRunning, setOutputEntries, setCompileOutput]);
+
+  /** コンパイル済みコードを実行する（Whitespace ターゲット時のみ） */
+  const handleRunCompileOutput = useCallback(
+    (compiledCode: string, stdinData?: string) => {
+      const backend = backendRef.current;
+      if (!backend || !backend.isReady() || isRunning) return;
+
+      compileTargetRef.current = null;
+      setOutputEntries([]);
+      backend.run(
+        compiledCode,
+        {
+          language: 'ws',
+          debug: executionOptions.debug,
+          ignoreDebug: false,
+          inputMode: 'batch',
+        },
+        stdinData,
+      );
+    },
+    [executionOptions, isRunning, setOutputEntries],
+  );
 
   const handleKill = useCallback(() => {
     backendRef.current?.kill();
@@ -178,8 +222,10 @@ export function useNospaceExecution(
     isRunning,
     handleRun,
     handleCompile,
+    handleRunCompileOutput,
     handleKill,
     handleSendStdin,
     handleClearOutput,
+    compileOutput,
   };
 }

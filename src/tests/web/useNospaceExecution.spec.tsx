@@ -13,6 +13,7 @@ import {
   outputEntriesAtom,
   exitCodeAtom,
 } from '../../web/stores/executionAtom';
+import { compileOutputAtom } from '../../web/stores/compileOutputAtom';
 import { flavorAtom } from '../../web/stores/flavorAtom';
 import type { ExecutionBackend } from '../../web/services/ExecutionBackend';
 import type { OutputEntry, ExecutionStatus } from '../../interfaces/NospaceTypes';
@@ -421,6 +422,208 @@ describe('useNospaceExecution', () => {
 
       expect(store.get(executionStatusAtom)).toBe('finished');
       expect(store.get(exitCodeAtom)).toBe(0);
+    });
+  });
+
+  describe('handleCompile - compile output routing', () => {
+    it('handleCompile 時に stdout が compileOutputAtom にルーティングされる', async () => {
+      const { store, wrapper } = createTestWrapper();
+      store.set(sourceCodeAtom, 'print "test"');
+      store.set(executionStatusAtom, 'idle');
+      store.set(compileOptionsAtom, { language: 'standard', target: 'ws' });
+
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+
+      await waitFor(() => {
+        expect(fakeBackend.isReadyValue).toBe(true);
+      });
+
+      act(() => {
+        result.current.handleCompile();
+      });
+
+      expect(fakeBackend.compileMock).toHaveBeenCalled();
+
+      // コンパイル中の stdout をシミュレート
+      act(() => {
+        fakeBackend.triggerOutput({
+          type: 'stdout',
+          data: 'compiled ws code\n',
+          timestamp: 100,
+        });
+      });
+
+      const compileOutput = store.get(compileOutputAtom);
+      expect(compileOutput).toEqual({
+        output: 'compiled ws code\n',
+        target: 'ws',
+      });
+
+      // outputEntries には追加されない
+      expect(store.get(outputEntriesAtom)).toEqual([]);
+    });
+
+    it('handleCompile 時に stderr は outputEntriesAtom にルーティングされる', async () => {
+      const { store, wrapper } = createTestWrapper();
+      store.set(sourceCodeAtom, 'bad code');
+      store.set(executionStatusAtom, 'idle');
+      store.set(compileOptionsAtom, { language: 'standard', target: 'mnemonic' });
+
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+
+      await waitFor(() => {
+        expect(fakeBackend.isReadyValue).toBe(true);
+      });
+
+      act(() => {
+        result.current.handleCompile();
+      });
+
+      // コンパイルエラーをシミュレート
+      act(() => {
+        fakeBackend.triggerOutput({
+          type: 'stderr',
+          data: 'compile error\n',
+          timestamp: 200,
+        });
+      });
+
+      // stderr は outputEntries に追加される
+      const entries = store.get(outputEntriesAtom);
+      expect(entries).toHaveLength(1);
+      expect(entries[0].type).toBe('stderr');
+
+      // compileOutput は空のまま
+      expect(store.get(compileOutputAtom)).toBeNull();
+    });
+
+    it('handleCompile で compileOutput がリセットされる', async () => {
+      const { store, wrapper } = createTestWrapper();
+      store.set(sourceCodeAtom, 'code');
+      store.set(executionStatusAtom, 'idle');
+      store.set(compileOptionsAtom, { language: 'standard', target: 'ws' });
+      store.set(compileOutputAtom, { output: 'old output', target: 'mnemonic' });
+
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+
+      await waitFor(() => {
+        expect(fakeBackend.isReadyValue).toBe(true);
+      });
+
+      act(() => {
+        result.current.handleCompile();
+      });
+
+      // handleCompile はまず null にリセットする
+      expect(store.get(compileOutputAtom)).toBeNull();
+    });
+
+    it('ステータスが compiling 以外になると stdout ルーティングが通常に戻る', async () => {
+      const { store, wrapper } = createTestWrapper();
+      store.set(sourceCodeAtom, 'code');
+      store.set(executionStatusAtom, 'idle');
+      store.set(compileOptionsAtom, { language: 'standard', target: 'ws' });
+
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+
+      await waitFor(() => {
+        expect(fakeBackend.isReadyValue).toBe(true);
+      });
+
+      act(() => {
+        result.current.handleCompile();
+      });
+
+      // ステータスを finished に変更（compileTargetRef がリセットされる）
+      act(() => {
+        fakeBackend.triggerStatusChange('finished', 'session-1', 0);
+      });
+
+      // この後の stdout は outputEntries に追加される
+      act(() => {
+        fakeBackend.triggerOutput({
+          type: 'stdout',
+          data: 'normal output',
+          timestamp: 300,
+        });
+      });
+
+      const entries = store.get(outputEntriesAtom);
+      expect(entries).toHaveLength(1);
+      expect(entries[0].data).toBe('normal output');
+    });
+  });
+
+  describe('handleRunCompileOutput', () => {
+    it('コンパイル済みコードが ws 言語で実行される', async () => {
+      const { store, wrapper } = createTestWrapper();
+      store.set(executionStatusAtom, 'idle');
+      store.set(executionOptionsAtom, {
+        debug: true,
+        ignoreDebug: false,
+        inputMode: 'batch',
+      });
+
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+
+      await waitFor(() => {
+        expect(fakeBackend.isReadyValue).toBe(true);
+      });
+
+      act(() => {
+        result.current.handleRunCompileOutput('compiled ws code', 'stdin data');
+      });
+
+      expect(fakeBackend.runMock).toHaveBeenCalledWith(
+        'compiled ws code',
+        expect.objectContaining({
+          language: 'ws',
+          debug: true,
+          ignoreDebug: false,
+          inputMode: 'batch',
+        }),
+        'stdin data',
+      );
+    });
+
+    it('実行前に outputEntries がクリアされる', async () => {
+      const { store, wrapper } = createTestWrapper();
+      store.set(executionStatusAtom, 'idle');
+      store.set(outputEntriesAtom, [{ type: 'stdout', data: 'old', timestamp: 1 }]);
+
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+
+      await waitFor(() => {
+        expect(fakeBackend.isReadyValue).toBe(true);
+      });
+
+      act(() => {
+        result.current.handleRunCompileOutput('code');
+      });
+
+      expect(store.get(outputEntriesAtom)).toEqual([]);
+    });
+  });
+
+  describe('compileOutput', () => {
+    it('compileOutput が hook から返される', async () => {
+      const { store, wrapper } = createTestWrapper();
+      store.set(compileOutputAtom, { output: 'test', target: 'ws' });
+
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+
+      expect(result.current.compileOutput).toEqual({
+        output: 'test',
+        target: 'ws',
+      });
+    });
+
+    it('compileOutput が null のとき null が返される', async () => {
+      const { wrapper } = createTestWrapper();
+
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+
+      expect(result.current.compileOutput).toBeNull();
     });
   });
 });

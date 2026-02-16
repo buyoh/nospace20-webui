@@ -34,4 +34,13 @@
       background-color: #c72e0d;
     }
   }
+
+  .btn-compile {
+    background-color: #0d5aa7;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background-color: #1177d2;
+    }
+  }
 }

@@ -4,7 +4,7 @@ import { ExecutionControls } from '../../web/components/execution/ExecutionContr
 import '@testing-library/jest-dom';
 
 describe('ExecutionControls', () => {
-  it('Runボタンが表示される', () => {
+  it('onRun 指定時に Run ボタンが表示される', () => {
     const mockOnRun = jest.fn();
     const mockOnKill = jest.fn();
     render(
@@ -19,13 +19,23 @@ describe('ExecutionControls', () => {
     expect(runButton).toBeInTheDocument();
   });
 
-  it('Stopボタンが表示される', () => {
-    const mockOnRun = jest.fn();
+  it('onRun 未指定時に Run ボタンが表示されない', () => {
     const mockOnKill = jest.fn();
     render(
       <ExecutionControls
         isRunning={false}
-        onRun={mockOnRun}
+        onKill={mockOnKill}
+      />
+    );
+
+    expect(screen.queryByText('Run')).not.toBeInTheDocument();
+  });
+
+  it('Stop ボタンが表示される', () => {
+    const mockOnKill = jest.fn();
+    render(
+      <ExecutionControls
+        isRunning={false}
         onKill={mockOnKill}
       />
     );
@@ -34,7 +44,7 @@ describe('ExecutionControls', () => {
     expect(stopButton).toBeInTheDocument();
   });
 
-  it('実行中でない場合、Runボタンが有効', () => {
+  it('実行中でない場合、Run ボタンが有効', () => {
     const mockOnRun = jest.fn();
     const mockOnKill = jest.fn();
     render(
@@ -49,7 +59,7 @@ describe('ExecutionControls', () => {
     expect(runButton).not.toBeDisabled();
   });
 
-  it('実行中の場合、Runボタンが無効', () => {
+  it('実行中の場合、Run ボタンが無効', () => {
     const mockOnRun = jest.fn();
     const mockOnKill = jest.fn();
     render(
@@ -64,7 +74,7 @@ describe('ExecutionControls', () => {
     expect(runButton).toBeDisabled();
   });
 
-  it('Runボタンクリック時にonRunが呼ばれる', () => {
+  it('Run ボタンクリック時に onRun が呼ばれる', () => {
     const mockOnRun = jest.fn();
     const mockOnKill = jest.fn();
     render(
@@ -80,13 +90,11 @@ describe('ExecutionControls', () => {
     expect(mockOnRun).toHaveBeenCalledTimes(1);
   });
 
-  it('Stopボタンクリック時にonKillが呼ばれる', () => {
-    const mockOnRun = jest.fn();
+  it('Stop ボタンクリック時に onKill が呼ばれる', () => {
     const mockOnKill = jest.fn();
     render(
       <ExecutionControls
         isRunning={true}
-        onRun={mockOnRun}
         onKill={mockOnKill}
       />
     );
@@ -96,34 +104,27 @@ describe('ExecutionControls', () => {
     expect(mockOnKill).toHaveBeenCalledTimes(1);
   });
 
-  it('supportsCompile=false の場合、Compile ボタンが表示されない', () => {
-    const mockOnRun = jest.fn();
+  it('onCompile 未指定時に Compile ボタンが表示されない', () => {
     const mockOnKill = jest.fn();
-    const mockOnCompile = jest.fn();
     render(
       <ExecutionControls
         isRunning={false}
-        onRun={mockOnRun}
         onKill={mockOnKill}
-        onCompile={mockOnCompile}
-        supportsCompile={false}
+        onRun={jest.fn()}
       />
     );
 
     expect(screen.queryByText('Compile')).not.toBeInTheDocument();
   });
 
-  it('supportsCompile=true の場合、Compile ボタンが表示される', () => {
-    const mockOnRun = jest.fn();
+  it('onCompile 指定時に Compile ボタンが表示される', () => {
     const mockOnKill = jest.fn();
     const mockOnCompile = jest.fn();
     render(
       <ExecutionControls
         isRunning={false}
-        onRun={mockOnRun}
         onKill={mockOnKill}
         onCompile={mockOnCompile}
-        supportsCompile={true}
       />
     );
 
@@ -132,16 +133,13 @@ describe('ExecutionControls', () => {
   });
 
   it('実行中でない場合、Compile ボタンが有効', () => {
-    const mockOnRun = jest.fn();
     const mockOnKill = jest.fn();
     const mockOnCompile = jest.fn();
     render(
       <ExecutionControls
         isRunning={false}
-        onRun={mockOnRun}
         onKill={mockOnKill}
         onCompile={mockOnCompile}
-        supportsCompile={true}
       />
     );
 
@@ -150,16 +148,13 @@ describe('ExecutionControls', () => {
   });
 
   it('実行中の場合、Compile ボタンが無効', () => {
-    const mockOnRun = jest.fn();
     const mockOnKill = jest.fn();
     const mockOnCompile = jest.fn();
     render(
       <ExecutionControls
         isRunning={true}
-        onRun={mockOnRun}
         onKill={mockOnKill}
         onCompile={mockOnCompile}
-        supportsCompile={true}
       />
     );
 
@@ -168,21 +163,34 @@ describe('ExecutionControls', () => {
   });
 
   it('Compile ボタンクリック時に onCompile が呼ばれる', () => {
-    const mockOnRun = jest.fn();
     const mockOnKill = jest.fn();
     const mockOnCompile = jest.fn();
     render(
       <ExecutionControls
         isRunning={false}
-        onRun={mockOnRun}
         onKill={mockOnKill}
         onCompile={mockOnCompile}
-        supportsCompile={true}
       />
     );
 
     const compileButton = screen.getByText('Compile');
     fireEvent.click(compileButton);
     expect(mockOnCompile).toHaveBeenCalledTimes(1);
+  });
+
+  it('Compile mode（onRun 無し、onCompile あり）のレイアウト', () => {
+    const mockOnKill = jest.fn();
+    const mockOnCompile = jest.fn();
+    render(
+      <ExecutionControls
+        isRunning={false}
+        onKill={mockOnKill}
+        onCompile={mockOnCompile}
+      />
+    );
+
+    expect(screen.getByText('Compile')).toBeInTheDocument();
+    expect(screen.queryByText('Run')).not.toBeInTheDocument();
+    expect(screen.getByText('Stop')).toBeInTheDocument();
   });
 });

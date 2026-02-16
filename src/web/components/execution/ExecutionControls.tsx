@@ -4,11 +4,11 @@ import './styles/ExecutionControls.scss';
 /** 実行コントロール（Run/Compile/Kill ボタン）の Props */
 interface ExecutionControlsProps {
   isRunning: boolean;
-  onRun: () => void;
+  /** Run ボタンのコールバック。未指定の場合、Run ボタンは非表示 */
+  onRun?: () => void;
   onKill: () => void;
-  /** Compile ボタンを表示するか（WASM flavor のみ） */
+  /** Compile ボタンのコールバック。未指定の場合、Compile ボタンは非表示 */
   onCompile?: () => void;
-  supportsCompile?: boolean;
 }
 
 export const ExecutionControls: React.FC<ExecutionControlsProps> = ({
@@ -16,11 +16,10 @@ export const ExecutionControls: React.FC<ExecutionControlsProps> = ({
   onRun,
   onKill,
   onCompile,
-  supportsCompile = false,
 }) => {
   return (
     <div className="execution-controls">
-      {supportsCompile && onCompile && (
+      {onCompile && (
         <button
           onClick={onCompile}
           disabled={isRunning}
@@ -29,9 +28,11 @@ export const ExecutionControls: React.FC<ExecutionControlsProps> = ({
           Compile
         </button>
       )}
-      <button onClick={onRun} disabled={isRunning} className="btn-run">
-        Run
-      </button>
+      {onRun && (
+        <button onClick={onRun} disabled={isRunning} className="btn-run">
+          Run
+        </button>
+      )}
       <button onClick={onKill} disabled={!isRunning} className="btn-kill">
         Stop
       </button>
