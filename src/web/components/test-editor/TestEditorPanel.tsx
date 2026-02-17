@@ -83,6 +83,7 @@ export const TestEditorPanel: React.FC = () => {
     return (
       <TestCaseCreateForm
         categories={categories}
+        source={testCase?.source || ''}
         onSubmit={handleCreate}
         onCancel={cancelCreate}
         isSaving={isSaving}
@@ -105,7 +106,6 @@ export const TestEditorPanel: React.FC = () => {
       testCase={testCase}
       isDirty={isDirty}
       isSaving={isSaving}
-      onSourceChange={updateSource}
       onCheckChange={updateCheck}
       onSave={handleSave}
     />

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { CodeTextarea } from '../editor/CodeTextarea';
 import './styles/TestCaseCreateForm.scss';
 
 interface TestCaseCreateFormProps {
   categories: string[];
+  source: string;
   onSubmit: (params: {
     category: string;
     fileName: string;
@@ -16,16 +16,18 @@ interface TestCaseCreateFormProps {
 
 /**
  * テストケース新規作成フォーム
+ * ソースコード (.ns) はメインエディタに表示されるため、
+ * このフォームではカテゴリ、ファイル名、期待結果 (.check.json) のみを入力する
  */
 export const TestCaseCreateForm: React.FC<TestCaseCreateFormProps> = ({
   categories,
+  source,
   onSubmit,
   onCancel,
   isSaving,
 }) => {
   const [category, setCategory] = useState(categories[0] || '');
   const [fileName, setFileName] = useState('');
-  const [source, setSource] = useState('');
   const [check, setCheck] = useState('');
 
   const handleSubmit = () => {
@@ -64,13 +66,6 @@ export const TestCaseCreateForm: React.FC<TestCaseCreateFormProps> = ({
             onChange={(e) => setFileName(e.target.value)}
             placeholder="e.g., test_001"
             disabled={isSaving}
-          />
-        </div>
-        <div className="form-section">
-          <label>Source (.ns)</label>
-          <CodeTextarea
-            value={source}
-            onChange={setSource}
           />
         </div>
         <div className="form-section">

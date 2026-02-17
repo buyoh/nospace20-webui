@@ -103,7 +103,12 @@ export function useTestEditor(client: TestApiClient = testApiClient) {
    */
   const startCreate = () => {
     setIsCreateMode(true);
-    setTestCase(null);
+    // 新規作成用の空のテストケースをセット
+    setTestCase({
+      path: '(new test case)',
+      source: '',
+      check: '',
+    });
     setIsDirty(false);
   };
 

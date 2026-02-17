@@ -1,24 +1,23 @@
 import React from 'react';
-import { CodeTextarea } from '../editor/CodeTextarea';
 import './styles/TestCaseEditForm.scss';
 
 interface TestCaseEditFormProps {
   testCase: { path: string; source: string; check: string | null };
   isDirty: boolean;
   isSaving: boolean;
-  onSourceChange: (source: string) => void;
   onCheckChange: (check: string) => void;
   onSave: () => void;
 }
 
 /**
  * テストケース編集フォーム
+ * ソースコード (.ns) はメインエディタに表示されるため、
+ * このフォームでは期待結果 (.check.json) のみを編集する
  */
 export const TestCaseEditForm: React.FC<TestCaseEditFormProps> = ({
   testCase,
   isDirty,
   isSaving,
-  onSourceChange,
   onCheckChange,
   onSave,
 }) => {
@@ -28,13 +27,6 @@ export const TestCaseEditForm: React.FC<TestCaseEditFormProps> = ({
         <h3>{testCase.path}</h3>
       </div>
       <div className="form-body">
-        <div className="form-section">
-          <label>Source (.ns)</label>
-          <CodeTextarea
-            value={testCase.source}
-            onChange={onSourceChange}
-          />
-        </div>
         <div className="form-section">
           <label>Expected Result (.check.json)</label>
           <textarea

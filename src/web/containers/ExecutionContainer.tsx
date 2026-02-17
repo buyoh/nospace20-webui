@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useAtomValue } from 'jotai';
+import { useAtom, useAtomValue } from 'jotai';
 import { executionOptionsAtom } from '../stores/optionsAtom';
 import { flavorAtom } from '../stores/flavorAtom';
+import { operationModeAtom } from '../stores/testEditorAtom';
 import { ExecutionOptions } from '../components/execution/ExecutionOptions';
 import { CompileOptions } from '../components/execution/CompileOptions';
 import { CompileOutputPanel } from '../components/execution/CompileOutputPanel';
@@ -12,8 +13,6 @@ import { useNospaceExecution } from '../hooks/useNospaceExecution';
 import { TestEditorContainer } from './TestEditorContainer';
 import './styles/ExecutionContainer.scss';
 
-type OperationMode = 'execution' | 'compile' | 'test-editor';
-
 /**
  * 実行パネル全体を統括するコンテナ。
  * Execution mode と Compile mode を切り替え可能。
@@ -23,7 +22,7 @@ export const ExecutionContainer: React.FC = () => {
   const flavor = useAtomValue(flavorAtom);
   const executionOptions = useAtomValue(executionOptionsAtom);
   const [batchInput, setBatchInput] = useState('');
-  const [operationMode, setOperationMode] = useState<OperationMode>('execution');
+  const [operationMode, setOperationMode] = useAtom(operationModeAtom);
   const [compileOutputCollapsed, setCompileOutputCollapsed] = useState(false);
 
   const {
