@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { CodeTextarea } from '../editor/CodeTextarea';
 import './styles/TestCaseCreateForm.scss';
 
 interface TestCaseCreateFormProps {
@@ -67,11 +68,9 @@ export const TestCaseCreateForm: React.FC<TestCaseCreateFormProps> = ({
         </div>
         <div className="form-section">
           <label>Source (.ns)</label>
-          <textarea
-            className="source-editor"
+          <CodeTextarea
             value={source}
-            onChange={(e) => setSource(e.target.value)}
-            disabled={isSaving}
+            onChange={setSource}
           />
         </div>
         <div className="form-section">

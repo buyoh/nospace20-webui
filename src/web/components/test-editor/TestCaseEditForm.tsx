@@ -1,4 +1,5 @@
 import React from 'react';
+import { CodeTextarea } from '../editor/CodeTextarea';
 import './styles/TestCaseEditForm.scss';
 
 interface TestCaseEditFormProps {
@@ -29,11 +30,9 @@ export const TestCaseEditForm: React.FC<TestCaseEditFormProps> = ({
       <div className="form-body">
         <div className="form-section">
           <label>Source (.ns)</label>
-          <textarea
-            className="source-editor"
+          <CodeTextarea
             value={testCase.source}
-            onChange={(e) => onSourceChange(e.target.value)}
-            disabled={isSaving}
+            onChange={onSourceChange}
           />
         </div>
         <div className="form-section">
