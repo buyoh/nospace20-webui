@@ -59,6 +59,12 @@ export const ExecutionContainer: React.FC = () => {
   };
 
   const handleRunCompiled = () => {
+    if (compileOutput?.target === 'ws') {
+      handleRunCompileOutput(compileOutput.output, batchInput);
+    }
+  };
+
+  const isCompileMode = operationMode === 'compile';
   const isTestEditorMode = operationMode === 'test-editor';
 
   return (
@@ -93,13 +99,7 @@ export const ExecutionContainer: React.FC = () => {
 
       {isTestEditorMode ? (
         <TestEditorContainer />
-      ) :    >
-            Compile
-          </button>
-        </div>
-      )}
-
-      {isCompileMode ? (
+      ) : isCompileMode ? (
         <>
           {/* Compile mode */}
           <CompileOptions />
