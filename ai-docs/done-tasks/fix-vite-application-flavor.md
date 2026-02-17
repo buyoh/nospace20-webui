@@ -4,13 +4,31 @@
 
 `.env.local` の `VITE_APPLICATION_FLAVOR` を `wasm` から `websocket` に変更しても、アプリケーションが `wasm` のままになっている。
 
-## 原因
+## 根本原因
 
-Vite では `.env.local` ファイルは**開発サーバーの起動時**に読み込まれ、`import.meta.env` として提供されます。ファイルを変更しただけでは、既に起動している開発サーバーには反映されません。
+**`flavorAtom` の初期値が常に `'wasm'` にハードコードされていました。**
+
+```typescript
+// 修正前
+export const flavorAtom = atom<Flavor>('wasm');
+```
+
+環境変数で `VITE_APPLICATION_FLAVOR=websocket` を設定していても、アプリケーションの初期表示では `flavorAtom` の初期値である `'wasm'` が使われていました。
 
 ## 解決方法
 
-**.env.local の変更後は、開発サーバーを再起動してください。**
+### 1. コードの修正（必須）
+
+`flavorAtom` の初期値を環境変数から取得するように修正しました：
+
+```typescript
+// 修正後
+export const flavorAtom = atom<Flavor>(getApplicationFlavor());
+```
+
+これにより、`.env.local` の `VITE_APPLICATION_FLAVOR` の値が初期表示に反映されるようになります。
+
+### 2. 開発サーバーの再起動（必須）
 
 ```bash
 # 開発サーバーを停止 (Ctrl+C)

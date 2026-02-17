@@ -20,6 +20,7 @@ export const availableFlavorsAtom = atom<readonly Flavor[]>((get) => {
 
 /**
  * Currently selected flavor.
- * Default is 'wasm' (works everywhere without server).
+ * Default is determined by VITE_APPLICATION_FLAVOR environment variable.
+ * Falls back to 'wasm' if not set.
  */
-export const flavorAtom = atom<Flavor>('wasm');
+export const flavorAtom = atom<Flavor>(getApplicationFlavor());
