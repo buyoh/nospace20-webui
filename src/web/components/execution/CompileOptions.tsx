@@ -48,8 +48,6 @@ export const CompileOptions: React.FC = () => {
           >
             <option value="ws">Whitespace</option>
             <option value="mnemonic">Mnemonic</option>
-            <option value="ex-ws">Extended Whitespace</option>
-            <option value="json">JSON</option>
           </select>
         </label>
       </div>
