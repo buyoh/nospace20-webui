@@ -50,17 +50,16 @@
     user-select: none;
 
     &:hover {
-      background-color: #f0f0f0;
+      background-color: #f0f0f040;
     }
 
     &.selected {
-      background-color: #e6f3ff;
-      font-weight: bold;
+      background-color: #e6f3ff40;
     }
 
     &.directory {
       font-weight: 600;
-      color: #333;
+      color: #f0f0f0;
     }
 
     .tree-icon {
