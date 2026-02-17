@@ -6,29 +6,49 @@
 
 ## 根本原因
 
-**`flavorAtom` の初期値が常に `'wasm'` にハードコードされていました。**
+**`readWebEnvVars()` が `new Function('return import.meta.env')` を使用していたが、`import.meta` は ES モジュールスコープでのみ有効であり、`new Function` で生成した関数はグローバルスコープで実行されるため、常に SyntaxError が発生していた。**
 
 ```typescript
-// 修正前
-export const flavorAtom = atom<Flavor>('wasm');
+// 修正前 - 常に SyntaxError が発生し、catch ブロックで {} が返される
+function readWebEnvVars(): ExpectedEnvVars {
+  // ...
+  try {
+    const getImportMetaEnv = new Function('return import.meta.env');
+    const env = getImportMetaEnv(); // ← SyntaxError: import.meta is only valid in module scope
+    return { VITE_APPLICATION_FLAVOR: env.VITE_APPLICATION_FLAVOR };
+  } catch {
+    return {}; // ← 常にここに到達
+  }
+}
 ```
 
-環境変数で `VITE_APPLICATION_FLAVOR=websocket` を設定していても、アプリケーションの初期表示では `flavorAtom` の初期値である `'wasm'` が使われていました。
+`parseApplicationFlavor({})` がデフォルト値 `'wasm'` を返すため、環境変数の設定に関わらず常に `wasm` になっていた。
 
 ## 解決方法
 
-### 1. コードの修正（必須）
+### 1. `env.ts` で `import.meta.env` を直接参照
 
-`flavorAtom` の初期値を環境変数から取得するように修正しました：
+`new Function` を経由せず、`import.meta.env` を直接使用するように修正：
 
 ```typescript
 // 修正後
-export const flavorAtom = atom<Flavor>(getApplicationFlavor());
+function readWebEnvVars(): ExpectedEnvVars {
+  return { VITE_APPLICATION_FLAVOR: import.meta.env.VITE_APPLICATION_FLAVOR };
+}
 ```
 
-これにより、`.env.local` の `VITE_APPLICATION_FLAVOR` の値が初期表示に反映されるようになります。
+### 2. Jest の `moduleNameMapper` でモックに差し替え
 
-### 2. 開発サーバーの再起動（必須）
+`import.meta.env` は CommonJS (Jest) ではパース不可のため、`jest.config.js` に `moduleNameMapper` を追加し、テスト時はモックファイルを使用：
+
+```javascript
+// jest.config.js
+moduleNameMapper: {
+  '(.*/|\\.\\./)libs/env$': '<rootDir>/src/__mocks__/web/libs/env.ts'
+}
+```
+
+### 3. 開発サーバーの再起動（必須）
 
 ```bash
 # 開発サーバーを停止 (Ctrl+C)
@@ -36,68 +56,17 @@ export const flavorAtom = atom<Flavor>(getApplicationFlavor());
 npm run dev
 ```
 
-## 環境変数の確認方法
-
-ブラウザの開発者ツールで以下を実行すると、現在の設定を確認できます:
-
-```javascript
-// Vite 環境では直接アクセス可能
-import.meta.env.VITE_APPLICATION_FLAVOR
-```
-
-または、`src/web/libs/env.ts` の `getApplicationFlavor()` 関数を使用:
-
-```javascript
-import { getApplicationFlavor } from './web/libs/env';
-console.log(getApplicationFlavor());
-```
-
 ## 実装の詳細
 
 ### `src/web/libs/env.ts`
 
-環境変数の読み込みは以下の順序で行われます:
+Vite 環境では `import.meta.env` を直接参照する。Jest 環境ではこのファイル自体が `moduleNameMapper` によりモックに差し替えられる。
 
-1. **テスト環境**: `setApplicationFlavor()` で設定された値（オーバーライド）
-2. **Node.js/Jest 環境**: `process.env.VITE_APPLICATION_FLAVOR`
-3. **Vite/ブラウザ環境**: `import.meta.env.VITE_APPLICATION_FLAVOR`
-4. **デフォルト**: `'wasm'`
+### `src/__mocks__/web/libs/env.ts`
 
-```typescript
-function readWebEnvVars(): ExpectedEnvVars {
-  // Jest/Node 環境では process.env を使用
-  if (typeof process !== 'undefined' && process.env?.VITE_APPLICATION_FLAVOR) {
-    return { VITE_APPLICATION_FLAVOR: process.env.VITE_APPLICATION_FLAVOR };
-  }
-
-  // Vite/ブラウザ環境では import.meta.env を使用
-  // new Function を使って動的に評価し、Jest でのパースエラーを回避
-  try {
-    const getImportMetaEnv = new Function('return import.meta.env');
-    const env = getImportMetaEnv();
-    return { VITE_APPLICATION_FLAVOR: env.VITE_APPLICATION_FLAVOR };
-  } catch {
-    return {};
-  }
-}
-```
-
-### なぜ `new Function` を使用するのか
-
-直接 `import.meta.env` にアクセスすると、Jest 環境でパースエラーが発生します:
-
-```
-SyntaxError: Cannot use 'import.meta' outside a module
-```
-
-`new Function` を使うことで、以下の利点があります:
-
-1. **Jest でのパースエラーを回避**: Jest は `import.meta` を認識できないが、`new Function` 内のコードはパースされない
-2. **Vite の実行時環境で動作**: Vite は実行時に `import.meta.env` オブジェクトを提供するため、動的評価でもアクセス可能
+Jest 用モック。`setApplicationFlavor()` によるオーバーライドをサポートし、デフォルトは `'wasm'`。
 
 ### テスト環境での動作
-
-Jest テストでは、`src/__mocks__/web/libs/env.ts` のモックファイルを使用せず、実際のコードが動作します。`process.env` ではなく、`setApplicationFlavor()` 関数を使ってフレーバーを設定します:
 
 ```typescript
 import { setApplicationFlavor } from '../../web/libs/env';
@@ -118,9 +87,10 @@ setApplicationFlavor('wasm');
 ## 関連ファイル
 
 - [src/web/libs/env.ts](../../src/web/libs/env.ts) - 環境変数の読み込みロジック
+- [src/__mocks__/web/libs/env.ts](../../src/__mocks__/web/libs/env.ts) - Jest 用モック
 - [src/web/stores/flavorAtom.ts](../../src/web/stores/flavorAtom.ts) - フレーバーの状態管理
+- [jest.config.js](../../jest.config.js) - Jest 設定
 - [.env.local](../../.env.local) - ローカル環境変数の設定
-- [.env.example](../../.env.example) - 環境変数の例
 
 ## テスト結果
 
