@@ -2,6 +2,7 @@
 
 ## タスク一覧
 
+- [expected-result-editor/](expected-result-editor/) Expected Result 構造化エディタ（テストケースの期待結果を UI フォームで編集）
 - [test-review-phase3-4.md](test-review-phase3-4.md) テストコード レビュー・改善計画（フェーズ3-4）
 - [nospace-webui/](nospace-webui/) nospace Web UI の設計・実装タスク
 - [wasm-flavor/](wasm-flavor/) WASM Flavor 設計（Phase 9〜11）
