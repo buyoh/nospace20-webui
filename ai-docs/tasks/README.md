@@ -11,6 +11,8 @@
 - [fix-build-missing-ace-deps.md](fix-build-missing-ace-deps.md) npm run build 失敗の修正: ace-builds / react-ace 依存不足
 - [extract-socket-client.md](extract-socket-client.md) ServerExecutionBackend からの Socket 管理の分離
 
+- [fix-compile-ws-trailing-newline/](fix-compile-ws-trailing-newline/) コンパイル後 Whitespace 実行時の末尾改行バグ修正
+
 ## 完了済みタスク
 
 - [test-review.md](../done-tasks/test-review.md) テストコード レビュー・改善計画（フェーズ1-2完了）
