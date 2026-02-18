@@ -68,6 +68,14 @@ this.outputCallback?.({
 
 ## 作業項目
 
-- [ ] `WasmExecutionBackend.compile()` で ws/ex-ws ターゲット時に '\n' を付加しないよう修正
-- [ ] 既存テストの更新（ws ターゲットのコンパイル出力テスト）
-- [ ] テスト実行・全テスト合格の確認
+- [x] `WasmExecutionBackend.compile()` で ws/ex-ws ターゲット時に '\n' を付加しないよう修正
+- [x] テスト追加・更新（ws/ex-ws/mnemonic/json ターゲット別の動作テスト）
+- [x] テスト実行・全テスト合格の確認（13/13 pass for WasmExecutionBackend）
+
+## 完了
+
+実装・テスト完了。全テスト合格 (182 tests, 181 pass / 1 pre-existing fail)。
+
+既存の未関連失敗テスト: `CompileOptions.spec.tsx` "Target セレクターに全てのオプションが含まれる"
+- `CompileOptions.tsx` に `ex-ws`/`json` オプションが未実装
+- 今回の変更とは無関係のため修正せず残置

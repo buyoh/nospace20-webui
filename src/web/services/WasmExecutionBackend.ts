@@ -197,9 +197,18 @@ export class WasmExecutionBackend implements ExecutionBackend {
         // CompileResult は discriminated union:
         //   { success: true, output: string } | { success: false, errors: WasmError[] }
         if (result.success) {
+          // BUG FIX: ws/ex-ws ターゲットは Whitespace 命令バイナリであり、
+          // '\n' (改行) も有効な命令文字として扱われる。末尾に余分な '\n' を付加すると
+          // WasmWhitespaceVM.fromWhitespace() でパースエラーが発生するため、
+          // ws/ex-ws ターゲットの場合のみ '\n' を付加しない。
+          // mnemonic/json ターゲットはテキスト出力なので表示整形のため '\n' を付加する。
+          const outputData =
+            options.target === 'ws' || options.target === 'ex-ws'
+              ? result.output
+              : result.output + '\n';
           this.outputCallback?.({
             type: 'stdout',
-            data: result.output + '\n',
+            data: outputData,
             timestamp: Date.now(),
           });
           this.statusCallback?.('finished', sessionId, 0);

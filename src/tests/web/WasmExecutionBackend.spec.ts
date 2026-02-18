@@ -62,7 +62,52 @@ describe('WasmExecutionBackend', () => {
 
       const stdoutEntry = outputEntries.find((e) => e.type === 'stdout');
       expect(stdoutEntry).toBeDefined();
-      expect(stdoutEntry!.data).toBe('compiled output\n');
+      // ws ターゲットは Whitespace 命令文字として '\n' を含むため、末尾改行を付加しない
+      expect(stdoutEntry!.data).toBe('compiled output');
+    });
+
+    it('should NOT append trailing newline for ws target', async () => {
+      fakeCompileResult = { success: true, output: '  \t\n' };
+      backend.compile('code', { language: 'standard', target: 'ws' });
+      await flushAsync();
+
+      const stdoutEntry = outputEntries.find((e) => e.type === 'stdout');
+      expect(stdoutEntry).toBeDefined();
+      // ws ターゲット: 余分な '\n' を付加しない（Whitespace の命令バイナリを破壊しないため）
+      expect(stdoutEntry!.data).toBe('  \t\n');
+    });
+
+    it('should NOT append trailing newline for ex-ws target', async () => {
+      fakeCompileResult = { success: true, output: '  \t\n' };
+      backend.compile('code', { language: 'standard', target: 'ex-ws' });
+      await flushAsync();
+
+      const stdoutEntry = outputEntries.find((e) => e.type === 'stdout');
+      expect(stdoutEntry).toBeDefined();
+      // ex-ws ターゲット: Whitespace と同様に空白文字が命令のため末尾改行を付加しない
+      expect(stdoutEntry!.data).toBe('  \t\n');
+    });
+
+    it('should append trailing newline for mnemonic target', async () => {
+      fakeCompileResult = { success: true, output: 'push 1\nend' };
+      backend.compile('code', { language: 'standard', target: 'mnemonic' });
+      await flushAsync();
+
+      const stdoutEntry = outputEntries.find((e) => e.type === 'stdout');
+      expect(stdoutEntry).toBeDefined();
+      // mnemonic はテキスト出力なので末尾改行を付加する（表示整形）
+      expect(stdoutEntry!.data).toBe('push 1\nend\n');
+    });
+
+    it('should append trailing newline for json target', async () => {
+      fakeCompileResult = { success: true, output: '{"ops":[]}' };
+      backend.compile('code', { language: 'standard', target: 'json' });
+      await flushAsync();
+
+      const stdoutEntry = outputEntries.find((e) => e.type === 'stdout');
+      expect(stdoutEntry).toBeDefined();
+      // json はテキスト出力なので末尾改行を付加する（表示整形）
+      expect(stdoutEntry!.data).toBe('{"ops":[]}\n');
     });
 
     it('should output single error to stderr', async () => {
