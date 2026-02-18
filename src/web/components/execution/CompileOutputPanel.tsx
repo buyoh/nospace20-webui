@@ -60,7 +60,11 @@ export const CompileOutputPanel: React.FC<CompileOutputPanelProps> = ({
       {!collapsed && (
         <div className="compile-output-content">
           {compileOutput ? (
-            <pre>{compileOutput.output}</pre>
+            <textarea
+              className="compile-output-textarea"
+              readOnly
+              value={compileOutput.output}
+            />
           ) : (
             <div className="compile-output-empty">No compiled output yet</div>
           )}
