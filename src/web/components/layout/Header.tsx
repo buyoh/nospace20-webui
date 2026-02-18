@@ -12,7 +12,7 @@ export const Header: React.FC = () => {
 
   return (
     <header className="header">
-      <h1>nospace Web IDE</h1>
+      <h1><a href="https://github.com/buyoh/nospace20/">nospace Web IDE</a></h1>
       <div className="header-flavor">
         {canSwitch ? (
           <select
