@@ -128,3 +128,16 @@ it('Target セレクターに指定した全てのオプションが含まれる
 - `CompileTarget` 型（`'ws' | 'mnemonic' | 'ex-ws' | 'json'`）はバックエンド処理で使用されるため型の変更は不要
 - Props を省略した場合は現在と同じデフォルト選択肢を使用（既存の呼び出し元への影響なし）
 - `compile-output-viewer` タスク等で選択肢が増えた場合もテストは壊れない
+
+## 進捗
+
+### 2026-02-19 完了
+
+- `src/web/components/execution/CompileOptions.tsx` を修正
+  - `OptionItem<T>` インターフェースと `CompileOptionsProps` を追加
+  - `languageOptions` / `targetOptions` props（省略時はデフォルト値）を受け取るよう変更
+  - `<option>` を `.map()` で生成するよう変更
+- `src/tests/web/CompileOptions.spec.tsx` を修正
+  - 「全てのオプションが含まれる」テストを依存性注入方式に変更（テストデータを props で注入）
+  - テスト名を「指定した全てのオプションが含まれる」に更新
+- 全 6 テスト Pass

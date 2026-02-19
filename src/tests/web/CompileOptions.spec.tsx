@@ -29,28 +29,37 @@ describe('CompileOptions', () => {
     expect(targetSelect.value).toBe('ws');
   });
 
-  it('Language セレクターに全てのオプションが含まれる', () => {
+  it('Language セレクターに指定した全てのオプションが含まれる', () => {
+    const testLanguageOptions = [
+      { value: 'standard' as const, label: 'Standard' },
+      { value: 'min' as const, label: 'Minimal' },
+    ];
     render(
       <Provider>
-        <CompileOptions />
+        <CompileOptions languageOptions={testLanguageOptions} />
       </Provider>
     );
 
     const languageSelect = screen.getByLabelText(/Language:/i) as HTMLSelectElement;
     const options = Array.from(languageSelect.options).map(o => o.value);
-    expect(options).toEqual(['standard', 'min', 'ws']);
+    expect(options).toEqual(['standard', 'min']);
   });
 
-  it('Target セレクターに全てのオプションが含まれる', () => {
+  it('Target セレクターに指定した全てのオプションが含まれる', () => {
+    const testTargetOptions = [
+      { value: 'ws' as const, label: 'WS' },
+      { value: 'mnemonic' as const, label: 'Mnemonic' },
+      { value: 'ex-ws' as const, label: 'Extended' },
+    ];
     render(
       <Provider>
-        <CompileOptions />
+        <CompileOptions targetOptions={testTargetOptions} />
       </Provider>
     );
 
     const targetSelect = screen.getByLabelText(/Target:/i) as HTMLSelectElement;
     const options = Array.from(targetSelect.options).map(o => o.value);
-    expect(options).toEqual(['ws', 'mnemonic', 'ex-ws', 'json']);
+    expect(options).toEqual(['ws', 'mnemonic', 'ex-ws']);
   });
 
   it('Language を変更できる', () => {
