@@ -29,6 +29,7 @@ export class WasmExecutionBackend implements ExecutionBackend {
         exitCode?: number | null,
       ) => void)
     | null = null;
+  private compileErrorsCallback: ((errors: any[]) => void) | null = null;
   private ready = false;
 
   static capabilities: ExecutionBackendCapabilities = {
@@ -219,24 +220,36 @@ export class WasmExecutionBackend implements ExecutionBackend {
             data: errorMessages + '\n',
             timestamp: Date.now(),
           });
+          // 構造化エラーをコールバックに渡す
+          this.compileErrorsCallback?.(result.errors);
           this.statusCallback?.('error', sessionId);
         }
       } catch (e) {
         // NOTE: wasm が throw する値は Error インスタンスではない場合がある。
         // ResultErr 型 ({ success: false, errors: [...] }) の場合は整形して表示する。
         // String(obj) は [object Object] になるため、それ以外は JSON.stringify で表示する。
-        const message = isNospaceErrorResult(e)
-          ? formatErrorEntries(e.errors)
-          : e instanceof Error
-            ? e.message
-            : typeof e === 'string'
-              ? e
-              : JSON.stringify(e);
-        this.outputCallback?.({
-          type: 'stderr',
-          data: message + '\n',
-          timestamp: Date.now(),
-        });
+        if (isNospaceErrorResult(e)) {
+          const message = formatErrorEntries(e.errors);
+          this.outputCallback?.({
+            type: 'stderr',
+            data: message + '\n',
+            timestamp: Date.now(),
+          });
+          // 構造化エラーをコールバックに渡す
+          this.compileErrorsCallback?.(e.errors);
+        } else {
+          const message =
+            e instanceof Error
+              ? e.message
+              : typeof e === 'string'
+                ? e
+                : JSON.stringify(e);
+          this.outputCallback?.({
+            type: 'stderr',
+            data: message + '\n',
+            timestamp: Date.now(),
+          });
+        }
         this.statusCallback?.('error', sessionId);
       }
     })();
@@ -270,5 +283,9 @@ export class WasmExecutionBackend implements ExecutionBackend {
     ) => void,
   ): void {
     this.statusCallback = callback;
+  }
+
+  onCompileErrors(callback: (errors: any[]) => void): void {
+    this.compileErrorsCallback = callback;
   }
 }

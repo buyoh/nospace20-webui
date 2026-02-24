@@ -215,4 +215,54 @@ describe('WasmExecutionBackend', () => {
       expect(stderrEntry!.data).toBe('parse error:3:7\n');
     });
   });
+
+  describe('compile - onCompileErrors callback', () => {
+    const options: CompileOptions = { language: 'standard', target: 'ws' };
+    let compileErrors: any[];
+
+    beforeEach(() => {
+      compileErrors = [];
+      backend.onCompileErrors((errors) => {
+        compileErrors = errors;
+      });
+    });
+
+    it('コンパイル成功時は onCompileErrors コールバックが呼ばれない', async () => {
+      fakeCompileResult = { success: true, output: 'ok' };
+      backend.compile('code', options);
+      await flushAsync();
+
+      expect(compileErrors).toEqual([]);
+    });
+
+    it('コンパイルエラー時に onCompileErrors コールバックにエラー配列が渡される', async () => {
+      fakeCompileResult = {
+        success: false,
+        errors: [{ message: 'syntax error', line: 5, column: 3 }],
+      };
+      backend.compile('code', options);
+      await flushAsync();
+
+      expect(compileErrors).toEqual([{ message: 'syntax error', line: 5, column: 3 }]);
+    });
+
+    it('ResultErr 例外スロー時に onCompileErrors コールバックが呼ばれる', async () => {
+      fakeCompileShouldThrow = {
+        success: false,
+        errors: [{ message: 'undefined function: foo', line: 2 }],
+      };
+      backend.compile('code', options);
+      await flushAsync();
+
+      expect(compileErrors).toEqual([{ message: 'undefined function: foo', line: 2 }]);
+    });
+
+    it('ResultErr 以外の例外スロー時は onCompileErrors コールバックが呼ばれない', async () => {
+      fakeCompileShouldThrow = new Error('wasm crash');
+      backend.compile('code', options);
+      await flushAsync();
+
+      expect(compileErrors).toEqual([]);
+    });
+  });
 });

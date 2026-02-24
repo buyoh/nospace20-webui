@@ -124,7 +124,12 @@ export class ServerExecutionBackend implements ExecutionBackend {
     this.statusCallback = callback;
   }
 
+  onCompileErrors(_callback: (errors: any[]) => void): void {
+    // websocket flavor does not support compile
+  }
+
   /** ステータス変更時にシステムメッセージを出力する */
+
   private emitSystemMessage(
     status: ExecutionStatus,
     exitCode?: number | null,

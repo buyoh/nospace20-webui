@@ -6,6 +6,7 @@ import type {
   CompileOptions,
   RunOptions,
 } from '../../interfaces/NospaceTypes';
+import type { NospaceErrorEntry } from '../libs/formatNospaceErrors';
 
 /**
  * Execution backend abstract interface.
@@ -65,6 +66,11 @@ export interface ExecutionBackend {
       exitCode?: number | null,
     ) => void,
   ): void;
+  /**
+   * コンパイルエラー発生時に構造化エラー配列を通知するコールバックを設定する。
+   * WebSocket flavor は未対応のため no-op で実装する。
+   */
+  onCompileErrors(callback: (errors: NospaceErrorEntry[]) => void): void;
 }
 
 /**

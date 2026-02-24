@@ -1,5 +1,6 @@
 import React from 'react';
 import AceEditor from 'react-ace';
+import type { Ace } from 'ace-builds';
 import 'ace-builds/src-noconflict/theme-monokai';
 import './nospace-ace-mode';
 import './styles/NospaceEditor.scss';
@@ -8,11 +9,14 @@ import './styles/NospaceEditor.scss';
 interface NospaceEditorProps {
   value: string;
   onChange: (value: string) => void;
+  /** Ace Editor のアノテーション（コンパイルエラー表示用） */
+  annotations?: Ace.Annotation[];
 }
 
 export const NospaceEditor: React.FC<NospaceEditorProps> = ({
   value,
   onChange,
+  annotations,
 }) => {
   return (
     <AceEditor
@@ -21,6 +25,7 @@ export const NospaceEditor: React.FC<NospaceEditorProps> = ({
       name="nospace-editor"
       value={value}
       onChange={onChange}
+      annotations={annotations}
       width="100%"
       height="100%"
       fontSize={14}

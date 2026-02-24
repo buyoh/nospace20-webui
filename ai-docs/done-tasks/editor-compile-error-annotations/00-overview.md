@@ -55,3 +55,26 @@ interface NospaceErrorEntry {
 |---|---|
 | `00-overview.md` | 本ドキュメント（概要） |
 | `01-design.md` | 詳細設計 |
+
+## 進捗
+
+### 2026-02-25 — 実装完了
+
+以下のファイルを変更・新規作成して実装を完了した。
+
+| ファイル | 変更内容 |
+|---|---|
+| `src/web/stores/compileErrorsAtom.ts` | 新規作成。`NospaceErrorEntry[]` を保持する atom |
+| `src/web/services/ExecutionBackend.ts` | `onCompileErrors` メソッドをインターフェースに追加 |
+| `src/web/services/WasmExecutionBackend.ts` | `compileErrorsCallback` を追加し compile 失敗時に呼び出す |
+| `src/web/services/ServerExecutionBackend.ts` | `onCompileErrors` を no-op で実装 |
+| `src/web/hooks/useNospaceExecution.ts` | `compileErrorsAtom` 購読・クリア処理を追加 |
+| `src/web/components/editor/NospaceEditor.tsx` | `annotations` prop を追加し AceEditor に渡す |
+| `src/web/containers/EditorContainer.tsx` | `compileErrorsAtom` を変換して `NospaceEditor` に渡す |
+| `src/tests/web/compileErrorsAtom.spec.ts` | 新規作成。atom の初期値テスト |
+| `src/tests/web/NospaceEditor.spec.tsx` | 新規作成。annotations prop 伝達テスト |
+| `src/tests/web/EditorContainer.spec.tsx` | 新規作成。line 1-based → row 0-based 変換テスト |
+| `src/tests/web/WasmExecutionBackend.spec.ts` | `onCompileErrors` コールバックのテストを追加 |
+| `src/tests/web/useNospaceExecution.spec.tsx` | `FakeExecutionBackend` に `onCompileErrors` を追加 |
+
+テスト結果: **195 テスト全パス**

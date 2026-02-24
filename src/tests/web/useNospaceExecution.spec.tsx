@@ -76,6 +76,10 @@ class FakeExecutionBackend implements ExecutionBackend {
     this.statusCallback = callback;
   }
 
+  onCompileErrors(_callback: (errors: any[]) => void): void {
+    // test stub - no-op
+  }
+
   /** テストヘルパー: output コールバックをトリガー */
   triggerOutput(entry: OutputEntry): void {
     this.outputCallback?.(entry);

@@ -9,6 +9,7 @@ import {
   exitCodeAtom,
 } from '../stores/executionAtom';
 import { compileOutputAtom } from '../stores/compileOutputAtom';
+import { compileErrorsAtom } from '../stores/compileErrorsAtom';
 import { flavorAtom } from '../stores/flavorAtom';
 import type { ExecutionBackend } from '../services/ExecutionBackend';
 import type { Flavor } from '../stores/flavorAtom';
@@ -71,6 +72,7 @@ export function useNospaceExecution(
   const setExecutionOptions = useSetAtom(executionOptionsAtom);
   const compileOutput = useAtomValue(compileOutputAtom);
   const setCompileOutput = useSetAtom(compileOutputAtom);
+  const setCompileErrors = useSetAtom(compileErrorsAtom);
 
   const backendRef = useRef<ExecutionBackend | null>(null);
   /** コンパイル中のターゲット。null 以外の場合、stdout を compileOutputAtom にルーティングする */
@@ -129,6 +131,10 @@ export function useNospaceExecution(
         }
       });
 
+      backend.onCompileErrors((errors) => {
+        setCompileErrors(errors);
+      });
+
       // Initialize
       try {
         await backend.init();
@@ -156,6 +162,7 @@ export function useNospaceExecution(
     backendFactory,
     setOutputEntries,
     setCompileOutput,
+    setCompileErrors,
     setExecutionStatus,
     setCurrentSessionId,
     setExitCode,
@@ -174,6 +181,7 @@ export function useNospaceExecution(
       }
 
       setOutputEntries([]);
+      setCompileErrors([]);
 
       backend.run(
         sourceCode,
@@ -192,6 +200,7 @@ export function useNospaceExecution(
       compileOptions,
       isRunning,
       setOutputEntries,
+      setCompileErrors,
     ],
   );
 
@@ -201,9 +210,10 @@ export function useNospaceExecution(
 
     compileTargetRef.current = compileOptions.target;
     setCompileOutput(null);
+    setCompileErrors([]);
     setOutputEntries([]);
     backend.compile(sourceCode, compileOptions);
-  }, [sourceCode, compileOptions, isRunning, setOutputEntries, setCompileOutput]);
+  }, [sourceCode, compileOptions, isRunning, setOutputEntries, setCompileOutput, setCompileErrors]);
 
   /** コンパイル済みコードを実行する（Whitespace ターゲット時のみ） */
   const handleRunCompileOutput = useCallback(
