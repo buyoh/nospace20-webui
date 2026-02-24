@@ -13,6 +13,7 @@
 
 - [fix-compile-ws-trailing-newline/](fix-compile-ws-trailing-newline/) コンパイル後 Whitespace 実行時の末尾改行バグ修正
 - [fix-test-compile-options.md](fix-test-compile-options.md) テスト失敗修正: CompileOptions テストの依存性注入対応
+- [editor-compile-error-annotations/](editor-compile-error-annotations/) エディタ コンパイルエラー アノテーション表示
 
 ## 完了済みタスク
 
