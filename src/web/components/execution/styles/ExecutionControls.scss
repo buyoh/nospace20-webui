@@ -1,3 +1,5 @@
+@use '../../../styles/colors';
+
 .execution-controls {
   display: flex;
   gap: 0.5rem;
@@ -18,29 +20,29 @@
   }
 
   .btn-run {
-    background-color: #0e7a0d;
+    background-color: colors.$success;
     color: white;
 
     &:hover:not(:disabled) {
-      background-color: #0f9d0c;
+      background-color: colors.$success-hover;
     }
   }
 
   .btn-kill {
-    background-color: #a1260d;
+    background-color: colors.$danger;
     color: white;
 
     &:hover:not(:disabled) {
-      background-color: #c72e0d;
+      background-color: colors.$danger-hover;
     }
   }
 
   .btn-compile {
-    background-color: #0d5aa7;
+    background-color: colors.$accent-blue-dark;
     color: white;
 
     &:hover:not(:disabled) {
-      background-color: #1177d2;
+      background-color: colors.$accent-blue-hover;
     }
   }
 }

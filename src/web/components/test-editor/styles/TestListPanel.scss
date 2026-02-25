@@ -1,19 +1,21 @@
+@use '../../../styles/colors';
+
 .test-list-panel {
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  background-color: #252526;
-  color: #d4d4d4;
+  background-color: colors.$bg-secondary;
+  color: colors.$text-primary;
 
   .test-list-header {
     padding: 8px;
-    border-bottom: 1px solid #444;
+    border-bottom: 1px solid colors.$border-primary;
 
     .btn-new-test {
       width: 100%;
       padding: 8px;
-      background-color: #007acc;
+      background-color: colors.$accent-primary;
       color: white;
       border: none;
       border-radius: 4px;
@@ -21,7 +23,7 @@
       font-size: 14px;
 
       &:hover {
-        background-color: #1177d2;
+        background-color: colors.$accent-blue-hover;
       }
     }
   }
@@ -37,11 +39,11 @@
   .test-list-empty {
     padding: 16px;
     text-align: center;
-    color: #888;
+    color: colors.$text-muted;
   }
 
   .test-list-error {
-    color: #f48771;
+    color: colors.$error-text;
   }
 
   .test-tree-node {
@@ -50,19 +52,19 @@
     padding: 4px 8px;
     cursor: pointer;
     user-select: none;
-    color: #d4d4d4;
+    color: colors.$text-primary;
 
     &:hover {
-      background-color: #2a2d2e;
+      background-color: colors.$bg-hover;
     }
 
     &.selected {
-      background-color: #094771;
+      background-color: colors.$accent-blue-selected;
     }
 
     &.directory {
       font-weight: 600;
-      color: #e0e0e0;
+      color: colors.$text-bright;
     }
 
     .tree-icon {
@@ -78,7 +80,7 @@
       font-size: 14px;
 
       &.no-check {
-        color: #f48771;
+        color: colors.$error-text;
         opacity: 0.9;
       }
     }

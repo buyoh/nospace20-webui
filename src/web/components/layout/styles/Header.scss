@@ -1,8 +1,10 @@
+@use '../../../styles/colors';
+
 .header {
-  background-color: #2d2d2d;
-  color: #ffffff;
+  background-color: colors.$bg-tertiary;
+  color: colors.$text-white;
   padding: 1rem 2rem;
-  border-bottom: 1px solid #444;
+  border-bottom: 1px solid colors.$border-primary;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -32,22 +34,22 @@
   font-weight: 600;
   padding: 0.2rem 0.6rem;
   border-radius: 4px;
-  background-color: #007acc;
-  color: #ffffff;
+  background-color: colors.$accent-primary;
+  color: colors.$text-white;
   letter-spacing: 0.05em;
 }
 
 .header-flavor-select {
   padding: 0.25rem 0.5rem;
-  background-color: #3c3c3c;
-  color: #d4d4d4;
-  border: 1px solid #555;
+  background-color: colors.$bg-input;
+  color: colors.$text-primary;
+  border: 1px solid colors.$border-secondary;
   border-radius: 4px;
   font-size: 0.8rem;
   cursor: pointer;
 
   &:focus {
     outline: none;
-    border-color: #007acc;
+    border-color: colors.$accent-primary;
   }
 }

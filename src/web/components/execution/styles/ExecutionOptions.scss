@@ -1,5 +1,7 @@
+@use '../../../styles/colors';
+
 .execution-options {
-  border: 1px solid #444;
+  border: 1px solid colors.$border-primary;
   border-radius: 4px;
   margin-bottom: 0.5rem;
   overflow: hidden;
@@ -14,15 +16,15 @@
     gap: 0.5rem;
     width: 100%;
     padding: 0.4rem 0.75rem;
-    background-color: #2d2d2d;
+    background-color: colors.$bg-tertiary;
     border: none;
-    border-bottom: 1px solid #444;
-    color: #ccc;
+    border-bottom: 1px solid colors.$border-primary;
+    color: colors.$text-secondary;
     cursor: pointer;
     text-align: left;
 
     &:hover {
-      color: #fff;
+      color: colors.$text-white;
     }
 
     .collapse-icon {
@@ -71,35 +73,35 @@
 
       select {
         padding: 0.25rem;
-        background-color: #3c3c3c;
-        color: #d4d4d4;
-        border: 1px solid #555;
+        background-color: colors.$bg-input;
+        color: colors.$text-primary;
+        border: 1px solid colors.$border-secondary;
         border-radius: 3px;
         font-size: 0.85rem;
         cursor: pointer;
 
         &:hover {
-          border-color: var(--accent-color, #007acc);
+          border-color: colors.$accent-primary;
         }
 
         &:focus {
           outline: none;
-          border-color: #007acc;
+          border-color: colors.$accent-primary;
         }
       }
 
       input[type='number'] {
         padding: 0.25rem;
-        background-color: #3c3c3c;
-        color: #d4d4d4;
-        border: 1px solid #555;
+        background-color: colors.$bg-input;
+        color: colors.$text-primary;
+        border: 1px solid colors.$border-secondary;
         border-radius: 3px;
         font-size: 0.85rem;
         width: 10rem;
 
         &:focus {
           outline: none;
-          border-color: #007acc;
+          border-color: colors.$accent-primary;
         }
       }
     }

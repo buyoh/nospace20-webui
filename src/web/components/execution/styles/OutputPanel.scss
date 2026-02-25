@@ -1,10 +1,12 @@
+@use '../../../styles/colors';
+
 .output-panel {
   display: flex;
   flex-direction: column;
   height: 100%;
   flex: 1;
   margin-top: 1rem;
-  border: 1px solid #444;
+  border: 1px solid colors.$border-primary;
   border-radius: 3px;
   overflow: hidden;
 }
@@ -14,26 +16,26 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.5rem;
-  background-color: #2d2d2d;
-  border-bottom: 1px solid #444;
+  background-color: colors.$bg-tertiary;
+  border-bottom: 1px solid colors.$border-primary;
 
   h3 {
     margin: 0;
     font-size: 0.9rem;
-    color: #ccc;
+    color: colors.$text-secondary;
   }
 
   .btn-clear {
     padding: 0.25rem 0.5rem;
-    background-color: #3c3c3c;
-    color: #d4d4d4;
-    border: 1px solid #555;
+    background-color: colors.$bg-input;
+    color: colors.$text-primary;
+    border: 1px solid colors.$border-secondary;
     border-radius: 3px;
     font-size: 0.75rem;
     cursor: pointer;
 
     &:hover {
-      background-color: #4a4a4a;
+      background-color: colors.$bg-input-hover;
     }
   }
 }
@@ -45,13 +47,13 @@
   font-family: 'Courier New', Courier, monospace;
   font-size: 0.85rem;
   line-height: 1.4;
-  background-color: #1e1e1e;
+  background-color: colors.$bg-primary;
   white-space: pre-wrap;
   word-break: break-all;
 }
 
 .output-empty {
-  color: #888;
+  color: colors.$text-muted;
   font-style: italic;
 }
 
@@ -59,19 +61,19 @@
   margin: 0;
 
   &.output-stdout {
-    color: #d4d4d4;
+    color: colors.$text-primary;
   }
 
   &.output-stderr {
-    color: #f48771;
+    color: colors.$error-text;
   }
 
   &.output-stdin-echo {
-    color: #888;
+    color: colors.$text-muted;
     font-style: italic;
   }
 
   &.output-system {
-    color: #4ec9b0;
+    color: colors.$info-text;
   }
 }

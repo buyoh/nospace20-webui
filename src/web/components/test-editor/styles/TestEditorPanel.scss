@@ -1,15 +1,17 @@
+@use '../../../styles/colors';
+
 .test-editor-panel {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: #252526;
+  background-color: colors.$bg-secondary;
 
   .test-editor-empty {
     display: flex;
     align-items: center;
     justify-content: center;
     height: 100%;
-    color: #888;
+    color: colors.$text-muted;
     font-size: 14px;
   }
 }

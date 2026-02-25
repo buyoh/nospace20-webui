@@ -1,22 +1,24 @@
+@use '../../../styles/colors';
+
 .test-case-edit-form,
 .test-case-create-form {
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  background-color: #252526;
-  color: #d4d4d4;
+  background-color: colors.$bg-secondary;
+  color: colors.$text-primary;
 
   .form-header {
     padding: 12px;
-    border-bottom: 1px solid #444;
-    background-color: #2d2d2d;
+    border-bottom: 1px solid colors.$border-primary;
+    background-color: colors.$bg-tertiary;
 
     h3 {
       margin: 0;
       font-size: 16px;
       font-weight: 600;
-      color: #e0e0e0;
+      color: colors.$text-bright;
     }
   }
 
@@ -33,22 +35,22 @@
         margin-bottom: 4px;
         font-weight: 600;
         font-size: 14px;
-        color: #ccc;
+        color: colors.$text-secondary;
       }
 
       input,
       select {
         width: 100%;
         padding: 8px;
-        border: 1px solid #555;
+        border: 1px solid colors.$border-secondary;
         border-radius: 4px;
         font-size: 14px;
-        background-color: #3c3c3c;
-        color: #d4d4d4;
+        background-color: colors.$bg-input;
+        color: colors.$text-primary;
 
         &:focus {
           outline: none;
-          border-color: #007acc;
+          border-color: colors.$accent-primary;
         }
       }
 
@@ -56,17 +58,17 @@
         width: 100%;
         min-height: 150px;
         padding: 8px;
-        border: 1px solid #555;
+        border: 1px solid colors.$border-secondary;
         border-radius: 4px;
         font-family: 'Courier New', monospace;
         font-size: 13px;
         resize: vertical;
-        background-color: #1e1e1e;
-        color: #d4d4d4;
+        background-color: colors.$bg-primary;
+        color: colors.$text-primary;
 
         &:focus {
           outline: none;
-          border-color: #007acc;
+          border-color: colors.$accent-primary;
         }
       }
 
@@ -82,8 +84,8 @@
 
   .form-footer {
     padding: 12px;
-    border-top: 1px solid #444;
-    background-color: #2d2d2d;
+    border-top: 1px solid colors.$border-primary;
+    background-color: colors.$bg-tertiary;
     display: flex;
     gap: 8px;
 
@@ -101,20 +103,20 @@
 
       &.btn-save,
       &.btn-create {
-        background-color: #0e7a0d;
+        background-color: colors.$success;
         color: white;
 
         &:hover:not(:disabled) {
-          background-color: #0f9d0c;
+          background-color: colors.$success-hover;
         }
       }
 
       &.btn-cancel {
-        background-color: #5a5a5a;
-        color: #d4d4d4;
+        background-color: colors.$bg-button-secondary;
+        color: colors.$text-primary;
 
         &:hover:not(:disabled) {
-          background-color: #6a6a6a;
+          background-color: colors.$bg-button-secondary-hover;
         }
       }
     }

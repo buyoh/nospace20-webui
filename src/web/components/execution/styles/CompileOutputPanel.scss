@@ -1,6 +1,8 @@
+@use '../../../styles/colors';
+
 .compile-output-panel {
   margin-top: 1rem;
-  border: 1px solid #444;
+  border: 1px solid colors.$border-primary;
   border-radius: 3px;
   overflow: hidden;
 }
@@ -10,8 +12,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.5rem;
-  background-color: #2d2d2d;
-  border-bottom: 1px solid #444;
+  background-color: colors.$bg-tertiary;
+  border-bottom: 1px solid colors.$border-primary;
 
   .collapsed & {
     border-bottom: none;
@@ -23,12 +25,12 @@
     gap: 0.5rem;
     background: none;
     border: none;
-    color: #ccc;
+    color: colors.$text-secondary;
     cursor: pointer;
     padding: 0;
 
     &:hover {
-      color: #fff;
+      color: colors.$text-white;
     }
 
     .collapse-icon {
@@ -50,7 +52,7 @@
 
   .btn-run-compiled {
     padding: 0.25rem 0.75rem;
-    background-color: #0e7a0d;
+    background-color: colors.$success;
     color: white;
     border: none;
     border-radius: 3px;
@@ -58,7 +60,7 @@
     cursor: pointer;
 
     &:hover:not(:disabled) {
-      background-color: #0f9d0c;
+      background-color: colors.$success-hover;
     }
 
     &:disabled {
@@ -70,7 +72,7 @@
 
 .compile-output-content {
   padding: 0.5rem;
-  background-color: #1e1e1e;
+  background-color: colors.$bg-primary;
   max-height: 200px;
   overflow-y: auto;
 
@@ -83,7 +85,7 @@
     font-family: 'Courier New', Courier, monospace;
     font-size: 0.85rem;
     line-height: 1.4;
-    color: #d4d4d4;
+    color: colors.$text-primary;
     background-color: transparent;
     border: none;
     resize: none;
@@ -96,7 +98,7 @@
 }
 
 .compile-output-empty {
-  color: #888;
+  color: colors.$text-muted;
   font-style: italic;
   font-size: 0.85rem;
 }
