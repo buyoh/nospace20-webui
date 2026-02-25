@@ -1,4 +1,5 @@
 import React from 'react';
+import { CheckResultEditor } from './CheckResultEditor';
 import './styles/TestCaseEditForm.scss';
 
 interface TestCaseEditFormProps {
@@ -29,10 +30,9 @@ export const TestCaseEditForm: React.FC<TestCaseEditFormProps> = ({
       <div className="form-body">
         <div className="form-section">
           <label>Expected Result (.check.json)</label>
-          <textarea
-            className="check-editor"
+          <CheckResultEditor
             value={testCase.check || ''}
-            onChange={(e) => onCheckChange(e.target.value)}
+            onChange={onCheckChange}
             disabled={isSaving}
           />
         </div>

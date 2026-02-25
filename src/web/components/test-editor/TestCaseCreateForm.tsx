@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { CheckResultEditor } from './CheckResultEditor';
 import './styles/TestCaseCreateForm.scss';
 
 interface TestCaseCreateFormProps {
@@ -70,10 +71,9 @@ export const TestCaseCreateForm: React.FC<TestCaseCreateFormProps> = ({
         </div>
         <div className="form-section">
           <label>Expected Result (.check.json)</label>
-          <textarea
-            className="check-editor"
+          <CheckResultEditor
             value={check}
-            onChange={(e) => setCheck(e.target.value)}
+            onChange={setCheck}
             disabled={isSaving}
           />
         </div>
