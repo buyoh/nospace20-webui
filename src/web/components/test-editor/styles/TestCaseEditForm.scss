@@ -4,17 +4,19 @@
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  background-color: #252526;
+  color: #d4d4d4;
 
   .form-header {
     padding: 12px;
-    border-bottom: 1px solid #ccc;
-    background-color: #f5f5f5;
+    border-bottom: 1px solid #444;
+    background-color: #2d2d2d;
 
     h3 {
       margin: 0;
       font-size: 16px;
       font-weight: 600;
-      color: #333;
+      color: #e0e0e0;
     }
   }
 
@@ -31,26 +33,41 @@
         margin-bottom: 4px;
         font-weight: 600;
         font-size: 14px;
+        color: #ccc;
       }
 
       input,
       select {
         width: 100%;
         padding: 8px;
-        border: 1px solid #ccc;
+        border: 1px solid #555;
         border-radius: 4px;
         font-size: 14px;
+        background-color: #3c3c3c;
+        color: #d4d4d4;
+
+        &:focus {
+          outline: none;
+          border-color: #007acc;
+        }
       }
 
       textarea {
         width: 100%;
         min-height: 150px;
         padding: 8px;
-        border: 1px solid #ccc;
+        border: 1px solid #555;
         border-radius: 4px;
         font-family: 'Courier New', monospace;
         font-size: 13px;
         resize: vertical;
+        background-color: #1e1e1e;
+        color: #d4d4d4;
+
+        &:focus {
+          outline: none;
+          border-color: #007acc;
+        }
       }
 
       .source-editor {
@@ -65,8 +82,8 @@
 
   .form-footer {
     padding: 12px;
-    border-top: 1px solid #ccc;
-    background-color: #f5f5f5;
+    border-top: 1px solid #444;
+    background-color: #2d2d2d;
     display: flex;
     gap: 8px;
 
@@ -84,20 +101,20 @@
 
       &.btn-save,
       &.btn-create {
-        background-color: #28a745;
+        background-color: #0e7a0d;
         color: white;
 
         &:hover:not(:disabled) {
-          background-color: #218838;
+          background-color: #0f9d0c;
         }
       }
 
       &.btn-cancel {
-        background-color: #6c757d;
-        color: white;
+        background-color: #5a5a5a;
+        color: #d4d4d4;
 
         &:hover:not(:disabled) {
-          background-color: #5a6268;
+          background-color: #6a6a6a;
         }
       }
     }

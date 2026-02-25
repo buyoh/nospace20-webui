@@ -3,15 +3,17 @@
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  background-color: #252526;
+  color: #d4d4d4;
 
   .test-list-header {
     padding: 8px;
-    border-bottom: 1px solid #ccc;
+    border-bottom: 1px solid #444;
 
     .btn-new-test {
       width: 100%;
       padding: 8px;
-      background-color: #007bff;
+      background-color: #007acc;
       color: white;
       border: none;
       border-radius: 4px;
@@ -19,7 +21,7 @@
       font-size: 14px;
 
       &:hover {
-        background-color: #0056b3;
+        background-color: #1177d2;
       }
     }
   }
@@ -35,11 +37,11 @@
   .test-list-empty {
     padding: 16px;
     text-align: center;
-    color: #666;
+    color: #888;
   }
 
   .test-list-error {
-    color: #dc3545;
+    color: #f48771;
   }
 
   .test-tree-node {
@@ -48,18 +50,19 @@
     padding: 4px 8px;
     cursor: pointer;
     user-select: none;
+    color: #d4d4d4;
 
     &:hover {
-      background-color: #f0f0f040;
+      background-color: #2a2d2e;
     }
 
     &.selected {
-      background-color: #e6f3ff40;
+      background-color: #094771;
     }
 
     &.directory {
       font-weight: 600;
-      color: #f0f0f0;
+      color: #e0e0e0;
     }
 
     .tree-icon {
@@ -75,8 +78,8 @@
       font-size: 14px;
 
       &.no-check {
-        color: #dc3545;
-        opacity: 0.7;
+        color: #f48771;
+        opacity: 0.9;
       }
     }
   }

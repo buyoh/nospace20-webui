@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: column;
   width: 100%;
+  color: #d4d4d4;
 
   .editor-header {
     display: flex;
@@ -11,13 +12,19 @@
 
     .check-result-type-selector {
       padding: 4px 8px;
-      border: 1px solid #ccc;
+      border: 1px solid #555;
       border-radius: 4px;
       font-size: 13px;
-      background-color: #fff;
+      background-color: #3c3c3c;
+      color: #d4d4d4;
+
+      &:focus {
+        outline: none;
+        border-color: #007acc;
+      }
 
       &:disabled {
-        background-color: #f5f5f5;
+        background-color: #2d2d2d;
         color: #888;
       }
     }
@@ -26,6 +33,7 @@
       display: flex;
       gap: 12px;
       font-size: 13px;
+      color: #ccc;
 
       label {
         display: flex;
@@ -50,19 +58,26 @@
         width: 100%;
         min-height: 150px;
         padding: 8px;
-        border: 1px solid #ccc;
+        border: 1px solid #555;
         border-radius: 4px;
         font-family: 'Courier New', monospace;
         font-size: 13px;
         resize: vertical;
         box-sizing: border-box;
+        background-color: #1e1e1e;
+        color: #d4d4d4;
+
+        &:focus {
+          outline: none;
+          border-color: #007acc;
+        }
       }
 
       .validation-errors {
         margin-top: 4px;
 
         .error-message {
-          color: #c0392b;
+          color: #f48771;
           font-size: 12px;
           padding: 2px 0;
         }
@@ -85,12 +100,20 @@
         input[type='number'] {
           flex: 1;
           padding: 4px 8px;
-          border: 1px solid #ccc;
+          border: 1px solid #555;
           border-radius: 4px;
           font-size: 13px;
+          background-color: #3c3c3c;
+          color: #d4d4d4;
+
+          &:focus {
+            outline: none;
+            border-color: #007acc;
+          }
 
           &:disabled {
-            background-color: #f5f5f5;
+            background-color: #2d2d2d;
+            color: #888;
           }
         }
 
@@ -100,19 +123,19 @@
 
         button {
           padding: 4px 8px;
-          border: 1px solid #ccc;
+          border: 1px solid #555;
           border-radius: 4px;
-          background-color: #fff;
+          background-color: #3c3c3c;
           cursor: pointer;
           font-size: 13px;
-          color: #c0392b;
+          color: #f48771;
 
           &:hover:not(:disabled) {
-            background-color: #fee;
+            background-color: #5a2020;
           }
 
           &:disabled {
-            color: #aaa;
+            color: #666;
             cursor: not-allowed;
           }
         }
@@ -121,18 +144,19 @@
       > button {
         align-self: flex-start;
         padding: 4px 12px;
-        border: 1px solid #ccc;
+        border: 1px solid #555;
         border-radius: 4px;
-        background-color: #fff;
+        background-color: #3c3c3c;
+        color: #d4d4d4;
         cursor: pointer;
         font-size: 13px;
 
         &:hover:not(:disabled) {
-          background-color: #f0f0f0;
+          background-color: #4a4a4a;
         }
 
         &:disabled {
-          color: #aaa;
+          color: #666;
           cursor: not-allowed;
         }
       }
@@ -177,24 +201,32 @@
         width: 100%;
         min-height: 80px;
         padding: 6px 8px;
-        border: 1px solid #ccc;
+        border: 1px solid #555;
         border-radius: 4px;
         font-family: 'Courier New', monospace;
         font-size: 13px;
         resize: vertical;
         box-sizing: border-box;
+        background-color: #1e1e1e;
+        color: #d4d4d4;
+
+        &:focus {
+          outline: none;
+          border-color: #007acc;
+        }
 
         &:disabled {
-          background-color: #f5f5f5;
+          background-color: #252526;
+          color: #888;
         }
       }
 
       .case-item {
-        border: 1px solid #ddd;
+        border: 1px solid #444;
         border-radius: 4px;
         padding: 8px;
         margin-bottom: 8px;
-        background-color: #fafafa;
+        background-color: #2d2d2d;
 
         .case-header {
           display: flex;
@@ -205,30 +237,38 @@
           input[type='text'] {
             flex: 1;
             padding: 4px 8px;
-            border: 1px solid #ccc;
+            border: 1px solid #555;
             border-radius: 4px;
             font-size: 13px;
+            background-color: #3c3c3c;
+            color: #d4d4d4;
+
+            &:focus {
+              outline: none;
+              border-color: #007acc;
+            }
 
             &:disabled {
-              background-color: #f5f5f5;
+              background-color: #252526;
+              color: #888;
             }
           }
 
           button {
             padding: 4px 8px;
-            border: 1px solid #ccc;
+            border: 1px solid #555;
             border-radius: 4px;
-            background-color: #fff;
+            background-color: #3c3c3c;
             cursor: pointer;
             font-size: 13px;
-            color: #c0392b;
+            color: #f48771;
 
             &:hover:not(:disabled) {
-              background-color: #fee;
+              background-color: #5a2020;
             }
 
             &:disabled {
-              color: #aaa;
+              color: #666;
               cursor: not-allowed;
             }
           }
@@ -238,18 +278,19 @@
       .multi-cases > button {
         margin-top: 4px;
         padding: 4px 12px;
-        border: 1px solid #ccc;
+        border: 1px solid #555;
         border-radius: 4px;
-        background-color: #fff;
+        background-color: #3c3c3c;
+        color: #d4d4d4;
         cursor: pointer;
         font-size: 13px;
 
         &:hover:not(:disabled) {
-          background-color: #f0f0f0;
+          background-color: #4a4a4a;
         }
 
         &:disabled {
-          color: #aaa;
+          color: #666;
           cursor: not-allowed;
         }
       }
