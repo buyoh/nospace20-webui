@@ -49,8 +49,8 @@
 - [ ] フィールドバリデーション強化
 
 ### Phase 5: テストとドキュメント（優先度: 中）
-- [ ] コンポーネントユニットテスト
-- [ ] 統合テスト
+- [x] コンポーネントユニットテスト（`src/tests/web/components/test-editor/check-result-forms.test.tsx`）
+- [x] 統合テスト（`CheckResultEditor.test.tsx` にて各フォームの統合動作を検証）
 - [ ] ドキュメント更新
 
 ## 関連タスク
