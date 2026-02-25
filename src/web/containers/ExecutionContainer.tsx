@@ -102,6 +102,7 @@ export const ExecutionContainer: React.FC = () => {
         <>
           {/* Compile mode */}
           <CompileOptions />
+          <ExecutionOptions />
           <ExecutionControls
             isRunning={isRunning}
             onCompile={handleCompile}
