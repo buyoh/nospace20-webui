@@ -36,13 +36,30 @@
 }
 ```
 
+## default.scss のデッドコード
+
+`default.scss` は `viteroot.tsx` から読み込まれるグローバルスタイルだが、以下のデッドコードを含む:
+
+- `body { background-color: #f5f5f5; color: #333; }` — `index.scss` の `.app { background-color: #1e1e1e; }` で上書きされ不使用
+- `.app-header` — どのコンポーネントからも参照されていない
+- `.app-footer` — どのコンポーネントからも参照されていない
+
+**対応**: `body` の背景色・テキスト色をダークテーマに統一（`$bg-primary` / `$text-primary`）。`.app-header` / `.app-footer` のスタイルは削除する。
+
 ## カラー変数定義
+
+旧設計（35 変数）から統合を行い **25 変数** に削減した。
+
+統合の方針:
+- 同一値の変数を統合（`$divider` = `$border-primary`、`$divider-hover` = `$text-dimmed`）
+- `rgba()` はインラインで `$accent-primary` から算出し、専用変数を設けない
+- `.app-header` / `.app-footer` のデッドコード用カラー（5 変数）を削除
 
 ### 背景色（Background）
 
 | 変数名 | 値 | 用途 |
 |---|---|---|
-| `$bg-primary` | `#1e1e1e` | メイン背景（エディタ、アプリ全体） |
+| `$bg-primary` | `#1e1e1e` | メイン背景（エディタ、body、アプリ全体） |
 | `$bg-secondary` | `#252526` | サイドバー・パネルの背景 |
 | `$bg-tertiary` | `#2d2d2d` | ヘッダー・セクション背景 |
 | `$bg-hover` | `#2a2d2e` | リストアイテムホバー |
@@ -55,7 +72,7 @@
 
 | 変数名 | 値 | 用途 |
 |---|---|---|
-| `$border-primary` | `#444` | パネル・セクション境界 |
+| `$border-primary` | `#444` | パネル・セクション境界、分割ペイン区切り線 |
 | `$border-secondary` | `#555` | 入力フィールド枠線 |
 
 ### 文字色（Text）
@@ -65,9 +82,9 @@
 | `$text-primary` | `#d4d4d4` | 主要テキスト |
 | `$text-secondary` | `#ccc` | ラベルテキスト |
 | `$text-muted` | `#888` | プレースホルダー・無効テキスト |
-| `$text-dimmed` | `#666` | 薄いテキスト |
-| `$text-bright` | `#e0e0e0` | 明るいテキスト |
-| `$text-white` | `#fff` | 白テキスト |
+| `$text-dimmed` | `#666` | 薄いテキスト、分割ペインホバー |
+| `$text-bright` | `#e0e0e0` | 明るいテキスト（選択アイテム、ラベル） |
+| `$text-white` | `#fff` | 白テキスト（`#ffffff` 含む） |
 
 ### アクセントカラー（Accent）
 
@@ -90,23 +107,24 @@
 | `$error-bg` | `#5a2020` | エラー背景 |
 | `$info-text` | `#4ec9b0` | 情報テキスト（ティール） |
 
-### ライトテーマ（default.scss 用）
+### 削除した変数（旧設計からの差分）
 
-| 変数名 | 値 | 用途 |
+| 旧変数名 | 旧値 | 理由 |
 |---|---|---|
-| `$light-bg` | `#f5f5f5` | ライトテーマ背景 |
-| `$light-text` | `#333` | ライトテーマテキスト |
-| `$light-header-bg` | `#2c3e50` | ライトテーマヘッダー背景 |
-| `$light-footer-bg` | `#ecf0f1` | ライトテーマフッター背景 |
-| `$light-footer-text` | `#7f8c8d` | ライトテーマフッターテキスト |
+| `$light-bg` | `#f5f5f5` | デッドコード。`body` は `$bg-primary` に変更 |
+| `$light-text` | `#333` | デッドコード。`body` は `$text-primary` に変更 |
+| `$light-header-bg` | `#2c3e50` | デッドコード（`.app-header` 未使用）。スタイルごと削除 |
+| `$light-footer-bg` | `#ecf0f1` | デッドコード（`.app-footer` 未使用）。スタイルごと削除 |
+| `$light-footer-text` | `#7f8c8d` | デッドコード（`.app-footer` 未使用）。スタイルごと削除 |
+| `$divider` | `#444` | `$border-primary` と同値。統合 |
+| `$divider-hover` | `#666` | `$text-dimmed` と同値。統合 |
+| `$accent-primary-alpha` | `rgba(0,122,204,0.1)` | インラインで `rgba($accent-primary, 0.1)` と記述 |
 
-### その他
+### インラインで算出する値
 
-| 変数名 | 値 | 用途 |
-|---|---|---|
-| `$accent-primary-alpha` | `rgba(0, 122, 204, 0.1)` | フォーカスシャドウ |
-| `$divider` | `#444` | 分割ペインの区切り線（`$border-primary` のエイリアスだがセマンティックに分離可能） |
-| `$divider-hover` | `#666` | 分割ペインホバー |
+| 記述方法 | 用途 |
+|---|---|
+| `rgba(colors.$accent-primary, 0.1)` | フォーカスシャドウ（CompileOptions.scss） |
 
 ## 対象ファイルと変更内容
 
@@ -129,7 +147,7 @@
 | `src/web/containers/styles/EditorContainer.scss` | 1 |
 | `src/web/containers/styles/ExecutionContainer.scss` | 7 |
 | `src/web/containers/styles/TestEditorContainer.scss` | 3 |
-| `src/web/components/styles/default.scss` | 5 |
+| `src/web/components/styles/default.scss` | 5（うちデッドコード削除 3、ダークテーマ化 2） |
 | `src/web/components/layout/styles/Header.scss` | 8 |
 | `src/web/components/layout/styles/SplitPane.scss` | 2 |
 | `src/web/components/editor/styles/CodeTextarea.scss` | 3 |
@@ -149,8 +167,11 @@
 ### 注意事項
 
 - `TestCaseCreateForm.scss` は既に `@use './TestCaseEditForm.scss';` を使用している。`_colors.scss` の追加インポートは不要（カラーコード未定義）。
-- `SplitPane.scss` の `#444` と `#666` は区切り線用途だが、`$border-primary` / `$text-dimmed` と同値。セマンティックに区別するため `$divider` / `$divider-hover` を使用する。
+- `SplitPane.scss` の `#444` と `#666` は区切り線用途で、`$border-primary` / `$text-dimmed` と同値。同じ変数を使用する。
 - `NospaceEditor.scss` はカラーコード未使用のため変更不要。
+- `default.scss` の `.app-header` / `.app-footer` はデッドコードのため、スタイルブロックごと削除する。`body` の背景色（`#f5f5f5` → `$bg-primary`）・テキスト色（`#333` → `$text-primary`）はダークテーマに統一する。
+- `CompileOptions.scss` の `rgba(0, 122, 204, 0.1)` は `rgba(colors.$accent-primary, 0.1)` に置換する（SCSS の組み込み関数で展開される）。
+- 既存の `var(--accent-color, #007acc)` は `colors.$accent-primary` に統一し、CSS custom property は廃止する。
 
 ## 実装手順
 
