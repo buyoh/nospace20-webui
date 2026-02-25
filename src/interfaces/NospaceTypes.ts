@@ -25,6 +25,10 @@ export interface ExecutionOptions {
   ignoreDebug: boolean;
   /** Standard input mode */
   inputMode: InputMode;
+  /** WASM: 1回の vm.step() コールで実行する命令数 (default: 10000) */
+  stepBudget: number;
+  /** WASM: 最大総実行ステップ数 (default: 100_000_000) */
+  maxTotalSteps: number;
 }
 
 export interface RunOptions {
@@ -36,6 +40,10 @@ export interface RunOptions {
   ignoreDebug: boolean;
   /** Standard input mode */
   inputMode: InputMode;
+  /** WASM only: 1回の vm.step() コールで実行する命令数 */
+  stepBudget?: number;
+  /** WASM only: 最大総実行ステップ数 */
+  maxTotalSteps?: number;
 }
 
 // --- Socket.IO event types ---

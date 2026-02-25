@@ -13,4 +13,6 @@ export const executionOptionsAtom = atom<ExecutionOptions>({
   debug: false,
   ignoreDebug: false,
   inputMode: 'batch',
+  stepBudget: 10000,
+  maxTotalSteps: 100_000_000,
 });

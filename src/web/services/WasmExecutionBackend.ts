@@ -13,8 +13,8 @@ import type {
 } from './ExecutionBackend';
 import { formatErrorEntries, isNospaceErrorResult } from '../libs/formatNospaceErrors';
 
-const STEP_BUDGET = 10000;
-const MAX_TOTAL_STEPS = 100_000_000;
+const DEFAULT_STEP_BUDGET = 10000;
+const DEFAULT_MAX_TOTAL_STEPS = 100_000_000;
 
 export class WasmExecutionBackend implements ExecutionBackend {
   readonly flavor = 'wasm' as const;
@@ -57,8 +57,11 @@ export class WasmExecutionBackend implements ExecutionBackend {
     this.abortController = new AbortController();
     const signal = this.abortController.signal;
 
+    const stepBudget = options.stepBudget ?? DEFAULT_STEP_BUDGET;
+    const maxTotalSteps = options.maxTotalSteps ?? DEFAULT_MAX_TOTAL_STEPS;
+
     // Start async execution loop
-    this.runAsync(code, options, stdinData ?? '', sessionId, signal);
+    this.runAsync(code, options, stdinData ?? '', sessionId, signal, stepBudget, maxTotalSteps);
   }
 
   private async runAsync(
@@ -67,6 +70,8 @@ export class WasmExecutionBackend implements ExecutionBackend {
     stdinData: string,
     sessionId: string,
     signal: AbortSignal,
+    stepBudget: number,
+    maxTotalSteps: number,
   ): Promise<void> {
     const nospace20 = getNospace20();
 
@@ -88,7 +93,7 @@ export class WasmExecutionBackend implements ExecutionBackend {
 
       // Step execution loop
       while (!signal.aborted) {
-        const result = this.vm.step(STEP_BUDGET);
+        const result = this.vm.step(stepBudget);
 
         // Flush stdout
         const stdout = this.vm.flush_stdout();
@@ -138,10 +143,10 @@ export class WasmExecutionBackend implements ExecutionBackend {
         }
 
         // Check max steps
-        if (this.vm.total_steps() >= MAX_TOTAL_STEPS) {
+        if (this.vm.total_steps() >= maxTotalSteps) {
           this.outputCallback?.({
             type: 'stderr',
-            data: `Execution limit reached (${MAX_TOTAL_STEPS} steps)\n`,
+            data: `Execution limit reached (${maxTotalSteps} steps)\n`,
             timestamp: Date.now(),
           });
           this.statusCallback?.('killed', sessionId);

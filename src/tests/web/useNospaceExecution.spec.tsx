@@ -212,6 +212,8 @@ describe('useNospaceExecution', () => {
         debug: false,
         ignoreDebug: false,
         inputMode: 'batch',
+        stepBudget: 10000,
+        maxTotalSteps: 100_000_000,
       });
       store.set(compileOptionsAtom, {
         language: 'standard',
@@ -235,6 +237,8 @@ describe('useNospaceExecution', () => {
           debug: false,
           ignoreDebug: false,
           inputMode: 'batch',
+          stepBudget: 10000,
+          maxTotalSteps: 100_000_000,
         },
         undefined,
       );
@@ -248,6 +252,8 @@ describe('useNospaceExecution', () => {
         debug: true,
         ignoreDebug: true,
         inputMode: 'batch',
+        stepBudget: 10000,
+        maxTotalSteps: 100_000_000,
       });
 
       const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
@@ -266,6 +272,38 @@ describe('useNospaceExecution', () => {
           inputMode: 'batch',
         }),
         'input data',
+      );
+    });
+
+    it('handleRun に stepBudget / maxTotalSteps が RunOptions に含まれる', async () => {
+      const { store, wrapper } = createTestWrapper();
+      store.set(sourceCodeAtom, 'code');
+      store.set(executionStatusAtom, 'idle');
+      store.set(executionOptionsAtom, {
+        debug: false,
+        ignoreDebug: false,
+        inputMode: 'batch',
+        stepBudget: 500,
+        maxTotalSteps: 5000,
+      });
+
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+
+      await waitFor(() => {
+        expect(fakeBackend.isReadyValue).toBe(true);
+      });
+
+      act(() => {
+        result.current.handleRun();
+      });
+
+      expect(fakeBackend.runMock).toHaveBeenCalledWith(
+        'code',
+        expect.objectContaining({
+          stepBudget: 500,
+          maxTotalSteps: 5000,
+        }),
+        undefined,
       );
     });
 
@@ -566,6 +604,8 @@ describe('useNospaceExecution', () => {
         debug: true,
         ignoreDebug: false,
         inputMode: 'batch',
+        stepBudget: 10000,
+        maxTotalSteps: 100_000_000,
       });
 
       const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
@@ -606,6 +646,37 @@ describe('useNospaceExecution', () => {
       });
 
       expect(store.get(outputEntriesAtom)).toEqual([]);
+    });
+
+    it('handleRunCompileOutput に stepBudget / maxTotalSteps が RunOptions に含まれる', async () => {
+      const { store, wrapper } = createTestWrapper();
+      store.set(executionStatusAtom, 'idle');
+      store.set(executionOptionsAtom, {
+        debug: false,
+        ignoreDebug: false,
+        inputMode: 'batch',
+        stepBudget: 200,
+        maxTotalSteps: 3000,
+      });
+
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+
+      await waitFor(() => {
+        expect(fakeBackend.isReadyValue).toBe(true);
+      });
+
+      act(() => {
+        result.current.handleRunCompileOutput('compiled code');
+      });
+
+      expect(fakeBackend.runMock).toHaveBeenCalledWith(
+        'compiled code',
+        expect.objectContaining({
+          stepBudget: 200,
+          maxTotalSteps: 3000,
+        }),
+        undefined,
+      );
     });
   });
 

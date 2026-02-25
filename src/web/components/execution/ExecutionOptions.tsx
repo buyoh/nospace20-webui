@@ -67,6 +67,42 @@ export const ExecutionOptions: React.FC = () => {
           </label>
         </div>
       )}
+
+      {/* Step Budget — WASM のみ */}
+      {isWasm && (
+        <div className="option-group">
+          <label>
+            <span>Step Budget:</span>
+            <input
+              type="number"
+              min={100}
+              max={1000000}
+              value={options.stepBudget}
+              onChange={(e) =>
+                setOptions({ ...options, stepBudget: Number(e.target.value) })
+              }
+            />
+          </label>
+        </div>
+      )}
+
+      {/* Max Total Steps — WASM のみ */}
+      {isWasm && (
+        <div className="option-group">
+          <label>
+            <span>Max Total Steps:</span>
+            <input
+              type="number"
+              min={1000}
+              max={10000000000}
+              value={options.maxTotalSteps}
+              onChange={(e) =>
+                setOptions({ ...options, maxTotalSteps: Number(e.target.value) })
+              }
+            />
+          </label>
+        </div>
+      )}
     </div>
   );
 };

@@ -6,6 +6,9 @@ import type { OutputEntry, CompileOptions, RunOptions } from '../../interfaces/N
 let fakeCompileResult: any;
 let fakeCompileShouldThrow: any;
 let fakeVMConstructorShouldThrow: any;
+let fakeVMStepResult: any;          // step() の返り値
+let fakeVMTotalSteps = 0;           // total_steps() の返り値
+let lastVMStepArg: number | undefined; // step() に渡された引数
 
 jest.mock('../../web/libs/nospace20/loader', () => ({
   initNospace20Wasm: jest.fn().mockResolvedValue(undefined),
@@ -22,6 +25,13 @@ jest.mock('../../web/libs/nospace20/loader', () => ({
           throw fakeVMConstructorShouldThrow;
         }
       }
+      step(budget: number) {
+        lastVMStepArg = budget;
+        return fakeVMStepResult ?? { status: 'complete' };
+      }
+      total_steps() { return fakeVMTotalSteps; }
+      flush_stdout() { return ''; }
+      get_traced() { return {}; }
       free() {}
     },
   }),
@@ -44,6 +54,9 @@ describe('WasmExecutionBackend', () => {
     fakeCompileResult = undefined;
     fakeCompileShouldThrow = undefined;
     fakeVMConstructorShouldThrow = undefined;
+    fakeVMStepResult = undefined;
+    fakeVMTotalSteps = 0;
+    lastVMStepArg = undefined;
     outputEntries = [];
 
     backend = new WasmExecutionBackend();
@@ -314,6 +327,81 @@ describe('WasmExecutionBackend', () => {
       await flushAsync();
 
       expect(compileErrors).toEqual([]);
+    });
+  });
+
+  describe('run - stepBudget / maxTotalSteps', () => {
+    it('RunOptions の stepBudget が vm.step() に渡される', async () => {
+      // step が即 complete を返すよう設定済み (fakeVMStepResult = undefined → complete)
+      const options: RunOptions = {
+        language: 'standard',
+        debug: false,
+        ignoreDebug: false,
+        inputMode: 'batch',
+        stepBudget: 500,
+      };
+      backend.run('code', options);
+      await flushAsync();
+
+      expect(lastVMStepArg).toBe(500);
+    });
+
+    it('stepBudget を省略するとデフォルト値 10000 が使われる', async () => {
+      const options: RunOptions = {
+        language: 'standard',
+        debug: false,
+        ignoreDebug: false,
+        inputMode: 'batch',
+        // stepBudget を省略
+      };
+      backend.run('code', options);
+      await flushAsync();
+
+      expect(lastVMStepArg).toBe(10000);
+    });
+
+    it('total_steps が maxTotalSteps に到達した場合に killed ステータスで停止する', async () => {
+      // step は pending を返し続け、total_steps が maxTotalSteps を超えるよう設定
+      fakeVMStepResult = { status: 'pending' };
+      fakeVMTotalSteps = 2000;  // maxTotalSteps (1000) を超えている
+
+      const statuses: string[] = [];
+      backend.onStatusChange((status) => statuses.push(status));
+
+      const options: RunOptions = {
+        language: 'standard',
+        debug: false,
+        ignoreDebug: false,
+        inputMode: 'batch',
+        maxTotalSteps: 1000,
+      };
+      backend.run('code', options);
+      await flushAsync();
+
+      expect(statuses).toContain('killed');
+    });
+
+    it('maxTotalSteps を省略するとデフォルト値 100_000_000 が上限として使われる', async () => {
+      // total_steps が 99_999_999 < 100_000_000 の場合は killed しない
+      fakeVMStepResult = { status: 'complete' };
+      fakeVMTotalSteps = 99_999_999;
+
+      const statuses: string[] = [];
+      backend.onStatusChange((status) => statuses.push(status));
+
+      const options: RunOptions = {
+        language: 'standard',
+        debug: false,
+        ignoreDebug: false,
+        inputMode: 'batch',
+        // maxTotalSteps を省略
+      };
+      backend.run('code', options);
+      await flushAsync();
+
+      // step が complete を返すので finished になる（killed にはならない）
+      expect(statuses).toContain('finished');
+      expect(statuses).not.toContain('killed');
     });
   });
 });

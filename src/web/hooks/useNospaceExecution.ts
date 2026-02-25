@@ -190,6 +190,8 @@ export function useNospaceExecution(
           debug: executionOptions.debug,
           ignoreDebug: executionOptions.ignoreDebug,
           inputMode: executionOptions.inputMode,
+          stepBudget: executionOptions.stepBudget,
+          maxTotalSteps: executionOptions.maxTotalSteps,
         },
         stdinData,
       );
@@ -230,6 +232,8 @@ export function useNospaceExecution(
           debug: executionOptions.debug,
           ignoreDebug: false,
           inputMode: 'batch',
+          stepBudget: executionOptions.stepBudget,
+          maxTotalSteps: executionOptions.maxTotalSteps,
         },
         stdinData,
       );

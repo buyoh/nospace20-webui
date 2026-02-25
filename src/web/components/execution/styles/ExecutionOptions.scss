@@ -36,5 +36,20 @@
         border-color: #007acc;
       }
     }
+
+    input[type='number'] {
+      padding: 0.25rem;
+      background-color: #3c3c3c;
+      color: #d4d4d4;
+      border: 1px solid #555;
+      border-radius: 3px;
+      font-size: 0.85rem;
+      width: 10rem;
+
+      &:focus {
+        outline: none;
+        border-color: #007acc;
+      }
+    }
   }
 }
