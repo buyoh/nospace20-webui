@@ -16,6 +16,7 @@
 - [editor-compile-error-annotations/](editor-compile-error-annotations/) エディタ コンパイルエラー アノテーション表示
 - [fix-ace-misspelled-options.md](fix-ace-misspelled-options.md) Ace Editor "misspelled option" 警告の修正
 - [wasm-execution-limits/](wasm-execution-limits/) WASM 実行制限パラメータ（STEP_BUDGET / MAX_TOTAL_STEPS）の UI 設定
+- [ws-compile-support/](ws-compile-support/) WebSocket flavor コンパイル・実行対応
 
 ## 完了済みタスク
 
