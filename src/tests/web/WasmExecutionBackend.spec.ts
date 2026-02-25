@@ -108,26 +108,26 @@ describe('WasmExecutionBackend', () => {
       expect(stdoutEntry!.data).toBe('  \t\n');
     });
 
-    it('should append trailing newline for mnemonic target', async () => {
+    it('should NOT append trailing newline for mnemonic target', async () => {
       fakeCompileResult = { success: true, output: 'push 1\nend' };
       backend.compile('code', { language: 'standard', target: 'mnemonic' });
       await flushAsync();
 
       const stdoutEntry = outputEntries.find((e) => e.type === 'stdout');
       expect(stdoutEntry).toBeDefined();
-      // mnemonic はテキスト出力なので末尾改行を付加する（表示整形）
-      expect(stdoutEntry!.data).toBe('push 1\nend\n');
+      // mnemonic: コンパイル出力をそのまま返す（末尾改行を付加しない）
+      expect(stdoutEntry!.data).toBe('push 1\nend');
     });
 
-    it('should append trailing newline for json target', async () => {
+    it('should NOT append trailing newline for json target', async () => {
       fakeCompileResult = { success: true, output: '{"ops":[]}' };
       backend.compile('code', { language: 'standard', target: 'json' });
       await flushAsync();
 
       const stdoutEntry = outputEntries.find((e) => e.type === 'stdout');
       expect(stdoutEntry).toBeDefined();
-      // json はテキスト出力なので末尾改行を付加する（表示整形）
-      expect(stdoutEntry!.data).toBe('{"ops":[]}\n');
+      // json: コンパイル出力をそのまま返す（末尾改行を付加しない）
+      expect(stdoutEntry!.data).toBe('{"ops":[]}');
     });
 
     it('should output single error to stderr', async () => {
