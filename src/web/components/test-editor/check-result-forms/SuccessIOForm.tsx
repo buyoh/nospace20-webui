@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   SuccessIOSchema,
   SuccessIOSingleSchema,
@@ -14,15 +14,18 @@ interface SuccessIOFormProps {
 /**
  * IO ベース検証（stdin/stdout）を編集するフォームコンポーネント。
  * 単一ケースと複数ケースのモード切り替えをサポートする。
+ *
+ * isSingleMode は schema から直接算出する（controlled component として扱う）。
+ * useState で管理すると、親が schema を更新するまでの間に内部状態と
+ * schema の不整合が生じてクラッシュするため。
  */
 export const SuccessIOForm: React.FC<SuccessIOFormProps> = ({
   schema,
   onChange,
   disabled,
 }) => {
-  const [isSingleMode, setIsSingleMode] = useState<boolean>(
-    !('cases' in schema),
-  );
+  // schema が真のソースなので、プロップから都度算出する
+  const isSingleMode = !('cases' in schema);
 
   const handleModeChange = (single: boolean) => {
     if (single) {
@@ -48,7 +51,6 @@ export const SuccessIOForm: React.FC<SuccessIOFormProps> = ({
         ],
       });
     }
-    setIsSingleMode(single);
   };
 
   const handleStdinChange = (value: string) => {
