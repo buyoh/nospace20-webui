@@ -15,6 +15,7 @@
 - [fix-test-compile-options.md](fix-test-compile-options.md) テスト失敗修正: CompileOptions テストの依存性注入対応
 - [editor-compile-error-annotations/](editor-compile-error-annotations/) エディタ コンパイルエラー アノテーション表示
 - [fix-ace-misspelled-options.md](fix-ace-misspelled-options.md) Ace Editor "misspelled option" 警告の修正
+- [wasm-execution-limits/](wasm-execution-limits/) WASM 実行制限パラメータ（STEP_BUDGET / MAX_TOTAL_STEPS）の UI 設定
 
 ## 完了済みタスク
 
