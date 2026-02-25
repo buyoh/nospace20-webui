@@ -10,6 +10,7 @@
 - [fix-build-missing-ace-deps.md](fix-build-missing-ace-deps.md) npm run build 失敗の修正: ace-builds / react-ace 依存不足
 - [extract-socket-client.md](extract-socket-client.md) ServerExecutionBackend からの Socket 管理の分離
 
+- [scss-color-variables/](scss-color-variables/) SCSS カラー変数の一元管理（カラーコード直指定を変数化）
 - [fix-compile-ws-trailing-newline/](fix-compile-ws-trailing-newline/) コンパイル後 Whitespace 実行時の末尾改行バグ修正
 - [fix-test-compile-options.md](fix-test-compile-options.md) テスト失敗修正: CompileOptions テストの依存性注入対応
 - [editor-compile-error-annotations/](editor-compile-error-annotations/) エディタ コンパイルエラー アノテーション表示
