@@ -33,9 +33,9 @@ export const NospaceEditor: React.FC<NospaceEditorProps> = ({
       showGutter={true}
       highlightActiveLine={true}
       setOptions={{
-        enableBasicAutocompletion: false,
-        enableLiveAutocompletion: false,
-        enableSnippets: false,
+        // NOTE: enableBasicAutocompletion, enableLiveAutocompletion, enableSnippets は
+        // ext-language_tools をインポートしない限り Ace の $options に登録されず
+        // "misspelled option" 警告が発生するため削除。デフォルトで無効のため動作に影響なし。
         showLineNumbers: true,
         tabSize: 2,
         useWorker: false,
