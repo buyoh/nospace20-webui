@@ -1,13 +1,50 @@
 .compile-options {
-  padding: 1rem;
-  border: 1px solid var(--border-color, #f5f5f5);
+  border: 1px solid #444;
   border-radius: 4px;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
+  overflow: hidden;
 
-  h3 {
-    margin: 0 0 0.75rem 0;
-    font-size: 0.9rem;
-    color: var(--text-secondary, #ccc);
+  &.collapsed .options-body {
+    display: none;
+  }
+
+  .options-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.4rem 0.75rem;
+    background-color: #2d2d2d;
+    border: none;
+    border-bottom: 1px solid #444;
+    color: #ccc;
+    cursor: pointer;
+    text-align: left;
+
+    &:hover {
+      color: #fff;
+    }
+
+    .collapse-icon {
+      font-size: 0.7rem;
+      width: 1rem;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      margin: 0;
+      font-size: 0.9rem;
+      font-weight: normal;
+    }
+  }
+
+  &.collapsed .options-header {
+    border-bottom: none;
+  }
+
+  .options-body {
+    padding: 0.75rem 1rem;
   }
 
   .option-group {
@@ -22,10 +59,11 @@
       align-items: center;
       gap: 0.5rem;
       cursor: pointer;
+      font-size: 0.85rem;
 
       span {
-        font-size: 0.875rem;
         min-width: 80px;
+        font-size: 0.875rem;
       }
 
       select {

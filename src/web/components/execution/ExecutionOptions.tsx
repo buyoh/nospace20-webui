@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAtom, useAtomValue } from 'jotai';
 import { executionOptionsAtom } from '../../stores/optionsAtom';
 import { flavorAtom } from '../../stores/flavorAtom';
@@ -12,11 +12,20 @@ export const ExecutionOptions: React.FC = () => {
   const [options, setOptions] = useAtom(executionOptionsAtom);
   const flavor = useAtomValue(flavorAtom);
   const isWasm = flavor === 'wasm';
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div className="execution-options">
-      <h3>Execution Options</h3>
+    <div className={`execution-options${collapsed ? ' collapsed' : ''}`}>
+      <button
+        className="options-header"
+        onClick={() => setCollapsed((prev) => !prev)}
+        aria-expanded={!collapsed}
+      >
+        <span className="collapse-icon">{collapsed ? '▶' : '▼'}</span>
+        <h3>Execution Options</h3>
+      </button>
 
+      {!collapsed && <div className="options-body">
       {/* Debug trace — 両 flavor で利用可能 */}
       <div className="option-group">
         <label>
@@ -103,6 +112,7 @@ export const ExecutionOptions: React.FC = () => {
           </label>
         </div>
       )}
+      </div>}
     </div>
   );
 };

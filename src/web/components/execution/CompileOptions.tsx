@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAtom } from 'jotai';
 import { compileOptionsAtom } from '../../stores/optionsAtom';
 import type { LanguageSubset, CompileTarget } from '../../../interfaces/NospaceTypes';
@@ -39,11 +39,20 @@ export const CompileOptions: React.FC<CompileOptionsProps> = ({
   targetOptions = DEFAULT_TARGET_OPTIONS,
 }) => {
   const [options, setOptions] = useAtom(compileOptionsAtom);
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div className="compile-options">
-      <h3>Compile Options</h3>
+    <div className={`compile-options${collapsed ? ' collapsed' : ''}`}>
+      <button
+        className="options-header"
+        onClick={() => setCollapsed((prev) => !prev)}
+        aria-expanded={!collapsed}
+      >
+        <span className="collapse-icon">{collapsed ? '▶' : '▼'}</span>
+        <h3>Compile Options</h3>
+      </button>
 
+      {!collapsed && <div className="options-body">
       <div className="option-group">
         <label>
           <span>Language:</span>
@@ -81,6 +90,7 @@ export const CompileOptions: React.FC<CompileOptionsProps> = ({
           </select>
         </label>
       </div>
+      </div>}
     </div>
   );
 };
