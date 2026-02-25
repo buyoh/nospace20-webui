@@ -5,6 +5,7 @@ import type {
   NospaceClientToServerEvents,
   NospaceServerToClientEvents,
   RunOptions,
+  CompileOptions,
 } from '../../interfaces/NospaceTypes';
 
 type AppSocket = Socket<
@@ -79,6 +80,11 @@ export class NospaceSocketClient {
   /** 実行リクエストを送信 */
   emitRun(code: string, options: RunOptions, stdinData?: string): void {
     this.requireSocket().emit('nospace_run', { code, options, stdinData });
+  }
+
+  /** コンパイルリクエストを送信 */
+  emitCompile(code: string, options: CompileOptions): void {
+    this.requireSocket().emit('nospace_compile', { code, options });
   }
 
   /** stdin データを送信 */

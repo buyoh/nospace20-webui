@@ -15,7 +15,11 @@ import {
   NospaceSocketClient,
   type SocketFactory,
 } from './NospaceSocketClient';
-import { tryFormatNospaceErrorJson } from '../libs/formatNospaceErrors';
+import {
+  tryFormatNospaceErrorJson,
+  tryParseNospaceErrors,
+} from '../libs/formatNospaceErrors';
+import type { NospaceErrorEntry } from '../libs/formatNospaceErrors';
 
 const defaultSocketFactory: SocketFactory = () => io();
 
@@ -37,10 +41,11 @@ export class ServerExecutionBackend implements ExecutionBackend {
         exitCode?: number | null,
       ) => void)
     | null = null;
+  private compileErrorsCallback: ((errors: NospaceErrorEntry[]) => void) | null = null;
 
   static capabilities: ExecutionBackendCapabilities = {
     supportsInteractiveStdin: true,
-    supportsCompile: false,
+    supportsCompile: true,
     supportsIgnoreDebug: true,
     supportsLanguageSubsetForRun: true,
     requiresServer: true,
@@ -68,6 +73,12 @@ export class ServerExecutionBackend implements ExecutionBackend {
           data: formatted ?? payload.data,
           timestamp: Date.now(),
         });
+
+        // 構造化エラーをコンパイルエラーコールバックに渡す（WASM flavor と同様の動作）
+        const parsed = tryParseNospaceErrors(payload.data);
+        if (parsed) {
+          this.compileErrorsCallback?.(parsed);
+        }
       },
       onExecutionStatus: (payload) => {
         this.currentSessionId = payload.sessionId;
@@ -92,8 +103,8 @@ export class ServerExecutionBackend implements ExecutionBackend {
     this.client.emitRun(code, options, stdinData);
   }
 
-  compile(_code: string, _options: CompileOptions): void {
-    throw new Error('Compile not supported in websocket flavor');
+  compile(code: string, options: CompileOptions): void {
+    this.client.emitCompile(code, options);
   }
 
   sendStdin(data: string): void {
@@ -124,8 +135,8 @@ export class ServerExecutionBackend implements ExecutionBackend {
     this.statusCallback = callback;
   }
 
-  onCompileErrors(_callback: (errors: any[]) => void): void {
-    // websocket flavor does not support compile
+  onCompileErrors(callback: (errors: NospaceErrorEntry[]) => void): void {
+    this.compileErrorsCallback = callback;
   }
 
   /** ステータス変更時にシステムメッセージを出力する */

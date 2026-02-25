@@ -71,3 +71,22 @@ export function isNospaceErrorResult(value: unknown): value is NospaceErrorResul
       typeof (e as Record<string, unknown>).message === 'string',
   );
 }
+
+/**
+ * 文字列を nospace エラー JSON としてパースし、NospaceErrorEntry[] を返す。
+ *
+ * パースに失敗した場合やエラーフォーマットに一致しない場合は null を返す。
+ * バックエンドから送信される stderr が構造化エラーかどうかを判定するために使用する。
+ */
+export function tryParseNospaceErrors(text: string): NospaceErrorEntry[] | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (!isNospaceErrorResult(parsed)) {
+    return null;
+  }
+  return parsed.errors;
+}

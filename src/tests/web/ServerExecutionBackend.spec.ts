@@ -118,10 +118,62 @@ describe('ServerExecutionBackend', () => {
   });
 
   describe('compile', () => {
-    it('should throw not supported error', () => {
+    it('compile でクライアントの emitCompile を呼び出す', async () => {
+      await connectBackend(backend, fakeSocket, listeners);
+
+      const code = 'nospace source';
+      const options = { language: 'standard' as const, target: 'ws' as const };
+
+      backend.compile(code, options);
+
+      expect((fakeSocket as any).emit).toHaveBeenCalledWith('nospace_compile', {
+        code,
+        options,
+      });
+    });
+
+    it('compile がエラーをスローしない', async () => {
+      await connectBackend(backend, fakeSocket, listeners);
+
       expect(() => {
         backend.compile('code', { language: 'standard', target: 'ws' });
-      }).toThrow('Compile not supported');
+      }).not.toThrow();
+    });
+
+    it('capabilities.supportsCompile が true', () => {
+      expect(ServerExecutionBackend.capabilities.supportsCompile).toBe(true);
+    });
+
+    it('stderr の JSON エラーで compileErrorsCallback が呼ばれる', async () => {
+      await connectBackend(backend, fakeSocket, listeners);
+
+      const compileErrorsCallback = jest.fn();
+      backend.onCompileErrors(compileErrorsCallback);
+
+      const errorJson = JSON.stringify({
+        success: false,
+        errors: [{ message: 'undefined function: foo', line: 3, column: 1 }],
+      });
+
+      listeners['nospace_stderr']({ sessionId: 'test-session', data: errorJson });
+
+      expect(compileErrorsCallback).toHaveBeenCalledWith([
+        { message: 'undefined function: foo', line: 3, column: 1 },
+      ]);
+    });
+
+    it('stderr の非 JSON データで compileErrorsCallback が呼ばれない', async () => {
+      await connectBackend(backend, fakeSocket, listeners);
+
+      const compileErrorsCallback = jest.fn();
+      backend.onCompileErrors(compileErrorsCallback);
+
+      listeners['nospace_stderr']({
+        sessionId: 'test-session',
+        data: 'plain error text',
+      });
+
+      expect(compileErrorsCallback).not.toHaveBeenCalled();
     });
   });
 

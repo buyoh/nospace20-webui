@@ -4,7 +4,7 @@ import {
   ProcessSpawner,
   ExecutionConfig,
 } from '../../app/Services/NospaceExecutionService';
-import type { RunOptions } from '../../interfaces/NospaceTypes';
+import type { RunOptions, CompileOptions } from '../../interfaces/NospaceTypes';
 import { ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
 import { Readable, Writable } from 'stream';
@@ -450,6 +450,147 @@ describe('NospaceExecutionService', () => {
       // Simulate stderr
       fakeProcess.stderr.emit('data', Buffer.from('error line\n'));
       expect(onStderr).toHaveBeenCalledWith('error line\n');
+    });
+  });
+
+  describe('compile', () => {
+    const compileOptions: CompileOptions = {
+      language: 'standard',
+      target: 'ws',
+    };
+
+    it('compile で正しいコマンドライン引数を構築する', () => {
+      files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+
+      service.compile('code', compileOptions, {
+        onStdout: jest.fn(),
+        onStderr: jest.fn(),
+        onExit: jest.fn(),
+      });
+
+      expect(fakeSpawner.spawn).toHaveBeenCalledWith(
+        fakeConfig.nospaceBinPath,
+        expect.arrayContaining(['--mode', 'compile', '--std', 'standard', '--target', 'ws'])
+      );
+    });
+
+    it('compile で --mode compile が含まれる', () => {
+      files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+
+      service.compile('code', { language: 'min', target: 'mnemonic' }, {
+        onStdout: jest.fn(),
+        onStderr: jest.fn(),
+        onExit: jest.fn(),
+      });
+
+      const spawnArgs = (fakeSpawner.spawn as jest.Mock).mock.calls[0][1] as string[];
+      expect(spawnArgs).toContain('--mode');
+      expect(spawnArgs).toContain('compile');
+      expect(spawnArgs).toContain('--std');
+      expect(spawnArgs).toContain('min');
+      expect(spawnArgs).toContain('--target');
+      expect(spawnArgs).toContain('mnemonic');
+    });
+
+    it('compile で一時ファイルを作成する', () => {
+      files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+
+      service.compile('source-code', compileOptions, {
+        onStdout: jest.fn(),
+        onStderr: jest.fn(),
+        onExit: jest.fn(),
+      });
+
+      // 一时ファイルが作成されたか確認
+      const createdFiles = Array.from(files.keys()).filter(
+        (k) => k.includes('nospace-') && k.endsWith('.ns')
+      );
+      expect(createdFiles).toHaveLength(1);
+      expect(files.get(createdFiles[0])).toBe('source-code');
+    });
+
+    it('compile でコンパイル成功時に stdout を通知する', () => {
+      files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+
+      const onStdout = jest.fn();
+
+      service.compile('code', compileOptions, {
+        onStdout,
+        onStderr: jest.fn(),
+        onExit: jest.fn(),
+      });
+
+      fakeProcess.stdout.emit('data', Buffer.from('compiled output\n'));
+      expect(onStdout).toHaveBeenCalledWith('compiled output\n');
+    });
+
+    it('compile でコンパイルエラー時に stderr を通知する', () => {
+      files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+
+      const onStderr = jest.fn();
+
+      service.compile('code', compileOptions, {
+        onStdout: jest.fn(),
+        onStderr,
+        onExit: jest.fn(),
+      });
+
+      fakeProcess.stderr.emit('data', Buffer.from('error: undefined\n'));
+      expect(onStderr).toHaveBeenCalledWith('error: undefined\n');
+    });
+
+    it('compile でプロセス終了時にコールバックを呼び出す', (done) => {
+      files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+
+      const onExit = jest.fn((code) => {
+        expect(code).toBe(0);
+        done();
+      });
+
+      service.compile('code', compileOptions, {
+        onStdout: jest.fn(),
+        onStderr: jest.fn(),
+        onExit,
+      });
+
+      fakeProcess.emit('exit', 0);
+    });
+
+    it('compile でサポート外ターゲットをエラーにする', () => {
+      const onStderr = jest.fn();
+      const onExit = jest.fn();
+
+      const session = service.compile('code', { language: 'standard', target: 'ex-ws' }, {
+        onStdout: jest.fn(),
+        onStderr,
+        onExit,
+      });
+
+      expect(session.status).toBe('error');
+      expect(onStderr).toHaveBeenCalledWith(expect.stringContaining('Unsupported compile target'));
+      expect(onExit).toHaveBeenCalledWith(1);
+      // spawn は呼ばれない
+      expect(fakeSpawner.spawn).not.toHaveBeenCalled();
+    });
+
+    it('compile でバイナリ未存在時にエラーを返す', () => {
+      const onStderr = jest.fn();
+      const onExit = jest.fn();
+
+      // Binary does NOT exist
+      files.delete(fakeConfig.nospaceBinPath);
+
+      const session = service.compile('code', compileOptions, {
+        onStdout: jest.fn(),
+        onStderr,
+        onExit,
+      });
+
+      expect(session.status).toBe('error');
+      expect(onStderr).toHaveBeenCalledWith(
+        expect.stringContaining('nospace20 binary not found')
+      );
+      expect(onExit).toHaveBeenCalledWith(1);
     });
   });
 

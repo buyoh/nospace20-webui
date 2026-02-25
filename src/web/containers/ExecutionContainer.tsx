@@ -38,7 +38,7 @@ export const ExecutionContainer: React.FC = () => {
 
   const isWasm = flavor === 'wasm';
   const isWebSocket = flavor === 'websocket';
-  const supportsCompileMode = isWasm;
+  const supportsCompileMode = true;
   const supportsTestEditor = isWebSocket;
   const showModeTabs = supportsCompileMode || supportsTestEditor;
 

@@ -1,6 +1,6 @@
 import { NospaceController } from '../../app/Controllers/NospaceController';
 import { NospaceExecutionService, NospaceSession } from '../../app/Services/NospaceExecutionService';
-import type { RunOptions } from '../../interfaces/NospaceTypes';
+import type { RunOptions, CompileOptions } from '../../interfaces/NospaceTypes';
 
 // Fake Socket implementation
 class FakeSocket {
@@ -81,6 +81,11 @@ class FakeNospaceExecutionService extends NospaceExecutionService {
     options: RunOptions;
     callbacks: any;
   }> = [];
+  private compileCalls: Array<{
+    code: string;
+    options: CompileOptions;
+    callbacks: any;
+  }> = [];
   private removedSessionIds: string[] = [];
 
   // Override to skip constructor dependencies
@@ -105,6 +110,13 @@ class FakeNospaceExecutionService extends NospaceExecutionService {
     return session;
   }
 
+  compile(code: string, options: CompileOptions, callbacks: any): NospaceSession {
+    const session = new FakeNospaceSession();
+    this.fakeSessions.set(session.sessionId, session);
+    this.compileCalls.push({ code, options, callbacks });
+    return session;
+  }
+
   getSession(sessionId: string): NospaceSession | undefined {
     return this.fakeSessions.get(sessionId);
   }
@@ -117,6 +129,10 @@ class FakeNospaceExecutionService extends NospaceExecutionService {
   // Test helpers
   getRunCalls() {
     return this.runCalls;
+  }
+
+  getCompileCalls() {
+    return this.compileCalls;
   }
 
   getRemovedSessionIds(): string[] {
@@ -151,6 +167,7 @@ describe('NospaceController', () => {
 
       // Verify handlers are registered
       expect(socket['eventHandlers'].has('nospace_run')).toBe(true);
+      expect(socket['eventHandlers'].has('nospace_compile')).toBe(true);
       expect(socket['eventHandlers'].has('nospace_stdin')).toBe(true);
       expect(socket['eventHandlers'].has('nospace_kill')).toBe(true);
       expect(socket['eventHandlers'].has('disconnect')).toBe(true);
@@ -378,6 +395,73 @@ describe('NospaceController', () => {
       // Check that session was removed
       const removedIds = executionService.getRemovedSessionIds();
       expect(removedIds.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('handleCompile', () => {
+    beforeEach(() => {
+      controller.handleConnection(socket as any);
+    });
+
+    it('nospace_compile イベントで compile を呼ぶ', () => {
+      const code = 'nospace code';
+      const options: CompileOptions = {
+        language: 'standard',
+        target: 'ws',
+      };
+
+      socket.trigger('nospace_compile', { code, options });
+
+      const calls = executionService.getCompileCalls();
+      expect(calls).toHaveLength(1);
+      expect(calls[0].code).toBe(code);
+      expect(calls[0].options).toEqual(options);
+    });
+
+    it('compile の初回ステータスが compiling である', () => {
+      socket.trigger('nospace_compile', {
+        code: 'test',
+        options: { language: 'standard', target: 'ws' },
+      });
+
+      const statusEvents = socket.getEmittedEvents('nospace_execution_status');
+      expect(statusEvents).toHaveLength(1);
+      expect(statusEvents[0].status).toBe('compiling');
+      expect(statusEvents[0].exitCode).toBe(null);
+    });
+
+    it('compile 中に disconnect で kill される', () => {
+      socket.trigger('nospace_compile', {
+        code: 'test',
+        options: { language: 'standard', target: 'ws' },
+      });
+
+      const sessionId = executionService.getSessionIds()[0];
+      const session = executionService.getSession(sessionId) as FakeNospaceSession;
+
+      socket.trigger('disconnect');
+
+      expect(session.wasKillCalled()).toBe(true);
+    });
+
+    it('compile 中に新しい compile リクエストで既存セッションが kill される', () => {
+      // First compile
+      socket.trigger('nospace_compile', {
+        code: 'first',
+        options: { language: 'standard', target: 'ws' },
+      });
+
+      const firstSessionId = executionService.getSessionIds()[0];
+      const firstSession = executionService.getSession(firstSessionId) as FakeNospaceSession;
+
+      // Second compile
+      socket.trigger('nospace_compile', {
+        code: 'second',
+        options: { language: 'min', target: 'mnemonic' },
+      });
+
+      expect(firstSession.wasKillCalled()).toBe(true);
+      expect(executionService.getCompileCalls()).toHaveLength(2);
     });
   });
 });

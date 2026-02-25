@@ -56,6 +56,12 @@ export interface NospaceClientToServerEvents {
     stdinData?: string; // Batch mode stdin data
   }) => void;
 
+  /** Compile request */
+  nospace_compile: (payload: {
+    code: string;
+    options: CompileOptions;
+  }) => void;
+
   /** Send stdin to running process (interactive mode) */
   nospace_stdin: (payload: { sessionId: string; data: string }) => void;
 

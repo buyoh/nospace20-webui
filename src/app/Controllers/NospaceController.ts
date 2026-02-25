@@ -2,6 +2,7 @@ import { Socket } from 'socket.io';
 import { NospaceExecutionService } from '../Services/NospaceExecutionService';
 import type {
   RunOptions,
+  CompileOptions,
   NospaceClientToServerEvents,
 } from '../../interfaces/NospaceTypes';
 
@@ -19,6 +20,11 @@ export class NospaceController {
     // Handle run request
     socket.on('nospace_run', (payload) => {
       this.handleRun(socket, payload.code, payload.options, payload.stdinData);
+    });
+
+    // Handle compile request
+    socket.on('nospace_compile', (payload) => {
+      this.handleCompile(socket, payload.code, payload.options);
     });
 
     // Handle stdin input
@@ -95,6 +101,58 @@ export class NospaceController {
       // Note: We don't explicitly close stdin here as the process
       // should handle EOF when stdin stream ends
     }
+  }
+
+  private handleCompile(
+    socket: Socket,
+    code: string,
+    options: CompileOptions
+  ): void {
+    // Kill existing session if any
+    const existingSessionId = this.sessionsBySocket.get(socket.id);
+    if (existingSessionId) {
+      const existingSession =
+        this.executionService.getSession(existingSessionId);
+      if (existingSession) {
+        existingSession.kill();
+      }
+      this.executionService.removeSession(existingSessionId);
+    }
+
+    // Create new compile session
+    const session = this.executionService.compile(code, options, {
+      onStdout: (data) => {
+        socket.emit('nospace_stdout', {
+          sessionId: session.sessionId,
+          data,
+        });
+      },
+      onStderr: (data) => {
+        socket.emit('nospace_stderr', {
+          sessionId: session.sessionId,
+          data,
+        });
+      },
+      onExit: (exitCode) => {
+        socket.emit('nospace_execution_status', {
+          sessionId: session.sessionId,
+          status: session.status,
+          exitCode,
+        });
+        this.executionService.removeSession(session.sessionId);
+        this.sessionsBySocket.delete(socket.id);
+      },
+    });
+
+    // Register session
+    this.sessionsBySocket.set(socket.id, session.sessionId);
+
+    // Emit initial status as 'compiling'
+    socket.emit('nospace_execution_status', {
+      sessionId: session.sessionId,
+      status: 'compiling',
+      exitCode: null,
+    });
   }
 
   private handleStdinInput(

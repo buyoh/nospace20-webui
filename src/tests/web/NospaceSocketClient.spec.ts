@@ -289,6 +289,38 @@ describe('NospaceSocketClient', () => {
     });
   });
 
+  describe('emitCompile', () => {
+    it('emitCompile でコンパイルリクエストを送信する', async () => {
+      const { socket, listeners } = createFakeSocket();
+      const client = new NospaceSocketClient(() => socket);
+      const { handlers } = createMockHandlers();
+
+      const connectPromise = client.connect(handlers);
+      (socket as any).connected = true;
+      listeners['connect']();
+      await connectPromise;
+
+      const code = 'nospace source';
+      const options = { language: 'standard' as const, target: 'ws' as const };
+
+      client.emitCompile(code, options);
+
+      expect((socket as any).emit).toHaveBeenCalledWith('nospace_compile', {
+        code,
+        options,
+      });
+    });
+
+    it('should throw if not connected', () => {
+      const { socket } = createFakeSocket();
+      const client = new NospaceSocketClient(() => socket);
+
+      expect(() => {
+        client.emitCompile('code', { language: 'standard', target: 'ws' });
+      }).toThrow('Socket not connected');
+    });
+  });
+
   describe('connected', () => {
     it('should return false when no socket exists', () => {
       const { socket } = createFakeSocket();

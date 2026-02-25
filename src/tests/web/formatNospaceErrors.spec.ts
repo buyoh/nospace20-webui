@@ -4,6 +4,7 @@ import {
   formatErrorEntries,
   tryFormatNospaceErrorJson,
   isNospaceErrorResult,
+  tryParseNospaceErrors,
 } from '../../web/libs/formatNospaceErrors';
 
 describe('formatErrorEntries', () => {
@@ -132,5 +133,50 @@ describe('isNospaceErrorResult', () => {
     expect(
       isNospaceErrorResult({ success: false, errors: [{ foo: 'bar' }] }),
     ).toBe(false);
+  });
+});
+
+describe('tryParseNospaceErrors', () => {
+  it('tryParseNospaceErrors で JSON エラーをパースする', () => {
+    const json = JSON.stringify({
+      success: false,
+      errors: [{ message: 'undefined function: foo', line: 3, column: 1 }],
+    });
+    const result = tryParseNospaceErrors(json);
+    expect(result).toEqual([{ message: 'undefined function: foo', line: 3, column: 1 }]);
+  });
+
+  it('tryParseNospaceErrors で複数エラーをパースする', () => {
+    const json = JSON.stringify({
+      success: false,
+      errors: [
+        { message: 'error one' },
+        { message: 'error two', line: 10 },
+      ],
+    });
+    const result = tryParseNospaceErrors(json);
+    expect(result).toEqual([
+      { message: 'error one' },
+      { message: 'error two', line: 10 },
+    ]);
+  });
+
+  it('tryParseNospaceErrors で非 JSON を null に返す', () => {
+    expect(tryParseNospaceErrors('plain error text')).toBeNull();
+  });
+
+  it('tryParseNospaceErrors で不正なフォーマット（success=true）を null に返す', () => {
+    const json = JSON.stringify({ success: true, output: 'ok' });
+    expect(tryParseNospaceErrors(json)).toBeNull();
+  });
+
+  it('tryParseNospaceErrors で errors 配列なしを null に返す', () => {
+    const json = JSON.stringify({ success: false });
+    expect(tryParseNospaceErrors(json)).toBeNull();
+  });
+
+  it('tryParseNospaceErrors で message なしエラーを null に返す', () => {
+    const json = JSON.stringify({ success: false, errors: [{ foo: 'bar' }] });
+    expect(tryParseNospaceErrors(json)).toBeNull();
   });
 });

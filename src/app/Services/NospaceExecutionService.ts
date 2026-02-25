@@ -3,7 +3,7 @@ import { writeFileSync, unlinkSync, existsSync, mkdirSync } from 'fs';
 import { randomUUID } from 'crypto';
 import { join } from 'path';
 import Config from '../Config';
-import type { RunOptions } from '../../interfaces/NospaceTypes';
+import type { RunOptions, CompileOptions } from '../../interfaces/NospaceTypes';
 
 /** ファイルシステム操作の抽象 */
 export interface FileSystem {
@@ -161,6 +161,13 @@ class NospaceSessionImpl implements NospaceSession {
 export class NospaceExecutionService {
   private sessions = new Map<string, NospaceSession>();
 
+  /** CLI がサポートするコンパイルターゲットのセット（WASM 専用の ex-ws を除く） */
+  private static readonly SUPPORTED_COMPILE_TARGETS = new Set([
+    'ws',
+    'mnemonic',
+    'json',
+  ]);
+
   constructor(
     private readonly config: ExecutionConfig = defaultExecutionConfig,
     private readonly fs: FileSystem = defaultFileSystem,
@@ -173,6 +180,79 @@ export class NospaceExecutionService {
   run(
     code: string,
     options: RunOptions,
+    callbacks: SessionCallbacks
+  ): NospaceSession {
+    const args: string[] = [];
+
+    // --std <language>
+    args.push('--std', options.language);
+
+    // Debug flags
+    if (options.debug) {
+      args.push('--debug');
+    }
+    if (options.ignoreDebug) {
+      args.push('--ignore-debug');
+    }
+
+    return this.spawnSession(code, args, callbacks);
+  }
+
+  /**
+   * Compile source code with nospace20
+   */
+  compile(
+    code: string,
+    options: CompileOptions,
+    callbacks: SessionCallbacks
+  ): NospaceSession {
+    // Validate compile target: ex-ws is WASM-only and not supported by CLI
+    if (!NospaceExecutionService.SUPPORTED_COMPILE_TARGETS.has(options.target)) {
+      const sessionId = randomUUID();
+      const errorMsg = `Unsupported compile target: ${options.target}\n`;
+      callbacks.onStderr(errorMsg);
+      callbacks.onExit(1);
+
+      const errorSession: NospaceSession = {
+        sessionId,
+        status: 'error',
+        exitCode: 1,
+        kill: () => {},
+        sendStdin: () => {},
+      };
+      this.sessions.set(sessionId, errorSession);
+      return errorSession;
+    }
+
+    const args: string[] = [];
+    args.push('--mode', 'compile');
+    args.push('--std', options.language);
+    args.push('--target', options.target);
+
+    return this.spawnSession(code, args, callbacks);
+  }
+
+  /**
+   * Get session by ID
+   */
+  getSession(sessionId: string): NospaceSession | undefined {
+    return this.sessions.get(sessionId);
+  }
+
+  /**
+   * Remove session from registry
+   */
+  removeSession(sessionId: string): void {
+    this.sessions.delete(sessionId);
+  }
+
+  /**
+   * 一時ファイルへの書き込み・バイナリ存在チェック・プロセス spawn を行う共通処理。
+   * run() / compile() の両方から呼び出される。
+   */
+  private spawnSession(
+    code: string,
+    args: string[],
     callbacks: SessionCallbacks
   ): NospaceSession {
     const sessionId = randomUUID();
@@ -193,21 +273,7 @@ export class NospaceExecutionService {
       throw error;
     }
 
-    // Build command arguments
-    const args: string[] = [];
-
-    // --std <language>
-    args.push('--std', options.language);
-
-    // Debug flags
-    if (options.debug) {
-      args.push('--debug');
-    }
-    if (options.ignoreDebug) {
-      args.push('--ignore-debug');
-    }
-
-    // File path
+    // Append file path to args
     args.push(tempFilePath);
 
     // Check if binary exists
@@ -248,19 +314,5 @@ export class NospaceExecutionService {
     this.sessions.set(sessionId, session);
 
     return session;
-  }
-
-  /**
-   * Get session by ID
-   */
-  getSession(sessionId: string): NospaceSession | undefined {
-    return this.sessions.get(sessionId);
-  }
-
-  /**
-   * Remove session from registry
-   */
-  removeSession(sessionId: string): void {
-    this.sessions.delete(sessionId);
   }
 }
