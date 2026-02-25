@@ -211,7 +211,9 @@ export const CheckResultEditor: React.FC<CheckResultEditorProps> = ({
   const [jsonText, setJsonText] = useState<string>(value);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
-  // 初期化: props.value をパースして state を設定
+  // value が変わるたびに state を再初期化する。
+  // テストケースを切り替えたとき（selectedPath 変更→ loadTestCase→ editingTestCaseAtom 更新）
+  // に value prop が新しい内容になるため、表示を正しく追従させる必要がある。
   useEffect(() => {
     const parsed = parseCheckResult(value);
     if (parsed) {
@@ -231,9 +233,7 @@ export const CheckResultEditor: React.FC<CheckResultEditorProps> = ({
       setEditMode('json');
       setJsonText(value);
     }
-    // 初期化時のみ実行
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [value]);
 
   // 型変更ハンドラー
   const handleTypeChange = useCallback(

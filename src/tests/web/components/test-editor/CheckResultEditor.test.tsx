@@ -135,4 +135,87 @@ describe('CheckResultEditor', () => {
       expect(input.disabled).toBe(true);
     });
   });
+
+  describe('value prop 変更時の再描画', () => {
+    it('別のテストケースに切り替えると新しい内容に更新される', () => {
+      const mockOnChange = jest.fn();
+      const { rerender } = render(
+        <CheckResultEditor
+          value='{"trace_hit_counts":[1,2,3]}'
+          onChange={mockOnChange}
+        />,
+      );
+
+      // 最初は success_trace フォームが表示される
+      expect(screen.getByText('Trace Hit Counts')).toBeInTheDocument();
+      const selector = screen.getByRole('combobox') as HTMLSelectElement;
+      expect(selector.value).toBe('success_trace');
+
+      // 別のテストケース（compile_error）に切り替え
+      rerender(
+        <CheckResultEditor
+          value='{"type":"compile_error","contains":["error msg"]}'
+          onChange={mockOnChange}
+        />,
+      );
+
+      // compile_error フォームの内容に更新される
+      expect(screen.getByRole('combobox')).toHaveValue('compile_error');
+      expect(screen.getByDisplayValue('error msg')).toBeInTheDocument();
+    });
+
+    it('unknown JSON に切り替えると JSON テキストモードに更新される', () => {
+      const mockOnChange = jest.fn();
+      const { rerender } = render(
+        <CheckResultEditor
+          value='{"trace_hit_counts":[1]}'
+          onChange={mockOnChange}
+        />,
+      );
+
+      // 最初はフォームモード
+      expect(
+        (screen.getByDisplayValue('form') as HTMLInputElement).checked,
+      ).toBe(true);
+
+      // unknown JSON に切り替え
+      rerender(
+        <CheckResultEditor
+          value='{"unknown_field":999}'
+          onChange={mockOnChange}
+        />,
+      );
+
+      // JSON テキストモードに切り替わる
+      expect(
+        (screen.getByDisplayValue('json') as HTMLInputElement).checked,
+      ).toBe(true);
+    });
+
+    it('success_trace の別データに切り替えると count 値が更新される', () => {
+      const mockOnChange = jest.fn();
+      const { rerender } = render(
+        <CheckResultEditor
+          value='{"trace_hit_counts":[1]}'
+          onChange={mockOnChange}
+        />,
+      );
+
+      let inputs = screen.getAllByRole('spinbutton') as HTMLInputElement[];
+      expect(inputs[0].value).toBe('1');
+
+      // 別のカウント値を持つデータに切り替え
+      rerender(
+        <CheckResultEditor
+          value='{"trace_hit_counts":[5,10]}'
+          onChange={mockOnChange}
+        />,
+      );
+
+      inputs = screen.getAllByRole('spinbutton') as HTMLInputElement[];
+      expect(inputs).toHaveLength(2);
+      expect(inputs[0].value).toBe('5');
+      expect(inputs[1].value).toBe('10');
+    });
+  });
 });
