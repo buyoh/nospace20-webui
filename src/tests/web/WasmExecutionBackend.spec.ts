@@ -1,10 +1,11 @@
 // Unit test for WasmExecutionBackend - compile error message handling
 
-import type { OutputEntry, CompileOptions } from '../../interfaces/NospaceTypes';
+import type { OutputEntry, CompileOptions, RunOptions } from '../../interfaces/NospaceTypes';
 
 // Fake nospace20 module used by WasmExecutionBackend via dependency injection
 let fakeCompileResult: any;
 let fakeCompileShouldThrow: any;
+let fakeVMConstructorShouldThrow: any;
 
 jest.mock('../../web/libs/nospace20/loader', () => ({
   initNospace20Wasm: jest.fn().mockResolvedValue(undefined),
@@ -16,6 +17,11 @@ jest.mock('../../web/libs/nospace20/loader', () => ({
       return fakeCompileResult;
     },
     WasmWhitespaceVM: class {
+      constructor() {
+        if (fakeVMConstructorShouldThrow !== undefined) {
+          throw fakeVMConstructorShouldThrow;
+        }
+      }
       free() {}
     },
   }),
@@ -37,6 +43,7 @@ describe('WasmExecutionBackend', () => {
   beforeEach(async () => {
     fakeCompileResult = undefined;
     fakeCompileShouldThrow = undefined;
+    fakeVMConstructorShouldThrow = undefined;
     outputEntries = [];
 
     backend = new WasmExecutionBackend();
@@ -260,6 +267,50 @@ describe('WasmExecutionBackend', () => {
     it('ResultErr 以外の例外スロー時は onCompileErrors コールバックが呼ばれない', async () => {
       fakeCompileShouldThrow = new Error('wasm crash');
       backend.compile('code', options);
+      await flushAsync();
+
+      expect(compileErrors).toEqual([]);
+    });
+  });
+
+  describe('run - compile error handling', () => {
+    const options: RunOptions = { language: 'standard', debug: false, ignoreDebug: false, inputMode: 'batch' };
+    let compileErrors: any[];
+
+    beforeEach(() => {
+      compileErrors = [];
+      backend.onCompileErrors((errors) => {
+        compileErrors = errors;
+      });
+    });
+
+    it('VM コンストラクタが ResultErr をスローした場合、onCompileErrors コールバックにエラー配列が渡される', async () => {
+      fakeVMConstructorShouldThrow = {
+        success: false,
+        errors: [{ message: 'compile error during execution', line: 3, column: 1 }],
+      };
+      backend.run('code', options);
+      await flushAsync();
+
+      expect(compileErrors).toEqual([{ message: 'compile error during execution', line: 3, column: 1 }]);
+    });
+
+    it('VM コンストラクタが ResultErr をスローした場合、エラーメッセージが stderr に出力される', async () => {
+      fakeVMConstructorShouldThrow = {
+        success: false,
+        errors: [{ message: 'syntax error in run', line: 5 }],
+      };
+      backend.run('code', options);
+      await flushAsync();
+
+      const stderrEntry = outputEntries.find((e) => e.type === 'stderr');
+      expect(stderrEntry).toBeDefined();
+      expect(stderrEntry!.data).toContain('syntax error in run');
+    });
+
+    it('VM コンストラクタが ResultErr 以外の例外をスローした場合、onCompileErrors コールバックが呼ばれない', async () => {
+      fakeVMConstructorShouldThrow = new Error('vm init failed');
+      backend.run('code', options);
       await flushAsync();
 
       expect(compileErrors).toEqual([]);

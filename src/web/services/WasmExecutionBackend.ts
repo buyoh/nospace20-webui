@@ -165,18 +165,30 @@ export class WasmExecutionBackend implements ExecutionBackend {
       // NOTE: wasm が throw する値は Error インスタンスではない場合がある。
       // ResultErr 型 ({ success: false, errors: [...] }) の場合は整形して表示する。
       // String(obj) は [object Object] になるため、それ以外は JSON.stringify で表示する。
-      const message = isNospaceErrorResult(e)
-        ? formatErrorEntries(e.errors)
-        : e instanceof Error
-          ? e.message
-          : typeof e === 'string'
-            ? e
-            : JSON.stringify(e);
-      this.outputCallback?.({
-        type: 'stderr',
-        data: message + '\n',
-        timestamp: Date.now(),
-      });
+      if (isNospaceErrorResult(e)) {
+        const message = formatErrorEntries(e.errors);
+        this.outputCallback?.({
+          type: 'stderr',
+          data: message + '\n',
+          timestamp: Date.now(),
+        });
+        // BUG FIX: 実行時にコンパイルエラーが発生した場合（WasmWhitespaceVM コンストラクタが
+        // ResultErr をスロー）、構造化エラーをコールバックに渡してエディタのアノテーション表示
+        // に反映させる。compile() メソッドと同様の処理が必要だった。
+        this.compileErrorsCallback?.(e.errors);
+      } else {
+        const message =
+          e instanceof Error
+            ? e.message
+            : typeof e === 'string'
+              ? e
+              : JSON.stringify(e);
+        this.outputCallback?.({
+          type: 'stderr',
+          data: message + '\n',
+          timestamp: Date.now(),
+        });
+      }
       this.statusCallback?.('error', sessionId);
     } finally {
       this.vm?.free();
