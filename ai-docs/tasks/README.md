@@ -18,6 +18,7 @@
 - [wasm-execution-limits/](wasm-execution-limits/) WASM 実行制限パラメータ（STEP_BUDGET / MAX_TOTAL_STEPS）の UI 設定
 - [ws-compile-support/](ws-compile-support/) WebSocket flavor コンパイル・実行対応
 - [extract-collapsible-section/](extract-collapsible-section/) 折りたたみセクション・オプションパネルの共通コンポーネント化
+- [extract-common-ui-components/](extract-common-ui-components/) 共通 UI コンポーネント抽出（Button / Select / TextInput / Textarea）
 
 ## 完了済みタスク
 
