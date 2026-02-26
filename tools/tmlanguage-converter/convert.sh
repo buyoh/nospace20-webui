@@ -21,9 +21,16 @@ cd ..
 cp src/mode/nospace.js "../$OUTPUT_DIR/"
 cp src/mode/nospace_highlight_rules.js "../$OUTPUT_DIR/"
 
-echo "Conversion complete. Output files:"
+echo "Intermediate files:"
 ls -la "../$OUTPUT_DIR/"
+
+cd ..
 echo ""
-echo "Next steps:"
-echo "  1. Review and adjust the generated files in $OUTPUT_DIR/"
-echo "  2. Integrate into src/web/components/editor/nospace-ace-mode.ts"
+echo "Generating nospace-ace-mode.ts..."
+node generate-ace-mode-ts.js
+
+echo "Formatting with prettier..."
+REPO_ROOT="$(cd ../.. && pwd)"
+npx --prefix "$REPO_ROOT" prettier --write "$REPO_ROOT/src/web/libs/nospace20/nospace-ace-mode.ts"
+
+echo "Done."
