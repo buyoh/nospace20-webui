@@ -1,4 +1,5 @@
 import React from 'react';
+import { Button } from '../common/Button';
 import './styles/ExecutionControls.scss';
 
 /** 実行コントロール（Run/Compile/Kill ボタン）の Props */
@@ -20,22 +21,33 @@ export const ExecutionControls: React.FC<ExecutionControlsProps> = ({
   return (
     <div className="execution-controls">
       {onCompile && (
-        <button
+        <Button
+          variant="accent"
           onClick={onCompile}
           disabled={isRunning}
           className="btn-compile"
         >
           Compile
-        </button>
+        </Button>
       )}
       {onRun && (
-        <button onClick={onRun} disabled={isRunning} className="btn-run">
+        <Button
+          variant="primary"
+          onClick={onRun}
+          disabled={isRunning}
+          className="btn-run"
+        >
           Run
-        </button>
+        </Button>
       )}
-      <button onClick={onKill} disabled={!isRunning} className="btn-kill">
+      <Button
+        variant="danger"
+        onClick={onKill}
+        disabled={!isRunning}
+        className="btn-kill"
+      >
         Stop
-      </button>
+      </Button>
     </div>
   );
 };

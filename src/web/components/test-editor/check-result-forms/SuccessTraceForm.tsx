@@ -1,5 +1,7 @@
 import React from 'react';
 import { SuccessTraceSchema } from '../../../../interfaces/CheckResultSchema';
+import { TextInput } from '../../common/TextInput';
+import { Button } from '../../common/Button';
 
 interface SuccessTraceFormProps {
   schema: SuccessTraceSchema;
@@ -39,7 +41,7 @@ export const SuccessTraceForm: React.FC<SuccessTraceFormProps> = ({
       <div className="array-editor">
         {schema.trace_hit_counts.map((count, index) => (
           <div key={index} className="array-item">
-            <input
+            <TextInput
               type="number"
               value={count}
               onChange={(e) =>
@@ -48,17 +50,24 @@ export const SuccessTraceForm: React.FC<SuccessTraceFormProps> = ({
               disabled={disabled}
               min={0}
             />
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => handleRemoveCount(index)}
               disabled={disabled || schema.trace_hit_counts.length === 1}
             >
               ×
-            </button>
+            </Button>
           </div>
         ))}
-        <button onClick={handleAddCount} disabled={disabled}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleAddCount}
+          disabled={disabled}
+        >
           + Add
-        </button>
+        </Button>
       </div>
     </div>
   );

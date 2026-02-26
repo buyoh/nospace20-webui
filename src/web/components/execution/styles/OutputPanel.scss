@@ -24,20 +24,6 @@
     font-size: 0.9rem;
     color: colors.$text-secondary;
   }
-
-  .btn-clear {
-    padding: 0.25rem 0.5rem;
-    background-color: colors.$bg-input;
-    color: colors.$text-primary;
-    border: 1px solid colors.$border-secondary;
-    border-radius: 3px;
-    font-size: 0.75rem;
-    cursor: pointer;
-
-    &:hover {
-      background-color: colors.$bg-input-hover;
-    }
-  }
 }
 
 .output-panel-content {

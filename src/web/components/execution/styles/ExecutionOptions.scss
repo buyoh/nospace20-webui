@@ -1,54 +1,6 @@
 @use '../../../styles/colors';
 
 .execution-options {
-  border: 1px solid colors.$border-primary;
-  border-radius: 4px;
-  margin-bottom: 0.5rem;
-  overflow: hidden;
-
-  &.collapsed .options-body {
-    display: none;
-  }
-
-  .options-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    width: 100%;
-    padding: 0.4rem 0.75rem;
-    background-color: colors.$bg-tertiary;
-    border: none;
-    border-bottom: 1px solid colors.$border-primary;
-    color: colors.$text-secondary;
-    cursor: pointer;
-    text-align: left;
-
-    &:hover {
-      color: colors.$text-white;
-    }
-
-    .collapse-icon {
-      font-size: 0.7rem;
-      width: 1rem;
-      text-align: center;
-      flex-shrink: 0;
-    }
-
-    h3 {
-      margin: 0;
-      font-size: 0.9rem;
-      font-weight: normal;
-    }
-  }
-
-  &.collapsed .options-header {
-    border-bottom: none;
-  }
-
-  .options-body {
-    padding: 0.75rem 1rem;
-  }
-
   .option-group {
     margin-bottom: 0.5rem;
 
@@ -63,46 +15,8 @@
       cursor: pointer;
       font-size: 0.85rem;
 
-      input[type='checkbox'] {
-        cursor: pointer;
-      }
-
       span {
         min-width: 80px;
-      }
-
-      select {
-        padding: 0.25rem;
-        background-color: colors.$bg-input;
-        color: colors.$text-primary;
-        border: 1px solid colors.$border-secondary;
-        border-radius: 3px;
-        font-size: 0.85rem;
-        cursor: pointer;
-
-        &:hover {
-          border-color: colors.$accent-primary;
-        }
-
-        &:focus {
-          outline: none;
-          border-color: colors.$accent-primary;
-        }
-      }
-
-      input[type='number'] {
-        padding: 0.25rem;
-        background-color: colors.$bg-input;
-        color: colors.$text-primary;
-        border: 1px solid colors.$border-secondary;
-        border-radius: 3px;
-        font-size: 0.85rem;
-        width: 10rem;
-
-        &:focus {
-          outline: none;
-          border-color: colors.$accent-primary;
-        }
       }
     }
   }

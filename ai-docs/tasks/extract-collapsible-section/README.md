@@ -212,3 +212,11 @@ return (
 5. `CompileOutputPanel` リファクタリング + SCSS 更新
 6. `CollapsibleSection` テスト作成
 7. ビルド・既存テスト通過確認
+
+
+## 進捗
+
+- 実装完了 (2025-07-25)
+  - `CollapsibleSection` コンポーネント・スタイル作成
+  - `CompileOptions`・`ExecutionOptions`・`CompileOutputPanel` をリファクタリング
+  - テスト作成・全テスト通過確認

@@ -1,0 +1,71 @@
+@use '../../styles/colors';
+
+.btn {
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  // サイズ
+  &.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  &.btn-md {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  // バリアント
+  &.btn-primary {
+    background-color: colors.$success;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background-color: colors.$success-hover;
+    }
+  }
+
+  &.btn-danger {
+    background-color: colors.$danger;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background-color: colors.$danger-hover;
+    }
+  }
+
+  &.btn-accent {
+    background-color: colors.$accent-blue-dark;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background-color: colors.$accent-blue-hover;
+    }
+  }
+
+  &.btn-secondary {
+    background-color: colors.$bg-button-secondary;
+    color: colors.$text-primary;
+
+    &:hover:not(:disabled) {
+      background-color: colors.$bg-button-secondary-hover;
+    }
+  }
+
+  &.btn-outline {
+    background-color: colors.$bg-input;
+    color: colors.$text-primary;
+    border: 1px solid colors.$border-secondary;
+
+    &:hover:not(:disabled) {
+      background-color: colors.$bg-input-hover;
+    }
+  }
+}

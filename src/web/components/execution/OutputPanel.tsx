@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { useAtomValue } from 'jotai';
 import { outputEntriesAtom } from '../../stores/executionAtom';
+import { Button } from '../common/Button';
 import './styles/OutputPanel.scss';
 
 /** 出力パネル（stdout/stderr 表示）の Props */
@@ -23,9 +24,9 @@ export const OutputPanel: React.FC<OutputPanelProps> = ({ onClear }) => {
     <div className="output-panel">
       <div className="output-panel-header">
         <h3>Output</h3>
-        <button onClick={onClear} className="btn-clear">
+        <Button variant="outline" size="sm" onClick={onClear} className="btn-clear">
           Clear
-        </button>
+        </Button>
       </div>
       <div ref={containerRef} className="output-panel-content">
         {outputEntries.length === 0 ? (

@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { CheckResultEditor } from './CheckResultEditor';
+import { Button } from '../common/Button';
+import { Select } from '../common/Select';
+import { TextInput } from '../common/TextInput';
 import './styles/TestCaseCreateForm.scss';
 
 interface TestCaseCreateFormProps {
@@ -47,7 +50,7 @@ export const TestCaseCreateForm: React.FC<TestCaseCreateFormProps> = ({
       <div className="form-body">
         <div className="form-section">
           <label>Category</label>
-          <select
+          <Select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             disabled={isSaving}
@@ -57,11 +60,11 @@ export const TestCaseCreateForm: React.FC<TestCaseCreateFormProps> = ({
                 {cat}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <div className="form-section">
           <label>File name (without .ns extension)</label>
-          <input
+          <TextInput
             type="text"
             value={fileName}
             onChange={(e) => setFileName(e.target.value)}
@@ -79,16 +82,22 @@ export const TestCaseCreateForm: React.FC<TestCaseCreateFormProps> = ({
         </div>
       </div>
       <div className="form-footer">
-        <button
+        <Button
+          variant="primary"
           className="btn-create"
           onClick={handleSubmit}
           disabled={!isValid || isSaving}
         >
           {isSaving ? 'Creating...' : 'Create'}
-        </button>
-        <button className="btn-cancel" onClick={onCancel} disabled={isSaving}>
+        </Button>
+        <Button
+          variant="secondary"
+          className="btn-cancel"
+          onClick={onCancel}
+          disabled={isSaving}
+        >
           Cancel
-        </button>
+        </Button>
       </div>
     </div>
   );

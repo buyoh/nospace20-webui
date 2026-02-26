@@ -1,5 +1,8 @@
 import React from 'react';
 import { ParseErrorSchema } from '../../../../interfaces/CheckResultSchema';
+import { RadioGroup } from '../../common/RadioGroup';
+import { TextInput } from '../../common/TextInput';
+import { Button } from '../../common/Button';
 
 interface ParseErrorFormProps {
   schema: ParseErrorSchema;
@@ -41,52 +44,46 @@ export const ParseErrorForm: React.FC<ParseErrorFormProps> = ({
   return (
     <div className="parse-error-form">
       <label>Phase</label>
-      <div className="radio-group">
-        <label>
-          <input
-            type="radio"
-            name="phase"
-            value="tree"
-            checked={schema.phase === 'tree'}
-            onChange={() => handlePhaseChange('tree')}
-            disabled={disabled}
-          />
-          Tree
-        </label>
-        <label>
-          <input
-            type="radio"
-            name="phase"
-            value="tokenize"
-            checked={schema.phase === 'tokenize'}
-            onChange={() => handlePhaseChange('tokenize')}
-            disabled={disabled}
-          />
-          Tokenize
-        </label>
-      </div>
+      <RadioGroup
+        name="phase"
+        options={[
+          { value: 'tree', label: 'Tree' },
+          { value: 'tokenize', label: 'Tokenize' },
+        ]}
+        value={schema.phase}
+        onChange={(v) => handlePhaseChange(v as 'tree' | 'tokenize')}
+        disabled={disabled}
+        className="radio-group"
+      />
 
       <label>Error Details (optional)</label>
       <div className="array-editor">
         {(schema.contains || []).map((detail, index) => (
           <div key={index} className="array-item">
-            <input
+            <TextInput
               type="text"
               value={detail}
               onChange={(e) => handleDetailChange(index, e.target.value)}
               disabled={disabled}
             />
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => handleRemoveDetail(index)}
               disabled={disabled}
             >
               ×
-            </button>
+            </Button>
           </div>
         ))}
-        <button onClick={handleAddDetail} disabled={disabled}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleAddDetail}
+          disabled={disabled}
+        >
           + Add
-        </button>
+        </Button>
       </div>
     </div>
   );

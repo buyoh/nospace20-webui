@@ -18,6 +18,9 @@ import { SuccessTraceForm } from './check-result-forms/SuccessTraceForm';
 import { SuccessIOForm } from './check-result-forms/SuccessIOForm';
 import { CompileErrorForm } from './check-result-forms/CompileErrorForm';
 import { ParseErrorForm } from './check-result-forms/ParseErrorForm';
+import { Select } from '../common/Select';
+import { RadioGroup } from '../common/RadioGroup';
+import { Textarea } from '../common/Textarea';
 import './styles/CheckResultEditor.scss';
 
 // ------------------------------------------------
@@ -35,7 +38,7 @@ const CheckResultTypeSelector: React.FC<CheckResultTypeSelectorProps> = ({
   onChange,
   disabled,
 }) => (
-  <select
+  <Select
     className="check-result-type-selector"
     value={value}
     onChange={(e) => onChange(e.target.value as CheckResultType)}
@@ -47,7 +50,7 @@ const CheckResultTypeSelector: React.FC<CheckResultTypeSelectorProps> = ({
     <option value="compile_error">Compile Error</option>
     <option value="parse_error">Parse Error</option>
     <option value="unknown">JSON Text (Manual)</option>
-  </select>
+  </Select>
 );
 
 // ------------------------------------------------
@@ -60,35 +63,24 @@ interface CheckResultModeToggleProps {
   disabled?: boolean;
 }
 
+const CHECK_RESULT_MODE_OPTIONS = [
+  { value: 'form', label: 'Form' },
+  { value: 'json', label: 'JSON Text' },
+] as const;
+
 const CheckResultModeToggle: React.FC<CheckResultModeToggleProps> = ({
   mode,
   onChange,
   disabled,
 }) => (
-  <div className="check-result-mode-toggle">
-    <label>
-      <input
-        type="radio"
-        name="edit-mode"
-        value="form"
-        checked={mode === 'form'}
-        onChange={() => onChange('form')}
-        disabled={disabled}
-      />
-      Form
-    </label>
-    <label>
-      <input
-        type="radio"
-        name="edit-mode"
-        value="json"
-        checked={mode === 'json'}
-        onChange={() => onChange('json')}
-        disabled={disabled}
-      />
-      JSON Text
-    </label>
-  </div>
+  <RadioGroup
+    name="edit-mode"
+    options={CHECK_RESULT_MODE_OPTIONS}
+    value={mode}
+    onChange={onChange}
+    disabled={disabled}
+    className="check-result-mode-toggle"
+  />
 );
 
 // ------------------------------------------------
@@ -109,7 +101,7 @@ const CheckResultJsonView: React.FC<CheckResultJsonViewProps> = ({
   disabled,
 }) => (
   <div className="check-result-json-view">
-    <textarea
+    <Textarea
       className="json-editor"
       value={value}
       onChange={(e) => onChange(e.target.value)}

@@ -3,6 +3,9 @@ import { useAtomValue, useSetAtom } from 'jotai';
 import { executionOptionsAtom } from '../../stores/optionsAtom';
 import { outputEntriesAtom } from '../../stores/executionAtom';
 import type { OutputEntry } from '../../../interfaces/NospaceTypes';
+import { Button } from '../common/Button';
+import { TextInput } from '../common/TextInput';
+import { Textarea } from '../common/Textarea';
 import './styles/InputPanel.scss';
 
 /** 入力パネル（バッチ/インタラクティブ入力）の Props */
@@ -58,7 +61,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({
       <div className="input-panel">
         <h3>Interactive Input</h3>
         <div className="interactive-input-group">
-          <input
+          <TextInput
             type="text"
             value={interactiveInput}
             onChange={(e) => setInteractiveInput(e.target.value)}
@@ -67,13 +70,14 @@ export const InputPanel: React.FC<InputPanelProps> = ({
             disabled={!isRunning}
             className="interactive-input"
           />
-          <button
+          <Button
+            variant="primary"
             onClick={handleInteractiveSend}
             disabled={!isRunning || !interactiveInput.trim()}
             className="btn-send"
           >
             Send
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -83,7 +87,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({
   return (
     <div className="input-panel">
       <h3>Batch Input</h3>
-      <textarea
+      <Textarea
         value={batchInput}
         onChange={(e) => onBatchInputChange?.(e.target.value)}
         placeholder="Enter all input data here (before running)..."

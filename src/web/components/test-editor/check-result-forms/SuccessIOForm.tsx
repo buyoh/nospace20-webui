@@ -4,6 +4,10 @@ import {
   SuccessIOSingleSchema,
   SuccessIOMultiSchema,
 } from '../../../../interfaces/CheckResultSchema';
+import { RadioGroup } from '../../common/RadioGroup';
+import { Textarea } from '../../common/Textarea';
+import { TextInput } from '../../common/TextInput';
+import { Button } from '../../common/Button';
 
 interface SuccessIOFormProps {
   schema: SuccessIOSchema;
@@ -100,39 +104,28 @@ export const SuccessIOForm: React.FC<SuccessIOFormProps> = ({
 
   return (
     <div className="success-io-form">
-      <div className="mode-selector">
-        <label>
-          <input
-            type="radio"
-            name="io-mode"
-            checked={isSingleMode}
-            onChange={() => handleModeChange(true)}
-            disabled={disabled}
-          />
-          Single Case
-        </label>
-        <label>
-          <input
-            type="radio"
-            name="io-mode"
-            checked={!isSingleMode}
-            onChange={() => handleModeChange(false)}
-            disabled={disabled}
-          />
-          Multiple Cases
-        </label>
-      </div>
+      <RadioGroup
+        name="io-mode"
+        options={[
+          { value: 'single', label: 'Single Case' },
+          { value: 'multi', label: 'Multiple Cases' },
+        ]}
+        value={isSingleMode ? 'single' : 'multi'}
+        onChange={(v) => handleModeChange(v === 'single')}
+        disabled={disabled}
+        className="mode-selector"
+      />
 
       {isSingleMode ? (
         <div className="single-case">
           <label>Standard Input (stdin)</label>
-          <textarea
+          <Textarea
             value={(schema as SuccessIOSingleSchema).stdin}
             onChange={(e) => handleStdinChange(e.target.value)}
             disabled={disabled}
           />
           <label>Expected Output (stdout)</label>
-          <textarea
+          <Textarea
             value={(schema as SuccessIOSingleSchema).stdout}
             onChange={(e) => handleStdoutChange(e.target.value)}
             disabled={disabled}
@@ -143,37 +136,44 @@ export const SuccessIOForm: React.FC<SuccessIOFormProps> = ({
           {(schema as SuccessIOMultiSchema).cases.map((testCase, index) => (
             <div key={index} className="case-item">
               <div className="case-header">
-                <input
+                <TextInput
                   type="text"
                   placeholder="Case name"
                   value={testCase.name}
                   onChange={(e) => handleCaseNameChange(index, e.target.value)}
                   disabled={disabled}
                 />
-                <button
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => handleRemoveCase(index)}
                   disabled={disabled}
                 >
                   × Remove
-                </button>
+                </Button>
               </div>
               <label>stdin</label>
-              <textarea
+              <Textarea
                 value={testCase.stdin}
                 onChange={(e) => handleCaseStdinChange(index, e.target.value)}
                 disabled={disabled}
               />
               <label>stdout</label>
-              <textarea
+              <Textarea
                 value={testCase.stdout}
                 onChange={(e) => handleCaseStdoutChange(index, e.target.value)}
                 disabled={disabled}
               />
             </div>
           ))}
-          <button onClick={handleAddCase} disabled={disabled}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleAddCase}
+            disabled={disabled}
+          >
             + Add Case
-          </button>
+          </Button>
         </div>
       )}
     </div>

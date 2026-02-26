@@ -1,5 +1,6 @@
 import React from 'react';
 import { CheckResultEditor } from './CheckResultEditor';
+import { Button } from '../common/Button';
 import './styles/TestCaseEditForm.scss';
 
 interface TestCaseEditFormProps {
@@ -38,13 +39,14 @@ export const TestCaseEditForm: React.FC<TestCaseEditFormProps> = ({
         </div>
       </div>
       <div className="form-footer">
-        <button
+        <Button
+          variant="primary"
           className="btn-save"
           onClick={onSave}
           disabled={!isDirty || isSaving}
         >
           {isSaving ? 'Saving...' : 'Save'}
-        </button>
+        </Button>
       </div>
     </div>
   );

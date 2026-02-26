@@ -1,0 +1,21 @@
+@use '../../styles/colors';
+
+.common-text-input {
+  padding: 0.25rem;
+  background-color: colors.$bg-input;
+  color: colors.$text-primary;
+  border: 1px solid colors.$border-secondary;
+  border-radius: 3px;
+  font-size: 0.85rem;
+
+  &:focus {
+    outline: none;
+    border-color: colors.$accent-primary;
+  }
+
+  &:disabled {
+    background-color: colors.$bg-tertiary;
+    color: colors.$text-muted;
+    cursor: not-allowed;
+  }
+}

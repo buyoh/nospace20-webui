@@ -4,45 +4,4 @@
   display: flex;
   gap: 0.5rem;
   padding: 0.5rem 0;
-
-  button {
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 3px;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: background-color 0.2s;
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-  }
-
-  .btn-run {
-    background-color: colors.$success;
-    color: white;
-
-    &:hover:not(:disabled) {
-      background-color: colors.$success-hover;
-    }
-  }
-
-  .btn-kill {
-    background-color: colors.$danger;
-    color: white;
-
-    &:hover:not(:disabled) {
-      background-color: colors.$danger-hover;
-    }
-  }
-
-  .btn-compile {
-    background-color: colors.$accent-blue-dark;
-    color: white;
-
-    &:hover:not(:disabled) {
-      background-color: colors.$accent-blue-hover;
-    }
-  }
 }

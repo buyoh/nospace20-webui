@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useAtom } from 'jotai';
 import { compileOptionsAtom } from '../../stores/optionsAtom';
 import type { LanguageSubset, CompileTarget } from '../../../interfaces/NospaceTypes';
+import { CollapsibleSection } from '../common/CollapsibleSection';
+import { Select } from '../common/Select';
 import './styles/CompileOptions.scss';
 
 /** 選択肢の定義 */
@@ -39,24 +41,13 @@ export const CompileOptions: React.FC<CompileOptionsProps> = ({
   targetOptions = DEFAULT_TARGET_OPTIONS,
 }) => {
   const [options, setOptions] = useAtom(compileOptionsAtom);
-  const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div className={`compile-options${collapsed ? ' collapsed' : ''}`}>
-      <button
-        className="options-header"
-        onClick={() => setCollapsed((prev) => !prev)}
-        aria-expanded={!collapsed}
-      >
-        <span className="collapse-icon">{collapsed ? '▶' : '▼'}</span>
-        <h3>Compile Options</h3>
-      </button>
-
-      {!collapsed && <div className="options-body">
+    <CollapsibleSection title="Compile Options" className="compile-options">
       <div className="option-group">
         <label>
           <span>Language:</span>
-          <select
+          <Select
             value={options.language}
             onChange={(e) =>
               setOptions({
@@ -68,14 +59,14 @@ export const CompileOptions: React.FC<CompileOptionsProps> = ({
             {languageOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
-          </select>
+          </Select>
         </label>
       </div>
 
       <div className="option-group">
         <label>
           <span>Target:</span>
-          <select
+          <Select
             value={options.target}
             onChange={(e) =>
               setOptions({
@@ -87,10 +78,9 @@ export const CompileOptions: React.FC<CompileOptionsProps> = ({
             {targetOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
-          </select>
+          </Select>
         </label>
       </div>
-      </div>}
-    </div>
+    </CollapsibleSection>
   );
 };

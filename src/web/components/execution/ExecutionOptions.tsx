@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useAtom, useAtomValue } from 'jotai';
 import { executionOptionsAtom } from '../../stores/optionsAtom';
 import { flavorAtom } from '../../stores/flavorAtom';
+import { CollapsibleSection } from '../common/CollapsibleSection';
+import { Select } from '../common/Select';
+import { TextInput } from '../common/TextInput';
+import { Checkbox } from '../common/Checkbox';
 import './styles/ExecutionOptions.scss';
 
 /**
@@ -12,47 +16,30 @@ export const ExecutionOptions: React.FC = () => {
   const [options, setOptions] = useAtom(executionOptionsAtom);
   const flavor = useAtomValue(flavorAtom);
   const isWasm = flavor === 'wasm';
-  const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div className={`execution-options${collapsed ? ' collapsed' : ''}`}>
-      <button
-        className="options-header"
-        onClick={() => setCollapsed((prev) => !prev)}
-        aria-expanded={!collapsed}
-      >
-        <span className="collapse-icon">{collapsed ? '▶' : '▼'}</span>
-        <h3>Execution Options</h3>
-      </button>
-
-      {!collapsed && <div className="options-body">
+    <CollapsibleSection title="Execution Options" className="execution-options">
       {/* Debug trace — 両 flavor で利用可能 */}
       <div className="option-group">
-        <label>
-          <input
-            type="checkbox"
-            checked={options.debug}
-            onChange={(e) =>
-              setOptions({ ...options, debug: e.target.checked })
-            }
-          />
-          <span>Debug trace (--debug)</span>
-        </label>
+        <Checkbox
+          label="Debug trace (--debug)"
+          checked={options.debug}
+          onChange={(e) =>
+            setOptions({ ...options, debug: e.target.checked })
+          }
+        />
       </div>
 
       {/* Ignore debug — WebSocket のみ */}
       {!isWasm && (
         <div className="option-group">
-          <label>
-            <input
-              type="checkbox"
-              checked={options.ignoreDebug}
-              onChange={(e) =>
-                setOptions({ ...options, ignoreDebug: e.target.checked })
-              }
-            />
-            <span>Ignore debug functions (--ignore-debug)</span>
-          </label>
+          <Checkbox
+            label="Ignore debug functions (--ignore-debug)"
+            checked={options.ignoreDebug}
+            onChange={(e) =>
+              setOptions({ ...options, ignoreDebug: e.target.checked })
+            }
+          />
         </div>
       )}
 
@@ -61,7 +48,7 @@ export const ExecutionOptions: React.FC = () => {
         <div className="option-group">
           <label>
             <span>Input Mode:</span>
-            <select
+            <Select
               value={options.inputMode}
               onChange={(e) =>
                 setOptions({
@@ -72,7 +59,7 @@ export const ExecutionOptions: React.FC = () => {
             >
               <option value="batch">Batch</option>
               <option value="interactive">Interactive</option>
-            </select>
+            </Select>
           </label>
         </div>
       )}
@@ -82,7 +69,7 @@ export const ExecutionOptions: React.FC = () => {
         <div className="option-group">
           <label>
             <span>Step Budget:</span>
-            <input
+            <TextInput
               type="number"
               min={100}
               max={1000000}
@@ -100,7 +87,7 @@ export const ExecutionOptions: React.FC = () => {
         <div className="option-group">
           <label>
             <span>Max Total Steps:</span>
-            <input
+            <TextInput
               type="number"
               min={1000}
               max={10000000000}
@@ -112,7 +99,6 @@ export const ExecutionOptions: React.FC = () => {
           </label>
         </div>
       )}
-      </div>}
-    </div>
+    </CollapsibleSection>
   );
 };

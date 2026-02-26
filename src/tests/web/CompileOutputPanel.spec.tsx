@@ -52,12 +52,12 @@ describe('CompileOutputPanel', () => {
       />
     );
 
-    const toggleButton = screen.getByLabelText('Collapse compiled output');
+    const toggleButton = screen.getByRole('button', { name: /Compiled Output/ });
     fireEvent.click(toggleButton);
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
 
-  it('折りたたみ中のトグルボタンの aria-label が正しい', () => {
+  it('折りたたみ中のトグルボタンに aria-expanded="false" が設定される', () => {
     render(
       <CompileOutputPanel
         {...defaultProps}
@@ -65,9 +65,8 @@ describe('CompileOutputPanel', () => {
       />
     );
 
-    expect(
-      screen.getByLabelText('Expand compiled output')
-    ).toBeInTheDocument();
+    const toggleButton = screen.getByRole('button', { name: /Compiled Output/ });
+    expect(toggleButton).toHaveAttribute('aria-expanded', 'false');
   });
 
   describe('Run ボタン', () => {

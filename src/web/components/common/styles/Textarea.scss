@@ -1,0 +1,25 @@
+@use '../../styles/colors';
+
+.common-textarea {
+  width: 100%;
+  padding: 0.5rem;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.85rem;
+  background-color: colors.$bg-primary;
+  color: colors.$text-primary;
+  border: 1px solid colors.$border-secondary;
+  border-radius: 4px;
+  resize: vertical;
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    border-color: colors.$accent-primary;
+  }
+
+  &:disabled {
+    background-color: colors.$bg-secondary;
+    color: colors.$text-muted;
+    cursor: not-allowed;
+  }
+}

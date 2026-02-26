@@ -1,0 +1,17 @@
+@use '../../styles/colors';
+
+.common-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+
+  input[type='checkbox'] {
+    cursor: pointer;
+  }
+
+  span {
+    min-width: 80px;
+  }
+}

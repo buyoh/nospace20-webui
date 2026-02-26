@@ -2,71 +2,11 @@
 
 .compile-output-panel {
   margin-top: 1rem;
-  border: 1px solid colors.$border-primary;
   border-radius: 3px;
-  overflow: hidden;
-}
 
-.compile-output-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem;
-  background-color: colors.$bg-tertiary;
-  border-bottom: 1px solid colors.$border-primary;
-
-  .collapsed & {
-    border-bottom: none;
-  }
-
-  .collapse-toggle {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: none;
-    border: none;
-    color: colors.$text-secondary;
-    cursor: pointer;
+  // CollapsibleSection の collapsible-body padding を上書き
+  .collapsible-body {
     padding: 0;
-
-    &:hover {
-      color: colors.$text-white;
-    }
-
-    .collapse-icon {
-      font-size: 0.75rem;
-      width: 1rem;
-      text-align: center;
-    }
-
-    h3 {
-      margin: 0;
-      font-size: 0.9rem;
-    }
-  }
-
-  .compile-output-actions {
-    display: flex;
-    gap: 0.5rem;
-  }
-
-  .btn-run-compiled {
-    padding: 0.25rem 0.75rem;
-    background-color: colors.$success;
-    color: white;
-    border: none;
-    border-radius: 3px;
-    font-size: 0.75rem;
-    cursor: pointer;
-
-    &:hover:not(:disabled) {
-      background-color: colors.$success-hover;
-    }
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
   }
 }
 

@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useTestTree } from '../../hooks/useTestTree';
 import { TestTreeNode } from './TestTreeNode';
+import { Button } from '../common/Button';
 import './styles/TestListPanel.scss';
 
 interface TestListPanelProps {
@@ -37,9 +38,9 @@ export const TestListPanel: React.FC<TestListPanelProps> = ({ onCreateNew }) => 
   return (
     <div className="test-list-panel">
       <div className="test-list-header">
-        <button className="btn-new-test" onClick={onCreateNew}>
+        <Button variant="accent" className="btn-new-test" onClick={onCreateNew}>
           + New Test
-        </button>
+        </Button>
       </div>
       <div className="test-list-tree">
         {tree.length === 0 ? (

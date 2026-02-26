@@ -14,17 +14,6 @@
 
     .btn-new-test {
       width: 100%;
-      padding: 8px;
-      background-color: colors.$accent-primary;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 14px;
-
-      &:hover {
-        background-color: colors.$accent-blue-hover;
-      }
     }
   }
 
