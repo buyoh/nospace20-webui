@@ -1,8 +1,8 @@
-# 共通 UI コンポーネント抽出（Button / Select / TextInput / Textarea）
+# 共通 UI コンポーネント抽出（Button / Select / TextInput / Textarea / Checkbox / RadioGroup）
 
 ## 概要
 
-button・select・input・textarea の CSS 設定が各コンポーネントの SCSS に分散している。
+button・select・input・textarea・checkbox・radio の CSS 設定が各コンポーネントの SCSS に分散している。
 各要素を React コンポーネントとしてラップし、スタイルを一か所に集約する。
 
 ## 現状の問題
@@ -76,6 +76,31 @@ button・select・input・textarea の CSS 設定が各コンポーネントの 
 
 **共通パターン**: `font-family: 'Courier New', monospace; background-color: $bg-primary or $bg-input; color: $text-primary; border: 1px solid $border-secondary; border-radius: 4px; resize: vertical; &:focus { outline: none; border-color: $accent-primary; }`
 
+### checkbox スタイルの散在
+
+1 箇所:
+
+| ファイル | セレクタ | 用途 |
+|---|---|---|
+| ExecutionOptions.tsx | `<input type="checkbox">` × 2 | debug / ignoreDebug オプション |
+| ExecutionOptions.scss | `.option-group input[type='checkbox'] { cursor: pointer; }` | — |
+
+現時点では 1 ファイルのみだが、`<label>` + checkbox + テキストの組み合わせパターンは今後も再利用されうるため、コンポーネント化しておく。
+
+### radio グループスタイルの散在
+
+3 箇所で同一の「ラジオボタングループ」パターンが独立実装されている:
+
+| ファイル (TSX) | SCSS セレクタ | 用途 |
+|---|---|---|
+| `CheckResultEditor.tsx` (`CheckResultModeToggle`) | `.check-result-mode-toggle` | Form / JSON Text 切替 |
+| `SuccessIOForm.tsx` | `.mode-selector` | Single Case / Multiple Cases 切替 |
+| `ParseErrorForm.tsx` | `.radio-group` | Tree / Tokenize 切替 |
+
+**共通パターン**: `display: flex; gap: 12-16px; font-size: 13px;` + `label { display: flex; align-items: center; gap: 4px; cursor: pointer; font-weight: normal; }`
+
+3 箇所とも「横並びラジオボタン + テキストラベル」の同一 UI パターンで、SCSS も `display: flex; gap; font-size; label { display: flex; align-items: center; gap; cursor: pointer; }` がほぼ同一。
+
 ## 設計
 
 ### ディレクトリ構造
@@ -83,11 +108,15 @@ button・select・input・textarea の CSS 設定が各コンポーネントの 
 ```
 src/web/components/common/
 ├── Button.tsx
+├── Checkbox.tsx
+├── RadioGroup.tsx
 ├── Select.tsx
 ├── TextInput.tsx
 ├── Textarea.tsx
 └── styles/
     ├── Button.scss
+    ├── Checkbox.scss
+    ├── RadioGroup.scss
     ├── Select.scss
     ├── TextInput.scss
     └── Textarea.scss
@@ -285,6 +314,117 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
 }
 ```
 
+### E. `Checkbox` コンポーネント
+
+```tsx
+interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
+  /** チェックボックスの横に表示するラベルテキスト */
+  label: string;
+}
+```
+
+- `<label>` + `<input type="checkbox">` + テキストを 1 つのコンポーネントにまとめる。
+- テキスト入力用の `TextInput` とは体系が異なるため別コンポーネント。
+
+**レンダリング**:
+
+```tsx
+<label className={`common-checkbox ${className ?? ''}`}>
+  <input type="checkbox" {...rest} />
+  <span>{label}</span>
+</label>
+```
+
+**SCSS（Checkbox.scss）**:
+
+```scss
+.common-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+
+  input[type='checkbox'] {
+    cursor: pointer;
+  }
+
+  span {
+    min-width: 80px;
+  }
+}
+```
+
+### F. `RadioGroup` コンポーネント
+
+```tsx
+interface RadioOption<T extends string> {
+  value: T;
+  label: string;
+}
+
+interface RadioGroupProps<T extends string> {
+  /** グループ名（HTML name 属性） */
+  name: string;
+  /** 選択肢 */
+  options: RadioOption<T>[];
+  /** 現在選択中の値 */
+  value: T;
+  /** 選択変更時コールバック */
+  onChange: (value: T) => void;
+  /** 無効化 */
+  disabled?: boolean;
+  /** 追加クラス */
+  className?: string;
+}
+```
+
+- 3 箇所のラジオボタングループ UI を統一する。
+- 各ラジオボタン + ラベルの組み合わせを `options` 配列で定義しレンダリング。
+
+**レンダリング**:
+
+```tsx
+<div className={`common-radio-group ${className ?? ''}`}>
+  {options.map((opt) => (
+    <label key={opt.value}>
+      <input
+        type="radio"
+        name={name}
+        value={opt.value}
+        checked={value === opt.value}
+        onChange={() => onChange(opt.value)}
+        disabled={disabled}
+      />
+      {opt.label}
+    </label>
+  ))}
+</div>
+```
+
+**SCSS（RadioGroup.scss）**:
+
+```scss
+.common-radio-group {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    font-weight: normal;
+
+    input[type='radio'] {
+      margin: 0;
+      cursor: pointer;
+    }
+  }
+}
+```
+
 ## リファクタリング対象
 
 ### Button 置き換え
@@ -322,8 +462,20 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
 | `TestCaseCreateForm.tsx` | `<input type="text">` → `<TextInput>` |
 | `CheckResultEditor.tsx` 関連フォーム | array item の `<input>` → `<TextInput>` |
 
-**対象外**:
-- `<input type="checkbox">`, `<input type="radio">`: テキスト入力とはスタイル体系が異なるため、現時点では対象外。1 箇所ずつしかなく、重複の問題が小さい。
+### Checkbox 置き換え
+
+| ファイル（TSX） | 変更内容 |
+|---|---|
+| `ExecutionOptions.tsx` | `<label><input type="checkbox" ...><span>Debug trace</span></label>` → `<Checkbox label="Debug trace (--debug)" ...>` |
+| `ExecutionOptions.tsx` | `<label><input type="checkbox" ...><span>Ignore debug...</span></label>` → `<Checkbox label="Ignore debug functions (--ignore-debug)" ...>` |
+
+### RadioGroup 置き換え
+
+| ファイル（TSX） | 変更内容 |
+|---|---|
+| `CheckResultEditor.tsx` (`CheckResultModeToggle`) | `<div className="check-result-mode-toggle"><label><input type="radio">...</label>...</div>` → `<RadioGroup name="edit-mode" options={[{value:'form',label:'Form'},{value:'json',label:'JSON Text'}]} ...>` |
+| `SuccessIOForm.tsx` | `.mode-selector` 内のラジオボタン → `<RadioGroup name="io-mode" options={[{value:'single',label:'Single Case'},{value:'multi',label:'Multiple Cases'}]} ...>` |
+| `ParseErrorForm.tsx` | `.radio-group` 内のラジオボタン → `<RadioGroup name="phase" options={[{value:'tree',label:'Tree'},{value:'tokenize',label:'Tokenize'}]} ...>` |
 
 ### Textarea 置き換え
 
@@ -348,10 +500,10 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
 | CompileOutputPanel.scss | `.btn-run-compiled` のスタイル |
 | OutputPanel.scss | `.btn-clear` のスタイル |
 | CompileOptions.scss | `.option-group select` のスタイル |
-| ExecutionOptions.scss | `.option-group select`, `input[type='number']` のスタイル |
+| ExecutionOptions.scss | `.option-group select`, `input[type='number']`, `input[type='checkbox']` のスタイル |
 | TestCaseEditForm.scss | `.form-footer button`, `.form-section input`, `.form-section select` のスタイル |
 | TestListPanel.scss | `.btn-new-test` のスタイル |
-| CheckResultEditor.scss | `.array-item button`, `.array-editor > button`, `.multi-cases > button`, `.array-item input`, `.case-header input`, `.check-result-type-selector`, `.json-editor`, `.success-io-form textarea` のスタイル |
+| CheckResultEditor.scss | `.array-item button`, `.array-editor > button`, `.multi-cases > button`, `.array-item input`, `.case-header input`, `.check-result-type-selector`, `.json-editor`, `.success-io-form textarea`, `.check-result-mode-toggle`, `.mode-selector`, `.radio-group` のスタイル |
 
 ## テスト
 
@@ -363,6 +515,8 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
 | `src/tests/web/common/Select.spec.tsx` | render, className マージ, disabled の検証 |
 | `src/tests/web/common/TextInput.spec.tsx` | render, type 属性, className マージの検証 |
 | `src/tests/web/common/Textarea.spec.tsx` | render, className マージの検証 |
+| `src/tests/web/common/Checkbox.spec.tsx` | render, label 表示, checked/onChange の検証 |
+| `src/tests/web/common/RadioGroup.spec.tsx` | render, options 表示, value/onChange, disabled の検証 |
 
 ### 既存テストへの影響
 
@@ -378,8 +532,10 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
 2. `Select` コンポーネント + SCSS 作成
 3. `TextInput` コンポーネント + SCSS 作成
 4. `Textarea` コンポーネント + SCSS 作成
-5. 各コンポーネントのユニットテスト作成
-6. execution 系コンポーネントのリファクタリング（ExecutionControls, CompileOptions, ExecutionOptions, InputPanel, OutputPanel, CompileOutputPanel）
-7. test-editor 系コンポーネントのリファクタリング（TestCaseEditForm, TestCaseCreateForm, TestListPanel, CheckResultEditor, SuccessIOForm, SuccessTraceForm, CompileErrorForm, ParseErrorForm）
-8. 不要になった SCSS のスタイル削除
-9. ビルド・既存テスト通過確認
+5. `Checkbox` コンポーネント + SCSS 作成
+6. `RadioGroup` コンポーネント + SCSS 作成
+7. 各コンポーネントのユニットテスト作成
+8. execution 系コンポーネントのリファクタリング（ExecutionControls, CompileOptions, ExecutionOptions, InputPanel, OutputPanel, CompileOutputPanel）
+9. test-editor 系コンポーネントのリファクタリング（TestCaseEditForm, TestCaseCreateForm, TestListPanel, CheckResultEditor, SuccessIOForm, SuccessTraceForm, CompileErrorForm, ParseErrorForm）
+10. 不要になった SCSS のスタイル削除
+11. ビルド・既存テスト通過確認
