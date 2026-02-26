@@ -2,7 +2,7 @@ import React from 'react';
 import AceEditor from 'react-ace';
 import type { Ace } from 'ace-builds';
 import 'ace-builds/src-noconflict/theme-monokai';
-import './nospace-ace-mode';
+import '../../libs/nospace20/nospace-ace-mode';
 import './styles/NospaceEditor.scss';
 
 /** Ace Editor を使用した Nospace エディタの Props */
