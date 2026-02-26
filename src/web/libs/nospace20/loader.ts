@@ -7,6 +7,7 @@ import type {
   compile as compileType,
   compile_to_mnemonic_string as compileToMnemonicType,
   compile_to_whitespace_string as compileToWsType,
+  getOptions as getOptionsType,
   parse as parseType,
   run as runType,
 } from './nospace20';
@@ -16,6 +17,7 @@ type Nospace20Module = {
   compile: typeof compileType;
   compile_to_mnemonic_string: typeof compileToMnemonicType;
   compile_to_whitespace_string: typeof compileToWsType;
+  getOptions: typeof getOptionsType;
   parse: typeof parseType;
   run: typeof runType;
 };
