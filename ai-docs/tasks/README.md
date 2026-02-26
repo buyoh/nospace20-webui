@@ -17,6 +17,7 @@
 - [fix-ace-misspelled-options.md](fix-ace-misspelled-options.md) Ace Editor "misspelled option" 警告の修正
 - [wasm-execution-limits/](wasm-execution-limits/) WASM 実行制限パラメータ（STEP_BUDGET / MAX_TOTAL_STEPS）の UI 設定
 - [ws-compile-support/](ws-compile-support/) WebSocket flavor コンパイル・実行対応
+- [extract-collapsible-section/](extract-collapsible-section/) 折りたたみセクション・オプションパネルの共通コンポーネント化
 
 ## 完了済みタスク
 
