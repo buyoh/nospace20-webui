@@ -19,7 +19,7 @@ jest.mock('react-ace', () => {
 // ace-builds の theme/mode インポートをスタブ
 jest.mock('ace-builds/src-noconflict/theme-monokai', () => ({}));
 // nospace-ace-mode は相対インポートのためモックが必要
-jest.mock('../../web/components/editor/nospace-ace-mode', () => ({}));
+jest.mock('../../web/libs/nospace20/nospace-ace-mode', () => ({}));
 
 // NospaceEditor は mock セットアップ後に import する
 import { NospaceEditor } from '../../web/components/editor/NospaceEditor';
