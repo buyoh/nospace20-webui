@@ -18,6 +18,7 @@
 - [wasm-execution-limits/](wasm-execution-limits/) WASM 実行制限パラメータ（STEP_BUDGET / MAX_TOTAL_STEPS）の UI 設定
 - [ws-compile-support/](ws-compile-support/) WebSocket flavor コンパイル・実行対応
 - [extract-collapsible-section/](extract-collapsible-section/) 折りたたみセクション・オプションパネルの共通コンポーネント化
+- [code-review-2026-02-27/](code-review-2026-02-27/) update-code SKILL.md 注意事項に対するコードレビュー（Mock違反・SRP違反・JSDoc欠落）
 - [extract-common-ui-components/](extract-common-ui-components/) 共通 UI コンポーネント抽出（Button / Select / TextInput / Textarea / Checkbox / RadioGroup）
 - [wasm-compiler-options/](wasm-compiler-options/) WASM コンパイラオプション拡張 UI（stdExtensions / optPasses の設定）
 - [operation-mode-tabs/](operation-mode-tabs/) オペレーションモード タブ再構成（Compile / Run / Run(Direct) / TestEditor）
