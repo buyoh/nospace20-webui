@@ -195,14 +195,30 @@ export const CompileOptions: React.FC<CompileOptionsProps> = (props) => {
         <div className="option-group">
           <span className="option-group-label">Optimization:</span>
           <div className="checkbox-group">
-            {optPassOptions.map((pass) => (
-              <Checkbox
-                key={pass}
-                label={OPT_PASS_LABELS[pass] ?? pass}
-                checked={(options.optPasses ?? []).includes(pass)}
-                onChange={(e) => handleOptPassChange(pass, e.target.checked)}
-              />
-            ))}
+            {optPassOptions
+              .filter((pass) => pass === 'all')
+              .map((pass) => (
+                <Checkbox
+                  key={pass}
+                  label={OPT_PASS_LABELS[pass] ?? pass}
+                  checked={(options.optPasses ?? []).includes(pass)}
+                  onChange={(e) => handleOptPassChange(pass, e.target.checked)}
+                />
+              ))}
+            {optPassOptions.some((pass) => pass !== 'all') && (
+              <CollapsibleSection title="More" defaultCollapsed={true} className="opt-pass-more">
+                {optPassOptions
+                  .filter((pass) => pass !== 'all')
+                  .map((pass) => (
+                    <Checkbox
+                      key={pass}
+                      label={OPT_PASS_LABELS[pass] ?? pass}
+                      checked={(options.optPasses ?? []).includes(pass)}
+                      onChange={(e) => handleOptPassChange(pass, e.target.checked)}
+                    />
+                  ))}
+              </CollapsibleSection>
+            )}
           </div>
         </div>
       )}

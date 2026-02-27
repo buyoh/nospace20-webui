@@ -6,10 +6,10 @@ import type {
 
 /** コンパイルオプション */
 export const compileOptionsAtom = atom<CompileOptions>({
-  language: 'standard',
+  language: 'ws',
   target: 'ws',
-  stdExtensions: [],
-  optPasses: [],
+  stdExtensions: ['alloc'],
+  optPasses: ['all'],
 });
 
 /** 実行オプション */
