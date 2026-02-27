@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useAtom, useAtomValue } from 'jotai';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { executionOptionsAtom } from '../stores/optionsAtom';
 import { flavorAtom } from '../stores/flavorAtom';
 import { operationModeAtom } from '../stores/testEditorAtom';
+import { sourceCodeAtom } from '../stores/editorAtom';
 import { ExecutionOptions } from '../components/execution/ExecutionOptions';
 import { CompileOptions } from '../components/execution/CompileOptions';
 import { CompileOutputPanel } from '../components/execution/CompileOutputPanel';
 import { ExecutionControls } from '../components/execution/ExecutionControls';
 import { OutputPanel } from '../components/execution/OutputPanel';
 import { InputPanel } from '../components/execution/InputPanel';
+import { SampleList } from '../components/editor/SampleList';
+import { editorSamples } from '../libs/editorSamples';
 import { useNospaceExecution, type BackendFactory } from '../hooks/useNospaceExecution';
 import { TestEditorContainer } from './TestEditorContainer';
 import './styles/ExecutionContainer.scss';
@@ -27,6 +30,7 @@ interface ExecutionContainerProps {
     CompileOptions?: React.ComponentType<any>;
     OutputPanel?: React.ComponentType<any>;
     InputPanel?: React.ComponentType<any>;
+    SampleList?: typeof SampleList;
   };
 }
 
@@ -42,12 +46,14 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({ backendF
     CompileOptions: CompileOptionsImpl = CompileOptions,
     OutputPanel: OutputPanelImpl = OutputPanel,
     InputPanel: InputPanelImpl = InputPanel,
+    SampleList: SampleListImpl = SampleList,
   } = components ?? {};
 
   const flavor = useAtomValue(flavorAtom);
   const executionOptions = useAtomValue(executionOptionsAtom);
   const [batchInput, setBatchInput] = useState('');
   const [operationMode, setOperationMode] = useAtom(operationModeAtom);
+  const setSourceCode = useSetAtom(sourceCodeAtom);
   const [compileOutputCollapsed, setCompileOutputCollapsed] = useState(true);
 
   // Compile/Run: コンパイル完了後に自動実行するためのペンディング入力データ。null は待機中でないことを示す
@@ -95,6 +101,12 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({ backendF
       setOperationMode('compile');
     }
   }, [isWasm, operationMode]);
+
+  /** サンプルをロードしてコンパイルタブへ切り替える */
+  const handleLoadSample = (code: string) => {
+    setSourceCode(code);
+    setOperationMode('compile');
+  };
 
   const handleRunWithInput = () => {
     const inputMode = isWasm ? 'batch' : executionOptions.inputMode;
@@ -147,9 +159,17 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({ backendF
             Test Editor
           </button>
         )}
+        <button
+          className={`mode-tab ${operationMode === 'sample' ? 'active' : ''}`}
+          onClick={() => setOperationMode('sample')}
+        >
+          Sample
+        </button>
       </div>
 
-      {operationMode === 'test-editor' ? (
+      {operationMode === 'sample' ? (
+        <SampleListImpl samples={editorSamples} onLoad={handleLoadSample} />
+      ) : operationMode === 'test-editor' ? (
         <TestEditorContainerImpl />
       ) : operationMode === 'compile' ? (
         <>
