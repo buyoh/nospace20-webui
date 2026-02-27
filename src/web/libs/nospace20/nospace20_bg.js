@@ -30,6 +30,14 @@ export class WasmWhitespaceVM {
         return ret >>> 0;
     }
     /**
+     * stdin のストリーム終端を通知する（interactive モード用）
+     *
+     * 以降、バッファが空の状態で入力命令に到達すると EOF として処理される。
+     */
+    closeStdin() {
+        wasm.wasmwhitespacevm_closeStdin(this.__wbg_ptr);
+    }
+    /**
      * 現在の命令のニーモニック表現を取得（デバッグ用）
      * @returns {string | undefined}
      */
@@ -42,7 +50,7 @@ export class WasmWhitespaceVM {
             let v1;
             if (r0 !== 0) {
                 v1 = getStringFromWasm0(r0, r1).slice();
-                wasm.__wbindgen_export3(r0, r1 * 1, 1);
+                wasm.__wbindgen_export4(r0, r1 * 1, 1);
             }
             return v1;
         } finally {
@@ -74,7 +82,7 @@ export class WasmWhitespaceVM {
             return getStringFromWasm0(r0, r1);
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
-            wasm.__wbindgen_export3(deferred1_0, deferred1_1, 1);
+            wasm.__wbindgen_export4(deferred1_0, deferred1_1, 1);
         }
     }
     /**
@@ -91,6 +99,34 @@ export class WasmWhitespaceVM {
             const ptr1 = passStringToWasm0(stdin, wasm.__wbindgen_export, wasm.__wbindgen_export2);
             const len1 = WASM_VECTOR_LEN;
             wasm.wasmwhitespacevm_fromWhitespace(retptr, ptr0, len0, ptr1, len1);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+            if (r2) {
+                throw takeObject(r1);
+            }
+            return WasmWhitespaceVM.__wrap(r0);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
+     * Interactive モードで Whitespace ソースから VM を構築する
+     *
+     * stdin バッファが空の場合、WaitingForInput で一時停止する。
+     * provide_stdin() で後からデータを追加可能。
+     * @param {string} ws_source
+     * @param {string} initial_stdin
+     * @returns {WasmWhitespaceVM}
+     */
+    static fromWhitespaceInteractive(ws_source, initial_stdin) {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passStringToWasm0(ws_source, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(initial_stdin, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+            const len1 = WASM_VECTOR_LEN;
+            wasm.wasmwhitespacevm_fromWhitespaceInteractive(retptr, ptr0, len0, ptr1, len1);
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
             var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
@@ -142,17 +178,21 @@ export class WasmWhitespaceVM {
     }
     /**
      * nospace ソースをコンパイルし、Whitespace VM を構築する
+     *
+     * - `std_extensions`: 有効にする拡張の配列（例: `["debug", "alloc"]`）
      * @param {string} nospace_source
      * @param {string} stdin
+     * @param {boolean | null} [interactive]
+     * @param {StdExtension[] | null} [std_extensions]
      */
-    constructor(nospace_source, stdin) {
+    constructor(nospace_source, stdin, interactive, std_extensions) {
         try {
             const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
             const ptr0 = passStringToWasm0(nospace_source, wasm.__wbindgen_export, wasm.__wbindgen_export2);
             const len0 = WASM_VECTOR_LEN;
             const ptr1 = passStringToWasm0(stdin, wasm.__wbindgen_export, wasm.__wbindgen_export2);
             const len1 = WASM_VECTOR_LEN;
-            wasm.wasmwhitespacevm_new(retptr, ptr0, len0, ptr1, len1);
+            wasm.wasmwhitespacevm_new(retptr, ptr0, len0, ptr1, len1, isLikeNone(interactive) ? 0xFFFFFF : interactive ? 1 : 0, isLikeNone(std_extensions) ? 0 : addHeapObject(std_extensions));
             var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
             var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
             var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
@@ -175,9 +215,21 @@ export class WasmWhitespaceVM {
         return ret >>> 0;
     }
     /**
+     * stdin にデータを追加する（interactive モード用）
+     *
+     * WaitingForInput 状態の際に呼び出し、次の step() で入力を再試行する。
+     * InputNumber の場合、改行（\n）付きで投入する必要がある。
+     * @param {string} data
+     */
+    provideStdin(data) {
+        const ptr0 = passStringToWasm0(data, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.wasmwhitespacevm_provideStdin(this.__wbg_ptr, ptr0, len0);
+    }
+    /**
      * 指定ステップ数だけ実行する
      *
-     * 戻り値: { status: "suspended" | "complete" | "error", error?: string }
+     * 戻り値: { status: "suspended" | "complete" | "error" | "waiting_for_input", error?: string, inputType?: string }
      * @param {number} budget
      * @returns {VmStepResult}
      */
@@ -199,19 +251,24 @@ if (Symbol.dispose) WasmWhitespaceVM.prototype[Symbol.dispose] = WasmWhitespaceV
 /**
  * nospace ソースコードをコンパイルする。
  * CLI の `--mode=compile` に相当。
+ *
+ * - `std_extensions`: 有効にする拡張の配列（例: `["debug", "alloc"]`）
+ * - `opt_passes`: 有効にする最適化パスの配列（例: `["all"]` または `["constant-folding", "dead-code"]`）
  * @param {string} source
  * @param {string} target
  * @param {string} lang_std
+ * @param {StdExtension[] | null} [std_extensions]
+ * @param {OptPass[] | null} [opt_passes]
  * @returns {CompileResult}
  */
-export function compile(source, target, lang_std) {
+export function compile(source, target, lang_std, std_extensions, opt_passes) {
     const ptr0 = passStringToWasm0(source, wasm.__wbindgen_export, wasm.__wbindgen_export2);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passStringToWasm0(target, wasm.__wbindgen_export, wasm.__wbindgen_export2);
     const len1 = WASM_VECTOR_LEN;
     const ptr2 = passStringToWasm0(lang_std, wasm.__wbindgen_export, wasm.__wbindgen_export2);
     const len2 = WASM_VECTOR_LEN;
-    const ret = wasm.compile(ptr0, len0, ptr1, len1, ptr2, len2);
+    const ret = wasm.compile(ptr0, len0, ptr1, len1, ptr2, len2, isLikeNone(std_extensions) ? 0 : addHeapObject(std_extensions), isLikeNone(opt_passes) ? 0 : addHeapObject(opt_passes));
     return takeObject(ret);
 }
 
@@ -240,6 +297,17 @@ export function compile_to_whitespace_string(source) {
 }
 
 /**
+ * 利用可能なオプションの一覧を返す
+ *
+ * compile() や WasmWhitespaceVM で指定可能なオプション値を取得できる。
+ * @returns {OptionsDefinition}
+ */
+export function getOptions() {
+    const ret = wasm.getOptions();
+    return takeObject(ret);
+}
+
+/**
  * nospace ソースコードの構文チェックのみ行う。
  * @param {string} source
  * @returns {ParseResult}
@@ -254,22 +322,39 @@ export function parse(source) {
 /**
  * nospace ソースコードを解析・実行する。
  * CLI の `--mode=run` に相当。
+ *
+ * - `ignore_debug`: デバッグ用組み込み関数（__assert, __trace 等）を無視する（CLI の `--ignore-debug` 相当）
+ * - `opt_passes`: 有効にする最適化パスの配列（例: `["all"]` または `["constant-folding", "dead-code"]`）
  * @param {string} source
  * @param {string} stdin
  * @param {boolean} debug
+ * @param {boolean | null} [ignore_debug]
+ * @param {OptPass[] | null} [opt_passes]
  * @returns {RunResult}
  */
-export function run(source, stdin, debug) {
+export function run(source, stdin, debug, ignore_debug, opt_passes) {
     const ptr0 = passStringToWasm0(source, wasm.__wbindgen_export, wasm.__wbindgen_export2);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passStringToWasm0(stdin, wasm.__wbindgen_export, wasm.__wbindgen_export2);
     const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.run(ptr0, len0, ptr1, len1, debug);
+    const ret = wasm.run(ptr0, len0, ptr1, len1, debug, isLikeNone(ignore_debug) ? 0xFFFFFF : ignore_debug ? 1 : 0, isLikeNone(opt_passes) ? 0 : addHeapObject(opt_passes));
     return takeObject(ret);
 }
 export function __wbg_Error_8c4e43fe74559d73(arg0, arg1) {
     const ret = Error(getStringFromWasm0(arg0, arg1));
     return addHeapObject(ret);
+}
+export function __wbg_String_8f0eb39a4a4c2f66(arg0, arg1) {
+    const ret = String(getObject(arg1));
+    const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+    const len1 = WASM_VECTOR_LEN;
+    getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+    getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+}
+export function __wbg___wbindgen_boolean_get_bbbb1c18aa2f5e25(arg0) {
+    const v = getObject(arg0);
+    const ret = typeof(v) === 'boolean' ? v : undefined;
+    return isLikeNone(ret) ? 0xFFFFFF : ret ? 1 : 0;
 }
 export function __wbg___wbindgen_debug_string_0bc8482c6e3508ae(arg0, arg1) {
     const ret = debugString(getObject(arg1));
@@ -278,12 +363,99 @@ export function __wbg___wbindgen_debug_string_0bc8482c6e3508ae(arg0, arg1) {
     getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
     getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
 }
+export function __wbg___wbindgen_is_function_0095a73b8b156f76(arg0) {
+    const ret = typeof(getObject(arg0)) === 'function';
+    return ret;
+}
+export function __wbg___wbindgen_is_null_ac34f5003991759a(arg0) {
+    const ret = getObject(arg0) === null;
+    return ret;
+}
+export function __wbg___wbindgen_is_object_5ae8e5880f2c1fbd(arg0) {
+    const val = getObject(arg0);
+    const ret = typeof(val) === 'object' && val !== null;
+    return ret;
+}
 export function __wbg___wbindgen_is_string_cd444516edc5b180(arg0) {
     const ret = typeof(getObject(arg0)) === 'string';
     return ret;
 }
+export function __wbg___wbindgen_is_undefined_9e4d92534c42d778(arg0) {
+    const ret = getObject(arg0) === undefined;
+    return ret;
+}
+export function __wbg___wbindgen_jsval_loose_eq_9dd77d8cd6671811(arg0, arg1) {
+    const ret = getObject(arg0) == getObject(arg1);
+    return ret;
+}
+export function __wbg___wbindgen_number_get_8ff4255516ccad3e(arg0, arg1) {
+    const obj = getObject(arg1);
+    const ret = typeof(obj) === 'number' ? obj : undefined;
+    getDataViewMemory0().setFloat64(arg0 + 8 * 1, isLikeNone(ret) ? 0 : ret, true);
+    getDataViewMemory0().setInt32(arg0 + 4 * 0, !isLikeNone(ret), true);
+}
+export function __wbg___wbindgen_string_get_72fb696202c56729(arg0, arg1) {
+    const obj = getObject(arg1);
+    const ret = typeof(obj) === 'string' ? obj : undefined;
+    var ptr1 = isLikeNone(ret) ? 0 : passStringToWasm0(ret, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+    var len1 = WASM_VECTOR_LEN;
+    getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+    getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+}
 export function __wbg___wbindgen_throw_be289d5034ed271b(arg0, arg1) {
     throw new Error(getStringFromWasm0(arg0, arg1));
+}
+export function __wbg_call_389efe28435a9388() { return handleError(function (arg0, arg1) {
+    const ret = getObject(arg0).call(getObject(arg1));
+    return addHeapObject(ret);
+}, arguments); }
+export function __wbg_done_57b39ecd9addfe81(arg0) {
+    const ret = getObject(arg0).done;
+    return ret;
+}
+export function __wbg_get_9b94d73e6221f75c(arg0, arg1) {
+    const ret = getObject(arg0)[arg1 >>> 0];
+    return addHeapObject(ret);
+}
+export function __wbg_get_b3ed3ad4be2bc8ac() { return handleError(function (arg0, arg1) {
+    const ret = Reflect.get(getObject(arg0), getObject(arg1));
+    return addHeapObject(ret);
+}, arguments); }
+export function __wbg_instanceof_ArrayBuffer_c367199e2fa2aa04(arg0) {
+    let result;
+    try {
+        result = getObject(arg0) instanceof ArrayBuffer;
+    } catch (_) {
+        result = false;
+    }
+    const ret = result;
+    return ret;
+}
+export function __wbg_instanceof_Uint8Array_9b9075935c74707c(arg0) {
+    let result;
+    try {
+        result = getObject(arg0) instanceof Uint8Array;
+    } catch (_) {
+        result = false;
+    }
+    const ret = result;
+    return ret;
+}
+export function __wbg_isArray_d314bb98fcf08331(arg0) {
+    const ret = Array.isArray(getObject(arg0));
+    return ret;
+}
+export function __wbg_iterator_6ff6560ca1568e55() {
+    const ret = Symbol.iterator;
+    return addHeapObject(ret);
+}
+export function __wbg_length_32ed9a279acd054c(arg0) {
+    const ret = getObject(arg0).length;
+    return ret;
+}
+export function __wbg_length_35a7bace40f36eac(arg0) {
+    const ret = getObject(arg0).length;
+    return ret;
 }
 export function __wbg_new_361308b2356cecd0() {
     const ret = new Object();
@@ -297,6 +469,21 @@ export function __wbg_new_dca287b076112a51() {
     const ret = new Map();
     return addHeapObject(ret);
 }
+export function __wbg_new_dd2b680c8bf6ae29(arg0) {
+    const ret = new Uint8Array(getObject(arg0));
+    return addHeapObject(ret);
+}
+export function __wbg_next_3482f54c49e8af19() { return handleError(function (arg0) {
+    const ret = getObject(arg0).next();
+    return addHeapObject(ret);
+}, arguments); }
+export function __wbg_next_418f80d8f5303233(arg0) {
+    const ret = getObject(arg0).next;
+    return addHeapObject(ret);
+}
+export function __wbg_prototypesetcall_bdcdcc5842e4d77d(arg0, arg1, arg2) {
+    Uint8Array.prototype.set.call(getArrayU8FromWasm0(arg0, arg1), getObject(arg2));
+}
 export function __wbg_set_1eb0999cf5d27fc8(arg0, arg1, arg2) {
     const ret = getObject(arg0).set(getObject(arg1), getObject(arg2));
     return addHeapObject(ret);
@@ -306,6 +493,10 @@ export function __wbg_set_3f1d0b984ed272ed(arg0, arg1, arg2) {
 }
 export function __wbg_set_f43e577aea94465b(arg0, arg1, arg2) {
     getObject(arg0)[arg1 >>> 0] = takeObject(arg2);
+}
+export function __wbg_value_0546255b415e96c1(arg0) {
+    const ret = getObject(arg0).value;
+    return addHeapObject(ret);
 }
 export function __wbindgen_cast_0000000000000001(arg0) {
     // Cast intrinsic for `F64 -> Externref`.
@@ -418,6 +609,11 @@ function dropObject(idx) {
     heap_next = idx;
 }
 
+function getArrayU8FromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    return getUint8ArrayMemory0().subarray(ptr / 1, ptr / 1 + len);
+}
+
 let cachedDataViewMemory0 = null;
 function getDataViewMemory0() {
     if (cachedDataViewMemory0 === null || cachedDataViewMemory0.buffer.detached === true || (cachedDataViewMemory0.buffer.detached === undefined && cachedDataViewMemory0.buffer !== wasm.memory.buffer)) {
@@ -441,10 +637,22 @@ function getUint8ArrayMemory0() {
 
 function getObject(idx) { return heap[idx]; }
 
+function handleError(f, args) {
+    try {
+        return f.apply(this, args);
+    } catch (e) {
+        wasm.__wbindgen_export3(addHeapObject(e));
+    }
+}
+
 let heap = new Array(128).fill(undefined);
 heap.push(undefined, null, true, false);
 
 let heap_next = heap.length;
+
+function isLikeNone(x) {
+    return x === undefined || x === null;
+}
 
 function passStringToWasm0(arg, malloc, realloc) {
     if (realloc === undefined) {

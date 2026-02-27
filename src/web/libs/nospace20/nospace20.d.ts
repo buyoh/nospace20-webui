@@ -35,8 +35,29 @@ interface ParseResultOk {
 type ParseResult = ParseResultOk | ResultErr;
 
 interface VmStepResult {
-    status: "suspended" | "complete" | "error";
+    status: "suspended" | "complete" | "error" | "waiting_for_input";
     error?: string;
+    inputType?: "char" | "number";
+}
+
+/** コンパイルターゲット */
+type CompileTarget = "ws" | "mnemonic";
+
+/** 言語サブセット */
+type LanguageStd = "standard" | "ws";
+
+/** ターゲット拡張 */
+type StdExtension = "debug" | "alloc";
+
+/** 利用可能な最適化パス */
+type OptPass = "all" | "condition-opt" | "geti-opt" | "constant-folding" | "dead-code";
+
+/** 利用可能なオプション定義 */
+interface OptionsDefinition {
+    readonly compileTargets: readonly CompileTarget[];
+    readonly languageStds: readonly LanguageStd[];
+    readonly stdExtensions: readonly StdExtension[];
+    readonly optPasses: readonly OptPass[];
 }
 
 
@@ -54,6 +75,12 @@ export class WasmWhitespaceVM {
      */
     call_stack_depth(): number;
     /**
+     * stdin のストリーム終端を通知する（interactive モード用）
+     *
+     * 以降、バッファが空の状態で入力命令に到達すると EOF として処理される。
+     */
+    closeStdin(): void;
+    /**
      * 現在の命令のニーモニック表現を取得（デバッグ用）
      */
     current_instruction(): string | undefined;
@@ -69,6 +96,13 @@ export class WasmWhitespaceVM {
      * Whitespace ソースコードから直接 VM を構築する
      */
     static fromWhitespace(ws_source: string, stdin: string): WasmWhitespaceVM;
+    /**
+     * Interactive モードで Whitespace ソースから VM を構築する
+     *
+     * stdin バッファが空の場合、WaitingForInput で一時停止する。
+     * provide_stdin() で後からデータを追加可能。
+     */
+    static fromWhitespaceInteractive(ws_source: string, initial_stdin: string): WasmWhitespaceVM;
     /**
      * ヒープの現在の内容
      *
@@ -93,16 +127,25 @@ export class WasmWhitespaceVM {
     is_complete(): boolean;
     /**
      * nospace ソースをコンパイルし、Whitespace VM を構築する
+     *
+     * - `std_extensions`: 有効にする拡張の配列（例: `["debug", "alloc"]`）
      */
-    constructor(nospace_source: string, stdin: string);
+    constructor(nospace_source: string, stdin: string, interactive?: boolean | null, std_extensions?: StdExtension[] | null);
     /**
      * 現在のプログラムカウンタ（命令インデックス）
      */
     pc(): number;
     /**
+     * stdin にデータを追加する（interactive モード用）
+     *
+     * WaitingForInput 状態の際に呼び出し、次の step() で入力を再試行する。
+     * InputNumber の場合、改行（\n）付きで投入する必要がある。
+     */
+    provideStdin(data: string): void;
+    /**
      * 指定ステップ数だけ実行する
      *
-     * 戻り値: { status: "suspended" | "complete" | "error", error?: string }
+     * 戻り値: { status: "suspended" | "complete" | "error" | "waiting_for_input", error?: string, inputType?: string }
      */
     step(budget: number): VmStepResult;
     /**
@@ -114,8 +157,11 @@ export class WasmWhitespaceVM {
 /**
  * nospace ソースコードをコンパイルする。
  * CLI の `--mode=compile` に相当。
+ *
+ * - `std_extensions`: 有効にする拡張の配列（例: `["debug", "alloc"]`）
+ * - `opt_passes`: 有効にする最適化パスの配列（例: `["all"]` または `["constant-folding", "dead-code"]`）
  */
-export function compile(source: string, target: string, lang_std: string): CompileResult;
+export function compile(source: string, target: string, lang_std: string, std_extensions?: StdExtension[] | null, opt_passes?: OptPass[] | null): CompileResult;
 
 /**
  * nospace ソースコードをニーモニックにコンパイル（ヘルパー関数）
@@ -128,6 +174,13 @@ export function compile_to_mnemonic_string(source: string): CompileResult;
 export function compile_to_whitespace_string(source: string): CompileResult;
 
 /**
+ * 利用可能なオプションの一覧を返す
+ *
+ * compile() や WasmWhitespaceVM で指定可能なオプション値を取得できる。
+ */
+export function getOptions(): OptionsDefinition;
+
+/**
  * nospace ソースコードの構文チェックのみ行う。
  */
 export function parse(source: string): ParseResult;
@@ -135,5 +188,8 @@ export function parse(source: string): ParseResult;
 /**
  * nospace ソースコードを解析・実行する。
  * CLI の `--mode=run` に相当。
+ *
+ * - `ignore_debug`: デバッグ用組み込み関数（__assert, __trace 等）を無視する（CLI の `--ignore-debug` 相当）
+ * - `opt_passes`: 有効にする最適化パスの配列（例: `["all"]` または `["constant-folding", "dead-code"]`）
  */
-export function run(source: string, stdin: string, debug: boolean): RunResult;
+export function run(source: string, stdin: string, debug: boolean, ignore_debug?: boolean | null, opt_passes?: OptPass[] | null): RunResult;

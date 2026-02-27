@@ -65,7 +65,7 @@ ace.define(
         '#keywords': [
           {
             token: 'keyword.control.nospace',
-            regex: /\b(?:if|else|while|return|break|continue)\b/,
+            regex: /\b(?:if|else|while|repeat|for|return|break|continue)\b/,
           },
           {
             token: 'keyword.declaration.nospace',
