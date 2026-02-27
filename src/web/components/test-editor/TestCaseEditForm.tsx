@@ -3,6 +3,7 @@ import { CheckResultEditor } from './CheckResultEditor';
 import { Button } from '../common/Button';
 import './styles/TestCaseEditForm.scss';
 
+/** TestCaseEditForm のプロパティ */
 interface TestCaseEditFormProps {
   testCase: { path: string; source: string; check: string | null };
   isDirty: boolean;

@@ -1,6 +1,7 @@
 import React from 'react';
 import { CompileErrorSchema } from '../../../../interfaces/CheckResultSchema';
 
+/** CompileErrorForm のプロパティ */
 interface CompileErrorFormProps {
   schema: CompileErrorSchema;
   onChange: (schema: CompileErrorSchema) => void;

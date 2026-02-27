@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { TestTreeNode as TestTreeNodeType } from '../../../interfaces/TestTypes';
 
+/** TestTreeNode のプロパティ */
 interface TestTreeNodeProps {
   node: TestTreeNodeType;
   selectedPath: string | null;

@@ -1,6 +1,7 @@
 import { atom } from 'jotai';
 import { getApplicationFlavor } from '../libs/env';
 
+/** 実行バックエンドの種別 */
 export type Flavor = 'wasm' | 'websocket';
 
 /** Determine available flavors */

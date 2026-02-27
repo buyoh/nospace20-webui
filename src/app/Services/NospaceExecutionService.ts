@@ -44,6 +44,7 @@ const defaultProcessSpawner: ProcessSpawner = {
 /** デフォルトのExecutionConfig実装 */
 const defaultExecutionConfig: ExecutionConfig = Config;
 
+/** Nospace セッションの実行状態 */
 export type SessionStatus = 'running' | 'finished' | 'error' | 'killed';
 
 /** Nospace 実行セッションの公開インターフェース */
@@ -158,6 +159,7 @@ class NospaceSessionImpl implements NospaceSession {
   }
 }
 
+/** Nospace CLI の実行セッションを管理するサービス */
 export class NospaceExecutionService {
   private sessions = new Map<string, NospaceSession>();
 

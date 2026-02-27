@@ -8,6 +8,7 @@ import type {
 
 type EmitFunction = Socket['emit'];
 
+/** Socket.IO 接続ごとの Nospace 実行リクエストを処理するコントローラー */
 export class NospaceController {
   private executionService: NospaceExecutionService;
   private sessionsBySocket = new Map<string, string>(); // socketId -> sessionId

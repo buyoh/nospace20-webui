@@ -16,6 +16,7 @@ import { formatErrorEntries, isNospaceErrorResult } from '../libs/formatNospaceE
 const DEFAULT_STEP_BUDGET = 10000;
 const DEFAULT_MAX_TOTAL_STEPS = 100_000_000;
 
+/** WASM 上で nospace を実行する ExecutionBackend 実装 */
 export class WasmExecutionBackend implements ExecutionBackend {
   readonly flavor = 'wasm' as const;
 

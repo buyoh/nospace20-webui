@@ -4,6 +4,7 @@ import { TestTreeNode } from './TestTreeNode';
 import { Button } from '../common/Button';
 import './styles/TestListPanel.scss';
 
+/** TestListPanel のプロパティ */
 interface TestListPanelProps {
   onCreateNew: () => void;
 }

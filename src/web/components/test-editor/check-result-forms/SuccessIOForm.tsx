@@ -9,6 +9,7 @@ import { Textarea } from '../../common/Textarea';
 import { TextInput } from '../../common/TextInput';
 import { Button } from '../../common/Button';
 
+/** SuccessIOForm のプロパティ */
 interface SuccessIOFormProps {
   schema: SuccessIOSchema;
   onChange: (schema: SuccessIOSchema) => void;

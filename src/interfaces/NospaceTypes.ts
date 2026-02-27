@@ -1,8 +1,12 @@
 // Common types for nospace execution
 
+/** nospace の言語サブセット */
 export type LanguageSubset = 'standard' | 'min' | 'ws';
+/** コンパイル出力フォーマット */
 export type CompileTarget = 'ws' | 'mnemonic' | 'ex-ws' | 'json';
+/** 標準入力モード */
 export type InputMode = 'interactive' | 'batch';
+/** 実行状態 */
 export type ExecutionStatus =
   | 'idle'
   | 'compiling'
@@ -11,6 +15,7 @@ export type ExecutionStatus =
   | 'error'
   | 'killed';
 
+/** コンパイルオプション */
 export interface CompileOptions {
   /** Language subset */
   language: LanguageSubset;
@@ -22,6 +27,7 @@ export interface CompileOptions {
   optPasses: string[];
 }
 
+/** 実行オプション */
 export interface ExecutionOptions {
   /** Enable debug trace */
   debug: boolean;
@@ -37,6 +43,7 @@ export interface ExecutionOptions {
   optPasses: string[];
 }
 
+/** 実行リクエストオプション（コンパイルと実行を統合） */
 export interface RunOptions {
   /** Language subset */
   language: LanguageSubset;
@@ -56,6 +63,7 @@ export interface RunOptions {
 
 // --- Socket.IO event types ---
 
+/** クライアントからサーバへの Socket.IO イベント定義 */
 export interface NospaceClientToServerEvents {
   /** Run request */
   nospace_run: (payload: {
@@ -77,6 +85,7 @@ export interface NospaceClientToServerEvents {
   nospace_kill: (payload: { sessionId: string }) => void;
 }
 
+/** サーバからクライアントへの Socket.IO イベント定義 */
 export interface NospaceServerToClientEvents {
   /** Stdout data (streaming) */
   nospace_stdout: (payload: { sessionId: string; data: string }) => void;
@@ -94,8 +103,10 @@ export interface NospaceServerToClientEvents {
 
 // --- Output panel types ---
 
+/** 出力エントリの種別 */
 export type OutputEntryType = 'stdout' | 'stderr' | 'stdin-echo' | 'system';
 
+/** 出力パネルに表示するエントリ */
 export interface OutputEntry {
   type: OutputEntryType;
   data: string;

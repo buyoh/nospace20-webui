@@ -4,6 +4,7 @@ import { RadioGroup } from '../../common/RadioGroup';
 import { TextInput } from '../../common/TextInput';
 import { Button } from '../../common/Button';
 
+/** ParseErrorForm のプロパティ */
 interface ParseErrorFormProps {
   schema: ParseErrorSchema;
   onChange: (schema: ParseErrorSchema) => void;

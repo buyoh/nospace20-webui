@@ -5,6 +5,7 @@ import { Select } from '../common/Select';
 import { TextInput } from '../common/TextInput';
 import './styles/TestCaseCreateForm.scss';
 
+/** TestCaseCreateForm のプロパティ */
 interface TestCaseCreateFormProps {
   categories: string[];
   source: string;

@@ -1,6 +1,5 @@
 import { atom } from 'jotai';
 
-// Editor source code
 const defaultCode = `func: puts(str) {
   while: *str != 0 {
     __putc(*str);
@@ -16,4 +15,5 @@ func: main() {
 }
 `;
 
+/** エディタのソースコード */
 export const sourceCodeAtom = atom<string>(defaultCode);

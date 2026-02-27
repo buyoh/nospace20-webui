@@ -3,6 +3,7 @@ import { SuccessTraceSchema } from '../../../../interfaces/CheckResultSchema';
 import { TextInput } from '../../common/TextInput';
 import { Button } from '../../common/Button';
 
+/** SuccessTraceForm のプロパティ */
 interface SuccessTraceFormProps {
   schema: SuccessTraceSchema;
   onChange: (schema: SuccessTraceSchema) => void;

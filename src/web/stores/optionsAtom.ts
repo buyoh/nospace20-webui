@@ -4,6 +4,7 @@ import type {
   ExecutionOptions,
 } from '../../interfaces/NospaceTypes';
 
+/** コンパイルオプション */
 export const compileOptionsAtom = atom<CompileOptions>({
   language: 'standard',
   target: 'ws',
@@ -11,6 +12,7 @@ export const compileOptionsAtom = atom<CompileOptions>({
   optPasses: [],
 });
 
+/** 実行オプション */
 export const executionOptionsAtom = atom<ExecutionOptions>({
   debug: false,
   ignoreDebug: false,
