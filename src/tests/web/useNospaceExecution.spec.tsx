@@ -19,7 +19,7 @@ import type { ExecutionBackend } from '../../web/services/ExecutionBackend';
 import type { OutputEntry, ExecutionStatus } from '../../interfaces/NospaceTypes';
 import type { Flavor } from '../../web/stores/flavorAtom';
 
-/** テスト用の Fake ExecutionBackend */
+/** テスト用の Fake ExecutionBackend (jest.fn() を使わない手動実装) */
 class FakeExecutionBackend implements ExecutionBackend {
   readonly flavor: Flavor = 'wasm';
 
@@ -31,10 +31,14 @@ class FakeExecutionBackend implements ExecutionBackend {
     | ((status: ExecutionStatus, sessionId: string, exitCode?: number | null) => void)
     | null = null;
 
-  runMock = jest.fn();
-  compileMock = jest.fn();
-  sendStdinMock = jest.fn();
-  killMock = jest.fn();
+  /** run() 呼び出し引数の記録: [code, options, stdinData] */
+  runCalls: Array<[string, any, string | undefined]> = [];
+  /** compile() 呼び出し引数の記録: [code, options] */
+  compileCalls: Array<[string, any]> = [];
+  /** sendStdin() 呼び出し引数の記録 */
+  sendStdinCalls: string[] = [];
+  /** kill() 呼び出し回数 */
+  killCalls: number = 0;
 
   async init(): Promise<void> {
     this.initCalled = true;
@@ -46,19 +50,19 @@ class FakeExecutionBackend implements ExecutionBackend {
   }
 
   run(code: string, options: any, stdinData?: string): void {
-    this.runMock(code, options, stdinData);
+    this.runCalls.push([code, options, stdinData]);
   }
 
   compile(code: string, options: any): void {
-    this.compileMock(code, options);
+    this.compileCalls.push([code, options]);
   }
 
   sendStdin(data: string): void {
-    this.sendStdinMock(data);
+    this.sendStdinCalls.push(data);
   }
 
   kill(): void {
-    this.killMock();
+    this.killCalls++;
   }
 
   dispose(): void {
@@ -109,11 +113,11 @@ describe('useNospaceExecution', () => {
 
   beforeEach(() => {
     fakeBackend = new FakeExecutionBackend();
-    backendFactory = jest.fn(async () => fakeBackend);
+    backendFactory = async (_flavor: Flavor) => fakeBackend;
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    jest.clearAllTimers();
   });
 
   describe('backend initialization', () => {
@@ -158,12 +162,14 @@ describe('useNospaceExecution', () => {
 
       const oldBackend = fakeBackend;
       const newBackend = new FakeExecutionBackend();
-      const factoryMock = jest
-        .fn()
-        .mockResolvedValueOnce(oldBackend)
-        .mockResolvedValueOnce(newBackend);
+      // factoryResults キューで順番に backend を返すプレーン関数
+      const factoryResults: FakeExecutionBackend[] = [oldBackend, newBackend];
+      let factoryCalls = 0;
+      const factoryFn: BackendFactory = async (_flavor) => {
+        return factoryResults[factoryCalls++];
+      };
 
-      const { rerender } = renderHook(() => useNospaceExecution(factoryMock), { wrapper });
+      const { rerender } = renderHook(() => useNospaceExecution(factoryFn), { wrapper });
 
       await waitFor(() => {
         expect(oldBackend.initCalled).toBe(true);
@@ -179,7 +185,7 @@ describe('useNospaceExecution', () => {
       });
 
       expect(oldBackend.disposeCalled).toBe(true);
-      expect(factoryMock).toHaveBeenCalledTimes(2);
+      expect(factoryCalls).toBe(2);
     });
   });
 
@@ -230,7 +236,8 @@ describe('useNospaceExecution', () => {
         result.current.handleRun();
       });
 
-      expect(fakeBackend.runMock).toHaveBeenCalledWith(
+      expect(fakeBackend.runCalls).toHaveLength(1);
+      expect(fakeBackend.runCalls[0]).toEqual([
         'print "test"',
         {
           language: 'standard',
@@ -241,7 +248,7 @@ describe('useNospaceExecution', () => {
           maxTotalSteps: 100_000_000,
         },
         undefined,
-      );
+      ]);
     });
 
     it('stdinData が渡される', async () => {
@@ -266,13 +273,12 @@ describe('useNospaceExecution', () => {
         result.current.handleRun('input data');
       });
 
-      expect(fakeBackend.runMock).toHaveBeenCalledWith(
-        'code',
-        expect.objectContaining({
-          inputMode: 'batch',
-        }),
-        'input data',
-      );
+      expect(fakeBackend.runCalls).toHaveLength(1);
+      expect(fakeBackend.runCalls[0][0]).toBe('code');
+      expect(fakeBackend.runCalls[0][1]).toEqual(expect.objectContaining({
+        inputMode: 'batch',
+      }));
+      expect(fakeBackend.runCalls[0][2]).toBe('input data');
     });
 
     it('handleRun に stepBudget / maxTotalSteps が RunOptions に含まれる', async () => {
@@ -297,14 +303,11 @@ describe('useNospaceExecution', () => {
         result.current.handleRun();
       });
 
-      expect(fakeBackend.runMock).toHaveBeenCalledWith(
-        'code',
-        expect.objectContaining({
-          stepBudget: 500,
-          maxTotalSteps: 5000,
-        }),
-        undefined,
-      );
+      expect(fakeBackend.runCalls).toHaveLength(1);
+      expect(fakeBackend.runCalls[0][1]).toEqual(expect.objectContaining({
+        stepBudget: 500,
+        maxTotalSteps: 5000,
+      }));
     });
 
     it('実行前に outputEntries がクリアされる', async () => {
@@ -339,7 +342,7 @@ describe('useNospaceExecution', () => {
         result.current.handleRun();
       });
 
-      expect(fakeBackend.runMock).not.toHaveBeenCalled();
+      expect(fakeBackend.runCalls).toHaveLength(0);
     });
 
     it('実行中の場合は呼ばれない', async () => {
@@ -357,7 +360,7 @@ describe('useNospaceExecution', () => {
         result.current.handleRun();
       });
 
-      expect(fakeBackend.runMock).not.toHaveBeenCalled();
+      expect(fakeBackend.runCalls).toHaveLength(0);
     });
   });
 
@@ -375,7 +378,7 @@ describe('useNospaceExecution', () => {
         result.current.handleKill();
       });
 
-      expect(fakeBackend.killMock).toHaveBeenCalled();
+      expect(fakeBackend.killCalls).toBe(1);
     });
   });
 
@@ -393,7 +396,7 @@ describe('useNospaceExecution', () => {
         result.current.handleSendStdin('input line\n');
       });
 
-      expect(fakeBackend.sendStdinMock).toHaveBeenCalledWith('input line\n');
+      expect(fakeBackend.sendStdinCalls).toEqual(['input line\n']);
     });
   });
 
@@ -484,7 +487,7 @@ describe('useNospaceExecution', () => {
         result.current.handleCompile();
       });
 
-      expect(fakeBackend.compileMock).toHaveBeenCalled();
+      expect(fakeBackend.compileCalls).toHaveLength(1);
 
       // コンパイル中の stdout をシミュレート
       act(() => {
@@ -618,16 +621,15 @@ describe('useNospaceExecution', () => {
         result.current.handleRunCompileOutput('compiled ws code', 'stdin data');
       });
 
-      expect(fakeBackend.runMock).toHaveBeenCalledWith(
-        'compiled ws code',
-        expect.objectContaining({
-          language: 'ws',
-          debug: true,
-          ignoreDebug: false,
-          inputMode: 'batch',
-        }),
-        'stdin data',
-      );
+      expect(fakeBackend.runCalls).toHaveLength(1);
+      expect(fakeBackend.runCalls[0][0]).toBe('compiled ws code');
+      expect(fakeBackend.runCalls[0][1]).toEqual(expect.objectContaining({
+        language: 'ws',
+        debug: true,
+        ignoreDebug: false,
+        inputMode: 'batch',
+      }));
+      expect(fakeBackend.runCalls[0][2]).toBe('stdin data');
     });
 
     it('実行前に outputEntries がクリアされる', async () => {
@@ -669,14 +671,11 @@ describe('useNospaceExecution', () => {
         result.current.handleRunCompileOutput('compiled code');
       });
 
-      expect(fakeBackend.runMock).toHaveBeenCalledWith(
-        'compiled code',
-        expect.objectContaining({
-          stepBudget: 200,
-          maxTotalSteps: 3000,
-        }),
-        undefined,
-      );
+      expect(fakeBackend.runCalls).toHaveLength(1);
+      expect(fakeBackend.runCalls[0][1]).toEqual(expect.objectContaining({
+        stepBudget: 200,
+        maxTotalSteps: 3000,
+      }));
     });
   });
 

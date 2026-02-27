@@ -56,6 +56,8 @@ describe('NospaceExecutionService', () => {
   let fakeConfig: ExecutionConfig;
   let fakeProcess: FakeChildProcess;
   let files: Map<string, string>;
+  /** spawn() 呼び出し引数の記録: [cmd, args, options] の配列 */
+  let spawnCalls: Array<[string, string[], any]>;
 
   beforeEach(() => {
     files = new Map();
@@ -75,9 +77,13 @@ describe('NospaceExecutionService', () => {
     // Fake Process
     fakeProcess = new FakeChildProcess();
 
-    // Fake ProcessSpawner
+    // Fake ProcessSpawner (jest.fn() を使わないプレーン実装)
+    spawnCalls = [];
     fakeSpawner = {
-      spawn: jest.fn(() => fakeProcess as unknown as ChildProcess),
+      spawn: (cmd: string, args: string[], options?: any) => {
+        spawnCalls.push([cmd, args, options]);
+        return fakeProcess as unknown as ChildProcess;
+      },
     };
 
     // Fake ExecutionConfig
@@ -232,10 +238,8 @@ describe('NospaceExecutionService', () => {
         onExit: jest.fn(),
       });
 
-      expect(fakeSpawner.spawn).toHaveBeenCalledWith(
-        fakeConfig.nospaceBinPath,
-        expect.arrayContaining(['--std', 'standard'])
-      );
+      expect(spawnCalls[0][0]).toBe(fakeConfig.nospaceBinPath);
+      expect(spawnCalls[0][1]).toEqual(expect.arrayContaining(['--std', 'standard']));
     });
 
     it('コマンド引数が正しく構築される (with debug and ignoreDebug)', () => {
@@ -255,15 +259,8 @@ describe('NospaceExecutionService', () => {
         onExit: jest.fn(),
       });
 
-      expect(fakeSpawner.spawn).toHaveBeenCalledWith(
-        fakeConfig.nospaceBinPath,
-        expect.arrayContaining([
-          '--std',
-          'ws',
-          '--debug',
-          '--ignore-debug',
-        ])
-      );
+      expect(spawnCalls[0][0]).toBe(fakeConfig.nospaceBinPath);
+      expect(spawnCalls[0][1]).toEqual(expect.arrayContaining(['--std', 'ws', '--debug', '--ignore-debug']));
     });
   });
 
@@ -468,10 +465,9 @@ describe('NospaceExecutionService', () => {
         onExit: jest.fn(),
       });
 
-      expect(fakeSpawner.spawn).toHaveBeenCalledWith(
-        fakeConfig.nospaceBinPath,
-        expect.arrayContaining(['--mode', 'compile', '--std', 'standard', '--target', 'ws'])
-      );
+      expect(spawnCalls).toHaveLength(1);
+      expect(spawnCalls[0][0]).toBe(fakeConfig.nospaceBinPath);
+      expect(spawnCalls[0][1]).toEqual(expect.arrayContaining(['--mode', 'compile', '--std', 'standard', '--target', 'ws']));
     });
 
     it('compile で --mode compile が含まれる', () => {
@@ -483,7 +479,7 @@ describe('NospaceExecutionService', () => {
         onExit: jest.fn(),
       });
 
-      const spawnArgs = (fakeSpawner.spawn as jest.Mock).mock.calls[0][1] as string[];
+      const spawnArgs = spawnCalls[0][1];
       expect(spawnArgs).toContain('--mode');
       expect(spawnArgs).toContain('compile');
       expect(spawnArgs).toContain('--std');
@@ -570,7 +566,7 @@ describe('NospaceExecutionService', () => {
       expect(onStderr).toHaveBeenCalledWith(expect.stringContaining('Unsupported compile target'));
       expect(onExit).toHaveBeenCalledWith(1);
       // spawn は呼ばれない
-      expect(fakeSpawner.spawn).not.toHaveBeenCalled();
+      expect(spawnCalls).toHaveLength(0);
     });
 
     it('compile でバイナリ未存在時にエラーを返す', () => {

@@ -15,24 +15,16 @@ import type { ExecutionBackend } from '../../web/services/ExecutionBackend';
 import type { OutputEntry, ExecutionStatus } from '../../interfaces/NospaceTypes';
 import type { Flavor } from '../../web/stores/flavorAtom';
 
-// WASM ローダーが必要な重いコンポーネント、外部接続が必要なコンポーネントをモック
-jest.mock('../../web/containers/TestEditorContainer', () => ({
+// 子コンポーネントは components prop 経由で注入するフェイク実装（jest.mock() 不要）
+const fakeComponents = {
   TestEditorContainer: () => <div data-testid="mock-test-editor" />,
-}));
-jest.mock('../../web/components/execution/ExecutionOptions', () => ({
   ExecutionOptions: () => <div data-testid="mock-execution-options" />,
-}));
-jest.mock('../../web/components/execution/CompileOptions', () => ({
   CompileOptions: () => <div data-testid="mock-compile-options" />,
-}));
-jest.mock('../../web/components/execution/OutputPanel', () => ({
   OutputPanel: () => <div data-testid="mock-output-panel" />,
-}));
-jest.mock('../../web/components/execution/InputPanel', () => ({
   InputPanel: () => <div data-testid="mock-input-panel" />,
-}));
+};
 
-// ExecutionContainer はモックセットアップ後に import する
+// ExecutionContainer を import する
 import { ExecutionContainer } from '../../web/containers/ExecutionContainer';
 
 /** テスト用の最小限 Fake ExecutionBackend */
@@ -61,7 +53,7 @@ const fakeBackendFactory = async (_flavor: Flavor): Promise<ExecutionBackend> =>
 function renderWithStore(store: ReturnType<typeof createStore>) {
   return render(
     <Provider store={store}>
-      <ExecutionContainer backendFactory={fakeBackendFactory} />
+      <ExecutionContainer backendFactory={fakeBackendFactory} components={fakeComponents} />
     </Provider>,
   );
 }

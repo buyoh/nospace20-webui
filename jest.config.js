@@ -24,6 +24,12 @@ module.exports = {
     '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$': '<rootDir>/src/__mocks__/fileMock.js',
     '\\.(css|less|scss)$': '<rootDir>/src/__mocks__/styleMock.js',
     // env.ts は import.meta.env を使用しており Jest (CommonJS) ではパース不可のためモックに差し替え
-    '(.*/|\\.\\./)libs/env$': '<rootDir>/src/__mocks__/web/libs/env.ts'
+    '(.*/|\\.\\./)libs/env$': '<rootDir>/src/__mocks__/web/libs/env.ts',
+    // react-ace は Jest 環境でロード不可のため静的スタブに差し替え
+    '^react-ace$': '<rootDir>/src/__mocks__/react-ace.js',
+    // ace-builds のテーマ・モードインポートは副作用のみのためスタブ化
+    '^ace-builds/.*$': '<rootDir>/src/__mocks__/styleMock.js',
+    // nospace-ace-mode は ace-builds 依存のためスタブ化
+    '.*/nospace-ace-mode$': '<rootDir>/src/__mocks__/styleMock.js',
   }
 };

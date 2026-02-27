@@ -52,14 +52,33 @@ function createFakeRequest(params: Record<string, any>, body?: any): Request {
   } as Request;
 }
 
-/** Create fake Express Response */
-function createFakeResponse() {
-  const res = {
-    status: jest.fn().mockReturnThis(),
-    json: jest.fn().mockReturnThis(),
+/** 手動実装のフェイク Express Response (jest.fn() を使わない) */
+interface FakeExpressResponse {
+  status(code: number): this;
+  json(data: any): this;
+  statusCode: number;
+  /** status() 呼び出し引数の記録 */
+  statusCalls: number[];
+  /** json() 呼び出し引数の記録 */
+  jsonCalls: any[];
+}
+
+function createFakeResponse(): FakeExpressResponse & Response {
+  const res: FakeExpressResponse = {
     statusCode: 200,
+    statusCalls: [],
+    jsonCalls: [],
+    status(code: number) {
+      this.statusCalls.push(code);
+      this.statusCode = code;
+      return this;
+    },
+    json(data: any) {
+      this.jsonCalls.push(data);
+      return this;
+    },
   };
-  return res as unknown as Response;
+  return res as unknown as FakeExpressResponse & Response;
 }
 
 describe('TestController', () => {
@@ -81,10 +100,10 @@ describe('TestController', () => {
 
       await controller.handleGetTree(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({
+      expect(res.statusCalls).toEqual([200]);
+      expect(res.jsonCalls).toEqual([{
         tree: service.getTreeResult,
-      });
+      }]);
     });
 
     it('should return 500 on error', async () => {
@@ -97,8 +116,8 @@ describe('TestController', () => {
 
       await controller.handleGetTree(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Internal server error' });
+      expect(res.statusCalls).toEqual([500]);
+      expect(res.jsonCalls).toEqual([{ error: 'Internal server error' }]);
     });
   });
 
@@ -117,8 +136,8 @@ describe('TestController', () => {
 
       await controller.handleGetTestCase(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(service.getTestCaseResult);
+      expect(res.statusCalls).toEqual([200]);
+      expect(res.jsonCalls).toEqual([service.getTestCaseResult]);
     });
 
     it('should return 400 when path is missing', async () => {
@@ -129,8 +148,8 @@ describe('TestController', () => {
 
       await controller.handleGetTestCase(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Path is required' });
+      expect(res.statusCalls).toEqual([400]);
+      expect(res.jsonCalls).toEqual([{ error: 'Path is required' }]);
     });
 
     it('should return 404 when test file not found', async () => {
@@ -143,10 +162,10 @@ describe('TestController', () => {
 
       await controller.handleGetTestCase(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith({
+      expect(res.statusCalls).toEqual([404]);
+      expect(res.jsonCalls).toEqual([{
         error: 'Test file not found: passes/test1',
-      });
+      }]);
     });
 
     it('should return 400 on path traversal', async () => {
@@ -159,8 +178,8 @@ describe('TestController', () => {
 
       await controller.handleGetTestCase(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Invalid path' });
+      expect(res.statusCalls).toEqual([400]);
+      expect(res.jsonCalls).toEqual([{ error: 'Invalid path' }]);
     });
   });
 
@@ -181,8 +200,8 @@ describe('TestController', () => {
         source: 'new source',
         check: 'new check',
       });
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({ success: true });
+      expect(res.statusCalls).toEqual([200]);
+      expect(res.jsonCalls).toEqual([{ success: true }]);
     });
 
     it('should return 400 when path is missing', async () => {
@@ -193,8 +212,8 @@ describe('TestController', () => {
 
       await controller.handleUpdateTestCase(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Path is required' });
+      expect(res.statusCalls).toEqual([400]);
+      expect(res.jsonCalls).toEqual([{ error: 'Path is required' }]);
     });
 
     it('should return 400 when source is missing', async () => {
@@ -205,8 +224,8 @@ describe('TestController', () => {
 
       await controller.handleUpdateTestCase(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Source is required' });
+      expect(res.statusCalls).toEqual([400]);
+      expect(res.jsonCalls).toEqual([{ error: 'Source is required' }]);
     });
 
     it('should return 404 when test file not found', async () => {
@@ -222,7 +241,7 @@ describe('TestController', () => {
 
       await controller.handleUpdateTestCase(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.statusCalls).toEqual([404]);
     });
   });
 
@@ -247,8 +266,8 @@ describe('TestController', () => {
         source: 'source code',
         check: '{}',
       });
-      expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith({ success: true });
+      expect(res.statusCalls).toEqual([201]);
+      expect(res.jsonCalls).toEqual([{ success: true }]);
     });
 
     it('should return 400 when path or source is missing', async () => {
@@ -259,10 +278,10 @@ describe('TestController', () => {
 
       await controller.handleCreateTestCase(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({
+      expect(res.statusCalls).toEqual([400]);
+      expect(res.jsonCalls).toEqual([{
         error: 'Path and source are required',
-      });
+      }]);
     });
 
     it('should return 409 when test file already exists', async () => {
@@ -281,10 +300,10 @@ describe('TestController', () => {
 
       await controller.handleCreateTestCase(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(409);
-      expect(res.json).toHaveBeenCalledWith({
+      expect(res.statusCalls).toEqual([409]);
+      expect(res.jsonCalls).toEqual([{
         error: 'Test file already exists: passes/test1',
-      });
+      }]);
     });
   });
 });

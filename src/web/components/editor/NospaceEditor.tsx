@@ -11,15 +11,21 @@ interface NospaceEditorProps {
   onChange: (value: string) => void;
   /** Ace Editor のアノテーション（コンパイルエラー表示用） */
   annotations?: Ace.Annotation[];
+  /**
+   * テスト・DI 用: レンダリングに使用する AceEditor コンポーネントの差し替え。
+   * 省略時はデフォルトの AceEditor を使用する。
+   */
+  AceEditorComponent?: React.ComponentType<any>;
 }
 
 export const NospaceEditor: React.FC<NospaceEditorProps> = ({
   value,
   onChange,
   annotations,
+  AceEditorComponent: AceEditorImpl = AceEditor,
 }) => {
   return (
-    <AceEditor
+    <AceEditorImpl
       mode="nospace"
       theme="monokai"
       name="nospace-editor"

@@ -8,28 +8,26 @@ import type { Ace } from 'ace-builds';
 import { compileErrorsAtom } from '../../web/stores/compileErrorsAtom';
 import type { NospaceErrorEntry } from '../../web/libs/formatNospaceErrors';
 
-// NospaceEditor をモックして渡された annotations をキャプチャする
+// NospaceEditorComponent prop 経由で注入するフェイクコンポーネント（jest.mock() 不要）
 let capturedAnnotations: Ace.Annotation[] | undefined;
 
-jest.mock('../../web/components/editor/NospaceEditor', () => ({
-  NospaceEditor: (props: { value: string; onChange: () => void; annotations?: Ace.Annotation[] }) => {
-    capturedAnnotations = props.annotations;
-    return <div data-testid="mock-nospace-editor" />;
-  },
-}));
+const MockNospaceEditor = (props: { value: string; onChange: () => void; annotations?: Ace.Annotation[] }) => {
+  capturedAnnotations = props.annotations;
+  return <div data-testid="mock-nospace-editor" />;
+};
 
-// useTestEditor をモック（API 通信が含まれるため no-op に差し替え）
-jest.mock('../../web/hooks/useTestEditor', () => ({
-  useTestEditor: () => ({ updateSource: jest.fn() }),
-}));
+// useTestEditor hook の DI 差し替え（API 通信なし）
+const fakeUseTestEditor = () => ({ updateSource: () => {} });
 
-// EditorContainer は mock セットアップ後に import する
 import { EditorContainer } from '../../web/containers/EditorContainer';
 
 function renderWithStore(store: ReturnType<typeof createStore>) {
   return render(
     <Provider store={store}>
-      <EditorContainer />
+      <EditorContainer
+        NospaceEditorComponent={MockNospaceEditor as any}
+        useTestEditorHook={fakeUseTestEditor}
+      />
     </Provider>,
   );
 }

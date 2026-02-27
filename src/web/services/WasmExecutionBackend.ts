@@ -16,10 +16,28 @@ import { formatErrorEntries, isNospaceErrorResult } from '../libs/formatNospaceE
 const DEFAULT_STEP_BUDGET = 10000;
 const DEFAULT_MAX_TOTAL_STEPS = 100_000_000;
 
+/**
+ * WASM ローダーのインターフェース。
+ * テスト時に環境に依存しないフェイク実装を注入できる。
+ */
+export interface Nospace20Loader {
+  /** WASM モジュールを初期化する */
+  initNospace20Wasm(): Promise<void>;
+  /** nospace20 API（WASM モジュール）を返す */
+  getNospace20(): any;
+}
+
+/** デフォルトローダー（実際のローダー模ジュールを使用） */
+const defaultLoader: Nospace20Loader = {
+  initNospace20Wasm,
+  getNospace20,
+};
+
 /** WASM 上で nospace を実行する ExecutionBackend 実装 */
 export class WasmExecutionBackend implements ExecutionBackend {
   readonly flavor = 'wasm' as const;
 
+  private readonly loader: Nospace20Loader;
   private vm: any | null = null;
   private abortController: AbortController | null = null;
   private outputCallback: ((entry: OutputEntry) => void) | null = null;
@@ -33,6 +51,13 @@ export class WasmExecutionBackend implements ExecutionBackend {
   private compileErrorsCallback: ((errors: any[]) => void) | null = null;
   private ready = false;
 
+  /**
+   * @param loader nospace20 WASM ローダー。省略時はデフォルトローダーを使用する。
+   */
+  constructor(loader: Nospace20Loader = defaultLoader) {
+    this.loader = loader;
+  }
+
   static capabilities: ExecutionBackendCapabilities = {
     supportsInteractiveStdin: false,
     supportsCompile: true,
@@ -42,7 +67,7 @@ export class WasmExecutionBackend implements ExecutionBackend {
   };
 
   async init(): Promise<void> {
-    await initNospace20Wasm();
+    await this.loader.initNospace20Wasm();
     this.ready = true;
   }
 
@@ -75,7 +100,7 @@ export class WasmExecutionBackend implements ExecutionBackend {
     maxTotalSteps: number,
     stdExtensions?: string[],
   ): Promise<void> {
-    const nospace20 = getNospace20();
+    const nospace20 = this.loader.getNospace20();
 
     try {
       // Build VM
@@ -174,33 +199,7 @@ export class WasmExecutionBackend implements ExecutionBackend {
         });
       }
     } catch (e) {
-      // NOTE: wasm が throw する値は Error インスタンスではない場合がある。
-      // ResultErr 型 ({ success: false, errors: [...] }) の場合は整形して表示する。
-      // String(obj) は [object Object] になるため、それ以外は JSON.stringify で表示する。
-      if (isNospaceErrorResult(e)) {
-        const message = formatErrorEntries(e.errors);
-        this.outputCallback?.({
-          type: 'stderr',
-          data: message + '\n',
-          timestamp: Date.now(),
-        });
-        // BUG FIX: 実行時にコンパイルエラーが発生した場合（WasmWhitespaceVM コンストラクタが
-        // ResultErr をスロー）、構造化エラーをコールバックに渡してエディタのアノテーション表示
-        // に反映させる。compile() メソッドと同様の処理が必要だった。
-        this.compileErrorsCallback?.(e.errors);
-      } else {
-        const message =
-          e instanceof Error
-            ? e.message
-            : typeof e === 'string'
-              ? e
-              : JSON.stringify(e);
-        this.outputCallback?.({
-          type: 'stderr',
-          data: message + '\n',
-          timestamp: Date.now(),
-        });
-      }
+      this.handleWasmError(e);
       this.statusCallback?.('error', sessionId);
     } finally {
       this.vm?.free();
@@ -212,7 +211,7 @@ export class WasmExecutionBackend implements ExecutionBackend {
     const sessionId = crypto.randomUUID();
 
     (async () => {
-      const nospace20 = getNospace20();
+      const nospace20 = this.loader.getNospace20();
 
       try {
         this.statusCallback?.('compiling', sessionId);
@@ -247,34 +246,43 @@ export class WasmExecutionBackend implements ExecutionBackend {
           this.statusCallback?.('error', sessionId);
         }
       } catch (e) {
-        // NOTE: wasm が throw する値は Error インスタンスではない場合がある。
-        // ResultErr 型 ({ success: false, errors: [...] }) の場合は整形して表示する。
-        // String(obj) は [object Object] になるため、それ以外は JSON.stringify で表示する。
-        if (isNospaceErrorResult(e)) {
-          const message = formatErrorEntries(e.errors);
-          this.outputCallback?.({
-            type: 'stderr',
-            data: message + '\n',
-            timestamp: Date.now(),
-          });
-          // 構造化エラーをコールバックに渡す
-          this.compileErrorsCallback?.(e.errors);
-        } else {
-          const message =
-            e instanceof Error
-              ? e.message
-              : typeof e === 'string'
-                ? e
-                : JSON.stringify(e);
-          this.outputCallback?.({
-            type: 'stderr',
-            data: message + '\n',
-            timestamp: Date.now(),
-          });
-        }
+        this.handleWasmError(e);
         this.statusCallback?.('error', sessionId);
       }
     })();
+  }
+
+  /**
+   * WASM が throw した例外を整形して outputCallback / compileErrorsCallback に渡す共通処理。
+   * NOTE: wasm が throw する値は Error インスタンスではない場合がある。
+   * ResultErr 型 ({ success: false, errors: [...] }) の場合は整形して表示する。
+   * String(obj) は [object Object] になるため、それ以外は JSON.stringify で表示する。
+   */
+  private handleWasmError(e: unknown): void {
+    if (isNospaceErrorResult(e)) {
+      const message = formatErrorEntries(e.errors);
+      this.outputCallback?.({
+        type: 'stderr',
+        data: message + '\n',
+        timestamp: Date.now(),
+      });
+      // BUG FIX: 実行時にコンパイルエラーが発生した場合（WasmWhitespaceVM コンストラクタが
+      // ResultErr をスロー）、構造化エラーをコールバックに渡してエディタのアノテーション表示
+      // に反映させる。compile() メソッドと同様の処理が必要だった。
+      this.compileErrorsCallback?.(e.errors);
+    } else {
+      const message =
+        e instanceof Error
+          ? e.message
+          : typeof e === 'string'
+            ? e
+            : JSON.stringify(e);
+      this.outputCallback?.({
+        type: 'stderr',
+        data: message + '\n',
+        timestamp: Date.now(),
+      });
+    }
   }
 
   sendStdin(_data: string): void {

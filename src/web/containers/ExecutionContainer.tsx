@@ -17,6 +17,17 @@ import './styles/ExecutionContainer.scss';
 interface ExecutionContainerProps {
   /** テスト用バックエンドファクトリ（依存性注入） */
   backendFactory?: BackendFactory;
+  /**
+   * テスト・DI 用: 子コンポーネントの差し替え。
+   * 省略時は各コンポーネントのデフォルト実装を使用する。
+   */
+  components?: {
+    TestEditorContainer?: React.ComponentType;
+    ExecutionOptions?: React.ComponentType<any>;
+    CompileOptions?: React.ComponentType<any>;
+    OutputPanel?: React.ComponentType<any>;
+    InputPanel?: React.ComponentType<any>;
+  };
 }
 
 /**
@@ -24,7 +35,15 @@ interface ExecutionContainerProps {
  * Compile / Run / Run(Direct) / TestEditor の4タブ構成。
  * Flavor に応じて利用可能なタブのみを表示する。
  */
-export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({ backendFactory }) => {
+export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({ backendFactory, components }) => {
+  const {
+    TestEditorContainer: TestEditorContainerImpl = TestEditorContainer,
+    ExecutionOptions: ExecutionOptionsImpl = ExecutionOptions,
+    CompileOptions: CompileOptionsImpl = CompileOptions,
+    OutputPanel: OutputPanelImpl = OutputPanel,
+    InputPanel: InputPanelImpl = InputPanel,
+  } = components ?? {};
+
   const flavor = useAtomValue(flavorAtom);
   const executionOptions = useAtomValue(executionOptionsAtom);
   const [batchInput, setBatchInput] = useState('');
@@ -110,11 +129,11 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({ backendF
       </div>
 
       {operationMode === 'test-editor' ? (
-        <TestEditorContainer />
+        <TestEditorContainerImpl />
       ) : operationMode === 'compile' ? (
         <>
           {/* Compile タブ: コンパイルのみ */}
-          <CompileOptions />
+          <CompileOptionsImpl />
           <ExecutionControls
             isRunning={isRunning}
             onCompile={handleCompile}
@@ -127,20 +146,20 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({ backendF
             collapsed={compileOutputCollapsed}
             onToggleCollapse={() => setCompileOutputCollapsed((prev) => !prev)}
           />
-          <OutputPanel onClear={handleClearOutput} />
+          <OutputPanelImpl onClear={handleClearOutput} />
         </>
       ) : operationMode === 'run' ? (
         <>
           {/* Run タブ: コンパイル済みコードの実行 */}
-          <ExecutionOptions />
+          <ExecutionOptionsImpl />
           <ExecutionControls
             isRunning={isRunning}
             onRun={handleRunCompiled}
             runDisabled={!canRunCompiled}
             onKill={handleKill}
           />
-          <OutputPanel onClear={handleClearOutput} />
-          <InputPanel
+          <OutputPanelImpl onClear={handleClearOutput} />
+          <InputPanelImpl
             isRunning={isRunning}
             onSendStdin={handleSendStdin}
             batchInput={batchInput}
@@ -151,14 +170,14 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({ backendF
       ) : (
         <>
           {/* Run(Direct) タブ: 従来の Execution モード相当 */}
-          <ExecutionOptions />
+          <ExecutionOptionsImpl />
           <ExecutionControls
             isRunning={isRunning}
             onRun={handleRunWithInput}
             onKill={handleKill}
           />
-          <OutputPanel onClear={handleClearOutput} />
-          <InputPanel
+          <OutputPanelImpl onClear={handleClearOutput} />
+          <InputPanelImpl
             isRunning={isRunning}
             onSendStdin={handleSendStdin}
             batchInput={batchInput}

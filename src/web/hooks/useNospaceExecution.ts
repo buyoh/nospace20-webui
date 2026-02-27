@@ -1,25 +1,22 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { sourceCodeAtom } from '../stores/editorAtom';
 import { executionOptionsAtom, compileOptionsAtom } from '../stores/optionsAtom';
 import {
   executionStatusAtom,
-  currentSessionIdAtom,
   outputEntriesAtom,
-  exitCodeAtom,
 } from '../stores/executionAtom';
 import { compileOutputAtom, compileStatusAtom, type CompileStatus } from '../stores/compileOutputAtom';
 import { compileErrorsAtom } from '../stores/compileErrorsAtom';
 import { flavorAtom } from '../stores/flavorAtom';
-import type { ExecutionBackend } from '../services/ExecutionBackend';
 import type { Flavor } from '../stores/flavorAtom';
-import type { CompileTarget } from '../../interfaces/NospaceTypes';
 import type { CompileOutput } from '../stores/compileOutputAtom';
+import { useExecutionBackend, type BackendFactory } from './useExecutionBackend';
 // Note: ServerExecutionBackend is dynamically imported for tree-shaking
 // import { WasmExecutionBackend } from '../services/WasmExecutionBackend';
 
-/** ExecutionBackend を生成するファクトリ関数 */
-export type BackendFactory = (flavor: Flavor) => Promise<ExecutionBackend>;
+/** ExecutionBackend を生成するファクトリ関数（後方互換のため再エクスポート） */
+export type { BackendFactory };
 
 /** useNospaceExecution フックの返り値 */
 export interface UseNospaceExecutionResult {
@@ -67,10 +64,7 @@ export function useNospaceExecution(
   const executionOptions = useAtomValue(executionOptionsAtom);
   const compileOptions = useAtomValue(compileOptionsAtom);
   const executionStatus = useAtomValue(executionStatusAtom);
-  const setExecutionStatus = useSetAtom(executionStatusAtom);
-  const setCurrentSessionId = useSetAtom(currentSessionIdAtom);
   const setOutputEntries = useSetAtom(outputEntriesAtom);
-  const setExitCode = useSetAtom(exitCodeAtom);
   const setExecutionOptions = useSetAtom(executionOptionsAtom);
   const compileOutput = useAtomValue(compileOutputAtom);
   const setCompileOutput = useSetAtom(compileOutputAtom);
@@ -78,13 +72,9 @@ export function useNospaceExecution(
   const compileStatus = useAtomValue(compileStatusAtom);
   const setCompileStatus = useSetAtom(compileStatusAtom);
 
-  const backendRef = useRef<ExecutionBackend | null>(null);
-  /** コンパイル中のターゲット。null 以外の場合、stdout を compileOutputAtom にルーティングする */
-  const compileTargetRef = useRef<CompileTarget | null>(null);
-  /** コンパイル中にエラーが発生したかどうかを追跡する */
-  const compileHadErrorRef = useRef(false);
-  /** 直前の executionStatus を追跡する（コンパイル完了検出用） */
-  const prevStatusRef = useRef<string | null>(null);
+  // バックエンドのライフサイクル管理とイベント配線は useExecutionBackend に委譲
+  const { backendRef, compileTargetRef, compileHadErrorRef, prevStatusRef } =
+    useExecutionBackend(flavor, backendFactory);
 
   const isRunning =
     executionStatus === 'running' || executionStatus === 'compiling';
@@ -100,91 +90,6 @@ export function useNospaceExecution(
       }));
     }
   }, [flavor, setExecutionOptions]);
-
-  // Switch backend when flavor changes
-  useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      const backend = await backendFactory(flavor);
-
-      if (cancelled) {
-        backend.dispose();
-        return;
-      }
-
-      // Setup callbacks
-      // コンパイル中は stdout を compileOutputAtom にルーティングし、
-      // それ以外は outputEntriesAtom に送る
-      backend.onOutput((entry) => {
-        if (compileTargetRef.current !== null && entry.type === 'stdout') {
-          setCompileOutput((prev) => ({
-            output: (prev?.output ?? '') + entry.data,
-            target: compileTargetRef.current!,
-          }));
-        } else {
-          setOutputEntries((prev) => [...prev, entry]);
-        }
-      });
-
-      backend.onStatusChange((status, sessionId, exitCode) => {
-        // コンパイル完了後に compileTargetRef をリセット
-        if (status !== 'compiling') {
-          compileTargetRef.current = null;
-          // compiling → 非compiling の遷移を検出してコンパイルステータスを確定する
-          if (prevStatusRef.current === 'compiling') {
-            setCompileStatus(compileHadErrorRef.current ? 'error' : 'success');
-          }
-        }
-        prevStatusRef.current = status;
-        setExecutionStatus(status);
-        setCurrentSessionId(sessionId);
-        if (exitCode !== undefined) {
-          setExitCode(exitCode ?? null);
-        }
-      });
-
-      backend.onCompileErrors((errors) => {
-        setCompileErrors(errors);
-        if (errors.length > 0) {
-          // エラー発生を記録（コンパイル完了時にステータスを 'error' に設定するため）
-          compileHadErrorRef.current = true;
-        }
-      });
-
-      // Initialize
-      try {
-        await backend.init();
-      } catch (err) {
-        console.error(
-          `[useNospaceExecution] Failed to initialize ${flavor} backend:`,
-          err,
-        );
-      }
-
-      // Dispose old backend
-      backendRef.current?.dispose();
-      backendRef.current = backend;
-    })();
-
-    return () => {
-      cancelled = true;
-      if (backendRef.current) {
-        backendRef.current.dispose();
-        backendRef.current = null;
-      }
-    };
-  }, [
-    flavor,
-    backendFactory,
-    setOutputEntries,
-    setCompileOutput,
-    setCompileErrors,
-    setCompileStatus,
-    setExecutionStatus,
-    setCurrentSessionId,
-    setExitCode,
-  ]);
 
   const handleRun = useCallback(
     (stdinData?: string) => {

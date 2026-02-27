@@ -1,6 +1,7 @@
 // Unit test for WasmExecutionBackend - compile error message handling
 
 import type { OutputEntry, CompileOptions, RunOptions } from '../../interfaces/NospaceTypes';
+import type { Nospace20Loader } from '../../web/services/WasmExecutionBackend';
 
 // Fake nospace20 module used by WasmExecutionBackend via dependency injection
 let fakeCompileResult: any;
@@ -12,8 +13,9 @@ let lastVMStepArg: number | undefined; // step() に渡された引数
 let lastCompileArgs: any[] = [];    // compile() に渡された引数
 let lastVMConstructorArgs: any[] = []; // WasmWhitespaceVM constructor に渡された引数
 
-jest.mock('../../web/libs/nospace20/loader', () => ({
-  initNospace20Wasm: jest.fn().mockResolvedValue(undefined),
+/** フェイク Nospace20Loader (jest.mock() を使わない DI 実装) */
+const fakeLoader: Nospace20Loader = {
+  initNospace20Wasm: async () => {},
   getNospace20: () => ({
     compile: (...args: any[]) => {
       lastCompileArgs = args;
@@ -39,7 +41,9 @@ jest.mock('../../web/libs/nospace20/loader', () => ({
       free() {}
     },
   }),
-}));
+};
+
+import { WasmExecutionBackend } from '../../web/services/WasmExecutionBackend';
 
 // crypto.randomUUID polyfill for test
 if (!globalThis.crypto?.randomUUID) {
@@ -47,8 +51,6 @@ if (!globalThis.crypto?.randomUUID) {
     value: { randomUUID: () => 'test-uuid' },
   });
 }
-
-import { WasmExecutionBackend } from '../../web/services/WasmExecutionBackend';
 
 describe('WasmExecutionBackend', () => {
   let backend: WasmExecutionBackend;
@@ -65,7 +67,7 @@ describe('WasmExecutionBackend', () => {
     lastVMConstructorArgs = [];
     outputEntries = [];
 
-    backend = new WasmExecutionBackend();
+    backend = new WasmExecutionBackend(fakeLoader);
     await backend.init();
     backend.onOutput((entry) => outputEntries.push(entry));
     backend.onStatusChange(() => {});
