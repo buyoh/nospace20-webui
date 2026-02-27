@@ -134,5 +134,18 @@ describe('CompileOutputPanel', () => {
 
       expect(screen.getByText('Run')).toBeInTheDocument();
     });
+
+    it('onRunCompiled 未指定時は ws ターゲットでも Run ボタンが表示されない', () => {
+      // onRunCompiled を省略（Compile タブでは Run ボタン不要）
+      const { onRunCompiled: _, ...propsWithoutRunCompiled } = defaultProps;
+      render(
+        <CompileOutputPanel
+          {...propsWithoutRunCompiled}
+          compileOutput={{ output: 'ws code', target: 'ws' }}
+        />
+      );
+
+      expect(screen.queryByText('Run')).not.toBeInTheDocument();
+    });
   });
 });

@@ -9,16 +9,22 @@ import { CompileOutputPanel } from '../components/execution/CompileOutputPanel';
 import { ExecutionControls } from '../components/execution/ExecutionControls';
 import { OutputPanel } from '../components/execution/OutputPanel';
 import { InputPanel } from '../components/execution/InputPanel';
-import { useNospaceExecution } from '../hooks/useNospaceExecution';
+import { useNospaceExecution, type BackendFactory } from '../hooks/useNospaceExecution';
 import { TestEditorContainer } from './TestEditorContainer';
 import './styles/ExecutionContainer.scss';
 
+/** ExecutionContainer の Props */
+interface ExecutionContainerProps {
+  /** テスト用バックエンドファクトリ（依存性注入） */
+  backendFactory?: BackendFactory;
+}
+
 /**
  * 実行パネル全体を統括するコンテナ。
- * Execution mode と Compile mode を切り替え可能。
- * Flavor に応じて利用可能な機能のみを表示する。
+ * Compile / Run / Run(Direct) / TestEditor の4タブ構成。
+ * Flavor に応じて利用可能なタブのみを表示する。
  */
-export const ExecutionContainer: React.FC = () => {
+export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({ backendFactory }) => {
   const flavor = useAtomValue(flavorAtom);
   const executionOptions = useAtomValue(executionOptionsAtom);
   const [batchInput, setBatchInput] = useState('');
@@ -34,23 +40,17 @@ export const ExecutionContainer: React.FC = () => {
     handleSendStdin,
     handleClearOutput,
     compileOutput,
-  } = useNospaceExecution();
+  } = useNospaceExecution(backendFactory);
 
   const isWasm = flavor === 'wasm';
   const isWebSocket = flavor === 'websocket';
-  const supportsCompileMode = true;
-  const supportsTestEditor = isWebSocket;
-  const showModeTabs = supportsCompileMode || supportsTestEditor;
 
-  // Server flavor ではコンパイルモード非対応のため、実行モードに強制
+  // WASM flavor は run-direct / test-editor 非対応のため compile に強制リダイレクト
   useEffect(() => {
-    if (!supportsCompileMode && operationMode === 'compile') {
-      setOperationMode('execution');
+    if (isWasm && (operationMode === 'run-direct' || operationMode === 'test-editor')) {
+      setOperationMode('compile');
     }
-    if (!supportsTestEditor && operationMode === 'test-editor') {
-      setOperationMode('execution');
-    }
-  }, [supportsCompileMode, supportsTestEditor]);
+  }, [isWasm, operationMode]);
 
   const handleRunWithInput = () => {
     const inputMode = isWasm ? 'batch' : executionOptions.inputMode;
@@ -63,46 +63,48 @@ export const ExecutionContainer: React.FC = () => {
     }
   };
 
-  const isCompileMode = operationMode === 'compile';
-  const isTestEditorMode = operationMode === 'test-editor';
+  const canRunCompiled = compileOutput !== null && compileOutput.target === 'ws';
 
   return (
     <div className="execution-container">
-      {/* モード切り替えタブ（複数モード対応の場合のみ表示） */}
-      {showModeTabs && (
-        <div className="operation-mode-tabs">
+      {/* モード切り替えタブ */}
+      <div className="operation-mode-tabs">
+        <button
+          className={`mode-tab ${operationMode === 'compile' ? 'active' : ''}`}
+          onClick={() => setOperationMode('compile')}
+        >
+          Compile
+        </button>
+        <button
+          className={`mode-tab ${operationMode === 'run' ? 'active' : ''}`}
+          onClick={() => setOperationMode('run')}
+        >
+          Run
+        </button>
+        {isWebSocket && (
           <button
-            className={`mode-tab ${operationMode === 'execution' ? 'active' : ''}`}
-            onClick={() => setOperationMode('execution')}
+            className={`mode-tab ${operationMode === 'run-direct' ? 'active' : ''}`}
+            onClick={() => setOperationMode('run-direct')}
           >
-            Execution
+            Run(Direct)
           </button>
-          {supportsCompileMode && (
-            <button
-              className={`mode-tab ${isCompileMode ? 'active' : ''}`}
-              onClick={() => setOperationMode('compile')}
-            >
-              Compile
-            </button>
-          )}
-          {supportsTestEditor && (
-            <button
-              className={`mode-tab ${isTestEditorMode ? 'active' : ''}`}
-              onClick={() => setOperationMode('test-editor')}
-            >
-              Test Editor
-            </button>
-          )}
-        </div>
-      )}
+        )}
+        {isWebSocket && (
+          <button
+            className={`mode-tab ${operationMode === 'test-editor' ? 'active' : ''}`}
+            onClick={() => setOperationMode('test-editor')}
+          >
+            Test Editor
+          </button>
+        )}
+      </div>
 
-      {isTestEditorMode ? (
+      {operationMode === 'test-editor' ? (
         <TestEditorContainer />
-      ) : isCompileMode ? (
+      ) : operationMode === 'compile' ? (
         <>
-          {/* Compile mode */}
+          {/* Compile タブ: コンパイルのみ */}
           <CompileOptions />
-          <ExecutionOptions />
           <ExecutionControls
             isRunning={isRunning}
             onCompile={handleCompile}
@@ -110,10 +112,21 @@ export const ExecutionContainer: React.FC = () => {
           />
           <CompileOutputPanel
             compileOutput={compileOutput}
-            onRunCompiled={handleRunCompiled}
             isRunning={isRunning}
             collapsed={compileOutputCollapsed}
             onToggleCollapse={() => setCompileOutputCollapsed((prev) => !prev)}
+          />
+          <OutputPanel onClear={handleClearOutput} />
+        </>
+      ) : operationMode === 'run' ? (
+        <>
+          {/* Run タブ: コンパイル済みコードの実行 */}
+          <ExecutionOptions />
+          <ExecutionControls
+            isRunning={isRunning}
+            onRun={handleRunCompiled}
+            runDisabled={!canRunCompiled}
+            onKill={handleKill}
           />
           <OutputPanel onClear={handleClearOutput} />
           <InputPanel
@@ -126,7 +139,7 @@ export const ExecutionContainer: React.FC = () => {
         </>
       ) : (
         <>
-          {/* Execution mode */}
+          {/* Run(Direct) タブ: 従来の Execution モード相当 */}
           <ExecutionOptions />
           <ExecutionControls
             isRunning={isRunning}

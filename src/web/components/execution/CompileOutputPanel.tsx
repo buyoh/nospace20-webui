@@ -8,8 +8,8 @@ import './styles/CompileOutputPanel.scss';
 interface CompileOutputPanelProps {
   /** コンパイル結果 */
   compileOutput: CompileOutput | null;
-  /** コンパイル済み Whitespace コードを実行する */
-  onRunCompiled: () => void;
+  /** コンパイル済み Whitespace コードを実行する。未指定時は Run ボタンを非表示 */
+  onRunCompiled?: () => void;
   /** 実行中かどうか */
   isRunning: boolean;
   /** パネルが折りたたまれているかどうか */
@@ -30,7 +30,7 @@ export const CompileOutputPanel: React.FC<CompileOutputPanelProps> = ({
   collapsed,
   onToggleCollapse,
 }) => {
-  const canRun = compileOutput !== null && compileOutput.target === 'ws';
+  const canRun = onRunCompiled !== undefined && compileOutput !== null && compileOutput.target === 'ws';
 
   return (
     <CollapsibleSection

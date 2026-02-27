@@ -7,6 +7,8 @@ interface ExecutionControlsProps {
   isRunning: boolean;
   /** Run ボタンのコールバック。未指定の場合、Run ボタンは非表示 */
   onRun?: () => void;
+  /** Run ボタンを追加で無効化するフラグ（isRunning に加えて） */
+  runDisabled?: boolean;
   onKill: () => void;
   /** Compile ボタンのコールバック。未指定の場合、Compile ボタンは非表示 */
   onCompile?: () => void;
@@ -15,6 +17,7 @@ interface ExecutionControlsProps {
 export const ExecutionControls: React.FC<ExecutionControlsProps> = ({
   isRunning,
   onRun,
+  runDisabled = false,
   onKill,
   onCompile,
 }) => {
@@ -34,7 +37,7 @@ export const ExecutionControls: React.FC<ExecutionControlsProps> = ({
         <Button
           variant="primary"
           onClick={onRun}
-          disabled={isRunning}
+          disabled={isRunning || runDisabled}
           className="btn-run"
         >
           Run

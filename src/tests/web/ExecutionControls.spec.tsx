@@ -193,4 +193,61 @@ describe('ExecutionControls', () => {
     expect(screen.queryByText('Run')).not.toBeInTheDocument();
     expect(screen.getByText('Stop')).toBeInTheDocument();
   });
+
+  describe('runDisabled プロップ', () => {
+    it('runDisabled=true の場合、Run ボタンが無効', () => {
+      render(
+        <ExecutionControls
+          isRunning={false}
+          onRun={jest.fn()}
+          runDisabled={true}
+          onKill={jest.fn()}
+        />
+      );
+
+      const runButton = screen.getByText('Run');
+      expect(runButton).toBeDisabled();
+    });
+
+    it('runDisabled=false の場合、Run ボタンが有効', () => {
+      render(
+        <ExecutionControls
+          isRunning={false}
+          onRun={jest.fn()}
+          runDisabled={false}
+          onKill={jest.fn()}
+        />
+      );
+
+      const runButton = screen.getByText('Run');
+      expect(runButton).not.toBeDisabled();
+    });
+
+    it('isRunning=true かつ runDisabled=false でも Run ボタンが無効（isRunning 優先）', () => {
+      render(
+        <ExecutionControls
+          isRunning={true}
+          onRun={jest.fn()}
+          runDisabled={false}
+          onKill={jest.fn()}
+        />
+      );
+
+      const runButton = screen.getByText('Run');
+      expect(runButton).toBeDisabled();
+    });
+
+    it('runDisabled 未指定時はデフォルトで Run ボタンが有効', () => {
+      render(
+        <ExecutionControls
+          isRunning={false}
+          onRun={jest.fn()}
+          onKill={jest.fn()}
+        />
+      );
+
+      const runButton = screen.getByText('Run');
+      expect(runButton).not.toBeDisabled();
+    });
+  });
 });
