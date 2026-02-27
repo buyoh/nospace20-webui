@@ -1,21 +1,50 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useAtom, useAtomValue } from 'jotai';
 import { executionOptionsAtom } from '../../stores/optionsAtom';
 import { flavorAtom } from '../../stores/flavorAtom';
+import { getNospace20, isNospace20WasmInitialized } from '../../libs/nospace20/loader';
 import { CollapsibleSection } from '../common/CollapsibleSection';
 import { Select } from '../common/Select';
 import { TextInput } from '../common/TextInput';
 import { Checkbox } from '../common/Checkbox';
 import './styles/ExecutionOptions.scss';
 
+/** ExecutionOptions の Props。省略時はデフォルト値を使用 */
+interface ExecutionOptionsProps {
+  optPassOptions?: string[];
+}
+
+const FALLBACK_OPT_PASS_OPTIONS: string[] = ['all', 'condition-opt', 'geti-opt', 'constant-folding', 'dead-code'];
+
+const OPT_PASS_LABELS: Record<string, string> = {
+  all: 'All',
+  'condition-opt': 'Condition Opt',
+  'geti-opt': 'GetI Opt',
+  'constant-folding': 'Constant Folding',
+  'dead-code': 'Dead Code',
+};
+
+function getWasmOptPassOptions(): string[] {
+  if (!isNospace20WasmInitialized()) {
+    return FALLBACK_OPT_PASS_OPTIONS;
+  }
+  try {
+    return [...getNospace20().getOptions().optPasses];
+  } catch {
+    return FALLBACK_OPT_PASS_OPTIONS;
+  }
+}
+
 /**
  * 実行オプション設定コンポーネント。
  * Flavor に応じて利用可能なオプションのみを表示する。
  */
-export const ExecutionOptions: React.FC = () => {
+export const ExecutionOptions: React.FC<ExecutionOptionsProps> = (props) => {
   const [options, setOptions] = useAtom(executionOptionsAtom);
   const flavor = useAtomValue(flavorAtom);
   const isWasm = flavor === 'wasm';
+  const wasmOptPassOptions = useMemo(() => getWasmOptPassOptions(), []);
+  const optPassOptions = props.optPassOptions ?? wasmOptPassOptions;
 
   return (
     <CollapsibleSection title="Execution Options" className="execution-options">
@@ -97,6 +126,29 @@ export const ExecutionOptions: React.FC = () => {
               }
             />
           </label>
+        </div>
+      )}
+
+      {/* Optimization — WASM のみ */}
+      {isWasm && optPassOptions.length > 0 && (
+        <div className="option-group">
+          <span className="option-group-label">Optimization:</span>
+          <div className="checkbox-group">
+            {optPassOptions.map((pass) => (
+              <Checkbox
+                key={pass}
+                label={OPT_PASS_LABELS[pass] ?? pass}
+                checked={options.optPasses.includes(pass)}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  const next = checked
+                    ? [...options.optPasses, pass]
+                    : options.optPasses.filter((p) => p !== pass);
+                  setOptions({ ...options, optPasses: next });
+                }}
+              />
+            ))}
+          </div>
         </div>
       )}
     </CollapsibleSection>

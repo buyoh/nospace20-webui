@@ -192,6 +192,7 @@ export function useNospaceExecution(
           inputMode: executionOptions.inputMode,
           stepBudget: executionOptions.stepBudget,
           maxTotalSteps: executionOptions.maxTotalSteps,
+          optPasses: executionOptions.optPasses,
         },
         stdinData,
         compileOptions.stdExtensions,

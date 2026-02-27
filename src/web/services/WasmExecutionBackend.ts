@@ -221,6 +221,7 @@ export class WasmExecutionBackend implements ExecutionBackend {
           options.target,
           options.language,
           options.stdExtensions.length > 0 ? options.stdExtensions as any : null,
+          options.optPasses?.length > 0 ? options.optPasses as any : null,
         );
 
         // CompileResult は discriminated union:

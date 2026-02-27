@@ -18,6 +18,8 @@ export interface CompileOptions {
   target: CompileTarget;
   /** 有効にする標準拡張 */
   stdExtensions: string[];
+  /** 有効にする最適化パス */
+  optPasses: string[];
 }
 
 export interface ExecutionOptions {
@@ -31,6 +33,8 @@ export interface ExecutionOptions {
   stepBudget: number;
   /** WASM: 最大総実行ステップ数 (default: 100_000_000) */
   maxTotalSteps: number;
+  /** 有効にする最適化パス（WASM only） */
+  optPasses: string[];
 }
 
 export interface RunOptions {
@@ -46,6 +50,8 @@ export interface RunOptions {
   stepBudget?: number;
   /** WASM only: 最大総実行ステップ数 */
   maxTotalSteps?: number;
+  /** 有効にする最適化パス（WASM only） */
+  optPasses?: string[];
 }
 
 // --- Socket.IO event types ---

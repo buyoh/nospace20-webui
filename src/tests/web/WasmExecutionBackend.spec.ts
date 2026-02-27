@@ -482,4 +482,35 @@ describe('WasmExecutionBackend', () => {
       expect(lastVMConstructorArgs[3]).toBeNull();
     });
   });
+
+  describe('compile - optPasses', () => {
+    it('optPasses が nospace20.compile() に渡される', async () => {
+      fakeCompileResult = { success: true, output: 'ok' };
+      const options: CompileOptions = {
+        language: 'standard',
+        target: 'ws',
+        stdExtensions: [],
+        optPasses: ['all', 'constant-folding'],
+      };
+      backend.compile('code', options);
+      await flushAsync();
+
+      // compile(code, target, language, stdExtensions, optPasses)
+      expect(lastCompileArgs[4]).toEqual(['all', 'constant-folding']);
+    });
+
+    it('optPasses が空配列の場合は null が渡される', async () => {
+      fakeCompileResult = { success: true, output: 'ok' };
+      const options: CompileOptions = {
+        language: 'standard',
+        target: 'ws',
+        stdExtensions: [],
+        optPasses: [],
+      };
+      backend.compile('code', options);
+      await flushAsync();
+
+      expect(lastCompileArgs[4]).toBeNull();
+    });
+  });
 });

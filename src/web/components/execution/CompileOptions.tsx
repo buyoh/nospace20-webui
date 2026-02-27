@@ -19,6 +19,7 @@ interface CompileOptionsProps {
   languageOptions?: OptionItem<LanguageSubset>[];
   targetOptions?: OptionItem<CompileTarget>[];
   stdExtensionOptions?: string[];
+  optPassOptions?: string[];
 }
 
 /** 値からラベルへのマッピング。未知の値はそのまま表示する */
@@ -38,6 +39,14 @@ const STD_EXTENSION_LABELS: Record<string, string> = {
   alloc: 'Alloc',
 };
 
+const OPT_PASS_LABELS: Record<string, string> = {
+  all: 'All',
+  'condition-opt': 'Condition Opt',
+  'geti-opt': 'GetI Opt',
+  'constant-folding': 'Constant Folding',
+  'dead-code': 'Dead Code',
+};
+
 /** WASM getOptions() が返す値を UI 用の OptionItem 配列に変換するフォールバック付きヘルパー */
 const FALLBACK_LANGUAGE_OPTIONS: OptionItem<LanguageSubset>[] = [
   { value: 'standard', label: 'Standard' },
@@ -51,6 +60,7 @@ const FALLBACK_TARGET_OPTIONS: OptionItem<CompileTarget>[] = [
 ];
 
 const FALLBACK_STD_EXTENSION_OPTIONS: string[] = ['debug', 'alloc'];
+const FALLBACK_OPT_PASS_OPTIONS: string[] = ['all', 'condition-opt', 'geti-opt', 'constant-folding', 'dead-code'];
 
 /**
  * WASM の getOptions() から利用可能なオプションを取得する。
@@ -60,12 +70,14 @@ function getWasmDerivedOptions(): {
   languageOptions: OptionItem<LanguageSubset>[];
   targetOptions: OptionItem<CompileTarget>[];
   stdExtensionOptions: string[];
+  optPassOptions: string[];
 } {
   if (!isNospace20WasmInitialized()) {
     return {
       languageOptions: FALLBACK_LANGUAGE_OPTIONS,
       targetOptions: FALLBACK_TARGET_OPTIONS,
       stdExtensionOptions: FALLBACK_STD_EXTENSION_OPTIONS,
+      optPassOptions: FALLBACK_OPT_PASS_OPTIONS,
     };
   }
   try {
@@ -80,12 +92,14 @@ function getWasmDerivedOptions(): {
         label: TARGET_LABELS[v] ?? v,
       })),
       stdExtensionOptions: [...opts.stdExtensions],
+      optPassOptions: [...opts.optPasses],
     };
   } catch {
     return {
       languageOptions: FALLBACK_LANGUAGE_OPTIONS,
       targetOptions: FALLBACK_TARGET_OPTIONS,
       stdExtensionOptions: FALLBACK_STD_EXTENSION_OPTIONS,
+      optPassOptions: FALLBACK_OPT_PASS_OPTIONS,
     };
   }
 }
@@ -101,6 +115,7 @@ export const CompileOptions: React.FC<CompileOptionsProps> = (props) => {
   const languageOptions = props.languageOptions ?? wasmOptions.languageOptions;
   const targetOptions = props.targetOptions ?? wasmOptions.targetOptions;
   const stdExtensionOptions = props.stdExtensionOptions ?? wasmOptions.stdExtensionOptions;
+  const optPassOptions = props.optPassOptions ?? wasmOptions.optPassOptions;
   const [options, setOptions] = useAtom(compileOptionsAtom);
 
   /** チェックボックスの ON/OFF で stdExtensions 配列を更新するハンドラ */
@@ -109,6 +124,15 @@ export const CompileOptions: React.FC<CompileOptionsProps> = (props) => {
       ? [...options.stdExtensions, ext]
       : options.stdExtensions.filter((e) => e !== ext);
     setOptions({ ...options, stdExtensions: next });
+  };
+
+  /** チェックボックスの ON/OFF で optPasses 配列を更新するハンドラ */
+  const handleOptPassChange = (pass: string, checked: boolean) => {
+    const current = options.optPasses ?? [];
+    const next = checked
+      ? [...current, pass]
+      : current.filter((p) => p !== pass);
+    setOptions({ ...options, optPasses: next });
   };
 
   return (
@@ -161,6 +185,22 @@ export const CompileOptions: React.FC<CompileOptionsProps> = (props) => {
                 label={STD_EXTENSION_LABELS[ext] ?? ext}
                 checked={options.stdExtensions.includes(ext)}
                 onChange={(e) => handleStdExtensionChange(ext, e.target.checked)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {optPassOptions.length > 0 && (
+        <div className="option-group">
+          <span className="option-group-label">Optimization:</span>
+          <div className="checkbox-group">
+            {optPassOptions.map((pass) => (
+              <Checkbox
+                key={pass}
+                label={OPT_PASS_LABELS[pass] ?? pass}
+                checked={(options.optPasses ?? []).includes(pass)}
+                onChange={(e) => handleOptPassChange(pass, e.target.checked)}
               />
             ))}
           </div>

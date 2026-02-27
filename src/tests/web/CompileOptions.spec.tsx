@@ -161,4 +161,86 @@ describe('CompileOptions', () => {
       expect(screen.queryByText('Std Extensions:')).not.toBeInTheDocument();
     });
   });
+
+  describe('Opt Passes', () => {
+    it('optPassOptions チェックボックスが表示される', () => {
+      render(
+        <Provider>
+          <CompileOptions optPassOptions={['all', 'condition-opt']} />
+        </Provider>
+      );
+
+      expect(screen.getByLabelText('All')).toBeInTheDocument();
+      expect(screen.getByLabelText('Condition Opt')).toBeInTheDocument();
+    });
+
+    it('チェックボックスを ON にすると atom の optPasses に値が追加される', () => {
+      const store = createStore();
+      store.set(compileOptionsAtom, {
+        language: 'standard',
+        target: 'ws',
+        stdExtensions: [],
+        optPasses: [],
+      });
+      render(
+        <Provider store={store}>
+          <CompileOptions optPassOptions={['all', 'condition-opt']} />
+        </Provider>
+      );
+
+      const allCheckbox = screen.getByLabelText('All') as HTMLInputElement;
+      expect(allCheckbox.checked).toBe(false);
+
+      fireEvent.click(allCheckbox);
+      expect(allCheckbox.checked).toBe(true);
+
+      const options = store.get(compileOptionsAtom);
+      expect(options.optPasses).toContain('all');
+    });
+
+    it('チェックボックスを OFF にすると atom の optPasses から値が削除される', () => {
+      const store = createStore();
+      store.set(compileOptionsAtom, {
+        language: 'standard',
+        target: 'ws',
+        stdExtensions: [],
+        optPasses: ['all'],
+      });
+
+      render(
+        <Provider store={store}>
+          <CompileOptions optPassOptions={['all', 'condition-opt']} />
+        </Provider>
+      );
+
+      const allCheckbox = screen.getByLabelText('All') as HTMLInputElement;
+      expect(allCheckbox.checked).toBe(true);
+
+      fireEvent.click(allCheckbox);
+      expect(allCheckbox.checked).toBe(false);
+
+      const options = store.get(compileOptionsAtom);
+      expect(options.optPasses).not.toContain('all');
+    });
+
+    it('props で optPassOptions を注入できる', () => {
+      render(
+        <Provider>
+          <CompileOptions optPassOptions={['custom-pass']} />
+        </Provider>
+      );
+
+      expect(screen.getByLabelText('custom-pass')).toBeInTheDocument();
+    });
+
+    it('optPassOptions が空配列の場合はセクションが表示されない', () => {
+      render(
+        <Provider>
+          <CompileOptions optPassOptions={[]} />
+        </Provider>
+      );
+
+      expect(screen.queryByText('Optimization:')).not.toBeInTheDocument();
+    });
+  });
 });
