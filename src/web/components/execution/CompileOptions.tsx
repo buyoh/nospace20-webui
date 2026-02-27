@@ -5,6 +5,7 @@ import type { LanguageSubset, CompileTarget } from '../../../interfaces/NospaceT
 import { getNospace20, isNospace20WasmInitialized } from '../../libs/nospace20/loader';
 import { CollapsibleSection } from '../common/CollapsibleSection';
 import { Select } from '../common/Select';
+import { Checkbox } from '../common/Checkbox';
 import './styles/CompileOptions.scss';
 
 /** 選択肢の定義 */
@@ -17,6 +18,7 @@ interface OptionItem<T extends string> {
 interface CompileOptionsProps {
   languageOptions?: OptionItem<LanguageSubset>[];
   targetOptions?: OptionItem<CompileTarget>[];
+  stdExtensionOptions?: string[];
 }
 
 /** 値からラベルへのマッピング。未知の値はそのまま表示する */
@@ -31,6 +33,11 @@ const TARGET_LABELS: Record<string, string> = {
   mnemonic: 'Mnemonic',
 };
 
+const STD_EXTENSION_LABELS: Record<string, string> = {
+  debug: 'Debug',
+  alloc: 'Alloc',
+};
+
 /** WASM getOptions() が返す値を UI 用の OptionItem 配列に変換するフォールバック付きヘルパー */
 const FALLBACK_LANGUAGE_OPTIONS: OptionItem<LanguageSubset>[] = [
   { value: 'standard', label: 'Standard' },
@@ -43,6 +50,8 @@ const FALLBACK_TARGET_OPTIONS: OptionItem<CompileTarget>[] = [
   { value: 'mnemonic', label: 'Mnemonic' },
 ];
 
+const FALLBACK_STD_EXTENSION_OPTIONS: string[] = ['debug', 'alloc'];
+
 /**
  * WASM の getOptions() から利用可能なオプションを取得する。
  * WASM が未初期化の場合はフォールバック値を返す。
@@ -50,11 +59,13 @@ const FALLBACK_TARGET_OPTIONS: OptionItem<CompileTarget>[] = [
 function getWasmDerivedOptions(): {
   languageOptions: OptionItem<LanguageSubset>[];
   targetOptions: OptionItem<CompileTarget>[];
+  stdExtensionOptions: string[];
 } {
   if (!isNospace20WasmInitialized()) {
     return {
       languageOptions: FALLBACK_LANGUAGE_OPTIONS,
       targetOptions: FALLBACK_TARGET_OPTIONS,
+      stdExtensionOptions: FALLBACK_STD_EXTENSION_OPTIONS,
     };
   }
   try {
@@ -68,11 +79,13 @@ function getWasmDerivedOptions(): {
         value: v as CompileTarget,
         label: TARGET_LABELS[v] ?? v,
       })),
+      stdExtensionOptions: [...opts.stdExtensions],
     };
   } catch {
     return {
       languageOptions: FALLBACK_LANGUAGE_OPTIONS,
       targetOptions: FALLBACK_TARGET_OPTIONS,
+      stdExtensionOptions: FALLBACK_STD_EXTENSION_OPTIONS,
     };
   }
 }
@@ -87,7 +100,16 @@ export const CompileOptions: React.FC<CompileOptionsProps> = (props) => {
   const wasmOptions = useMemo(() => getWasmDerivedOptions(), []);
   const languageOptions = props.languageOptions ?? wasmOptions.languageOptions;
   const targetOptions = props.targetOptions ?? wasmOptions.targetOptions;
+  const stdExtensionOptions = props.stdExtensionOptions ?? wasmOptions.stdExtensionOptions;
   const [options, setOptions] = useAtom(compileOptionsAtom);
+
+  /** チェックボックスの ON/OFF で stdExtensions 配列を更新するハンドラ */
+  const handleStdExtensionChange = (ext: string, checked: boolean) => {
+    const next = checked
+      ? [...options.stdExtensions, ext]
+      : options.stdExtensions.filter((e) => e !== ext);
+    setOptions({ ...options, stdExtensions: next });
+  };
 
   return (
     <CollapsibleSection title="Compile Options" className="compile-options">
@@ -128,6 +150,22 @@ export const CompileOptions: React.FC<CompileOptionsProps> = (props) => {
           </Select>
         </label>
       </div>
+
+      {stdExtensionOptions.length > 0 && (
+        <div className="option-group">
+          <span className="option-group-label">Std Extensions:</span>
+          <div className="checkbox-group">
+            {stdExtensionOptions.map((ext) => (
+              <Checkbox
+                key={ext}
+                label={STD_EXTENSION_LABELS[ext] ?? ext}
+                checked={options.stdExtensions.includes(ext)}
+                onChange={(e) => handleStdExtensionChange(ext, e.target.checked)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </CollapsibleSection>
   );
 };

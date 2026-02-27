@@ -1,7 +1,8 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { CompileOptions } from '../../web/components/execution/CompileOptions';
-import { Provider } from 'jotai';
+import { Provider, createStore } from 'jotai';
+import { compileOptionsAtom } from '../../web/stores/optionsAtom';
 import '@testing-library/jest-dom';
 
 describe('CompileOptions', () => {
@@ -84,5 +85,80 @@ describe('CompileOptions', () => {
     const targetSelect = screen.getByLabelText(/Target:/i) as HTMLSelectElement;
     fireEvent.change(targetSelect, { target: { value: 'mnemonic' } });
     expect(targetSelect.value).toBe('mnemonic');
+  });
+
+  describe('Std Extensions', () => {
+    it('stdExtensions チェックボックスが表示される', () => {
+      render(
+        <Provider>
+          <CompileOptions stdExtensionOptions={['debug', 'alloc']} />
+        </Provider>
+      );
+
+      expect(screen.getByLabelText('Debug')).toBeInTheDocument();
+      expect(screen.getByLabelText('Alloc')).toBeInTheDocument();
+    });
+
+    it('チェックボックスを ON にすると atom の stdExtensions に値が追加される', () => {
+      const store = createStore();
+      render(
+        <Provider store={store}>
+          <CompileOptions stdExtensionOptions={['debug', 'alloc']} />
+        </Provider>
+      );
+
+      const debugCheckbox = screen.getByLabelText('Debug') as HTMLInputElement;
+      expect(debugCheckbox.checked).toBe(false);
+
+      fireEvent.click(debugCheckbox);
+      expect(debugCheckbox.checked).toBe(true);
+
+      const options = store.get(compileOptionsAtom);
+      expect(options.stdExtensions).toContain('debug');
+    });
+
+    it('チェックボックスを OFF にすると atom の stdExtensions から値が削除される', () => {
+      const store = createStore();
+      store.set(compileOptionsAtom, {
+        language: 'standard',
+        target: 'ws',
+        stdExtensions: ['debug'],
+      });
+
+      render(
+        <Provider store={store}>
+          <CompileOptions stdExtensionOptions={['debug', 'alloc']} />
+        </Provider>
+      );
+
+      const debugCheckbox = screen.getByLabelText('Debug') as HTMLInputElement;
+      expect(debugCheckbox.checked).toBe(true);
+
+      fireEvent.click(debugCheckbox);
+      expect(debugCheckbox.checked).toBe(false);
+
+      const options = store.get(compileOptionsAtom);
+      expect(options.stdExtensions).not.toContain('debug');
+    });
+
+    it('props で stdExtensionOptions を注入できる', () => {
+      render(
+        <Provider>
+          <CompileOptions stdExtensionOptions={['custom-ext']} />
+        </Provider>
+      );
+
+      expect(screen.getByLabelText('custom-ext')).toBeInTheDocument();
+    });
+
+    it('stdExtensionOptions が空配列の場合はセクションが表示されない', () => {
+      render(
+        <Provider>
+          <CompileOptions stdExtensionOptions={[]} />
+        </Provider>
+      );
+
+      expect(screen.queryByText('Std Extensions:')).not.toBeInTheDocument();
+    });
   });
 });

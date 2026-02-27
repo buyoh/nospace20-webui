@@ -194,6 +194,7 @@ export function useNospaceExecution(
           maxTotalSteps: executionOptions.maxTotalSteps,
         },
         stdinData,
+        compileOptions.stdExtensions,
       );
     },
     [

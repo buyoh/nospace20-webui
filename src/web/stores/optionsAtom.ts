@@ -7,6 +7,7 @@ import type {
 export const compileOptionsAtom = atom<CompileOptions>({
   language: 'standard',
   target: 'ws',
+  stdExtensions: [],
 });
 
 export const executionOptionsAtom = atom<ExecutionOptions>({

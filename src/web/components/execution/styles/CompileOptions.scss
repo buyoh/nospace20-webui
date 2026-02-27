@@ -20,5 +20,19 @@
         font-size: 0.875rem;
       }
     }
+
+    .option-group-label {
+      display: block;
+      min-width: 80px;
+      font-size: 0.875rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .checkbox-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem 0.75rem;
+      padding-left: 0.5rem;
+    }
   }
 }

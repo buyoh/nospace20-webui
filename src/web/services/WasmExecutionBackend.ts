@@ -49,7 +49,7 @@ export class WasmExecutionBackend implements ExecutionBackend {
     return this.ready;
   }
 
-  run(code: string, options: RunOptions, stdinData?: string): void {
+  run(code: string, options: RunOptions, stdinData?: string, stdExtensions?: string[]): void {
     // Kill any existing execution
     this.kill();
 
@@ -61,7 +61,7 @@ export class WasmExecutionBackend implements ExecutionBackend {
     const maxTotalSteps = options.maxTotalSteps ?? DEFAULT_MAX_TOTAL_STEPS;
 
     // Start async execution loop
-    this.runAsync(code, options, stdinData ?? '', sessionId, signal, stepBudget, maxTotalSteps);
+    this.runAsync(code, options, stdinData ?? '', sessionId, signal, stepBudget, maxTotalSteps, stdExtensions);
   }
 
   private async runAsync(
@@ -72,6 +72,7 @@ export class WasmExecutionBackend implements ExecutionBackend {
     signal: AbortSignal,
     stepBudget: number,
     maxTotalSteps: number,
+    stdExtensions?: string[],
   ): Promise<void> {
     const nospace20 = getNospace20();
 
@@ -81,7 +82,12 @@ export class WasmExecutionBackend implements ExecutionBackend {
       if (options.language === 'ws') {
         this.vm = nospace20.WasmWhitespaceVM.fromWhitespace(code, stdinData);
       } else {
-        this.vm = new nospace20.WasmWhitespaceVM(code, stdinData);
+        this.vm = new nospace20.WasmWhitespaceVM(
+          code,
+          stdinData,
+          null,
+          stdExtensions?.length ? stdExtensions as any : null,
+        );
       }
 
       this.statusCallback?.('running', sessionId);
@@ -210,7 +216,12 @@ export class WasmExecutionBackend implements ExecutionBackend {
       try {
         this.statusCallback?.('compiling', sessionId);
 
-        const result = nospace20.compile(code, options.target, options.language);
+        const result = nospace20.compile(
+          code,
+          options.target,
+          options.language,
+          options.stdExtensions.length > 0 ? options.stdExtensions as any : null,
+        );
 
         // CompileResult は discriminated union:
         //   { success: true, output: string } | { success: false, errors: WasmError[] }

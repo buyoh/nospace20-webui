@@ -9,18 +9,22 @@ let fakeVMConstructorShouldThrow: any;
 let fakeVMStepResult: any;          // step() の返り値
 let fakeVMTotalSteps = 0;           // total_steps() の返り値
 let lastVMStepArg: number | undefined; // step() に渡された引数
+let lastCompileArgs: any[] = [];    // compile() に渡された引数
+let lastVMConstructorArgs: any[] = []; // WasmWhitespaceVM constructor に渡された引数
 
 jest.mock('../../web/libs/nospace20/loader', () => ({
   initNospace20Wasm: jest.fn().mockResolvedValue(undefined),
   getNospace20: () => ({
-    compile: (_code: string, _target: string, _langStd: string) => {
+    compile: (...args: any[]) => {
+      lastCompileArgs = args;
       if (fakeCompileShouldThrow !== undefined) {
         throw fakeCompileShouldThrow;
       }
       return fakeCompileResult;
     },
     WasmWhitespaceVM: class {
-      constructor() {
+      constructor(...args: any[]) {
+        lastVMConstructorArgs = args;
         if (fakeVMConstructorShouldThrow !== undefined) {
           throw fakeVMConstructorShouldThrow;
         }
@@ -57,6 +61,8 @@ describe('WasmExecutionBackend', () => {
     fakeVMStepResult = undefined;
     fakeVMTotalSteps = 0;
     lastVMStepArg = undefined;
+    lastCompileArgs = [];
+    lastVMConstructorArgs = [];
     outputEntries = [];
 
     backend = new WasmExecutionBackend();
@@ -73,7 +79,7 @@ describe('WasmExecutionBackend', () => {
   const flushAsync = () => new Promise<void>((r) => setTimeout(r, 10));
 
   describe('compile - result handling', () => {
-    const options: CompileOptions = { language: 'standard', target: 'ws' };
+    const options: CompileOptions = { language: 'standard', target: 'ws', stdExtensions: [] };
 
     it('should output successful compile result to stdout', async () => {
       fakeCompileResult = { success: true, output: 'compiled output' };
@@ -88,7 +94,7 @@ describe('WasmExecutionBackend', () => {
 
     it('should NOT append trailing newline for ws target', async () => {
       fakeCompileResult = { success: true, output: '  \t\n' };
-      backend.compile('code', { language: 'standard', target: 'ws' });
+      backend.compile('code', { language: 'standard', target: 'ws', stdExtensions: [] });
       await flushAsync();
 
       const stdoutEntry = outputEntries.find((e) => e.type === 'stdout');
@@ -99,7 +105,7 @@ describe('WasmExecutionBackend', () => {
 
     it('should NOT append trailing newline for ex-ws target', async () => {
       fakeCompileResult = { success: true, output: '  \t\n' };
-      backend.compile('code', { language: 'standard', target: 'ex-ws' });
+      backend.compile('code', { language: 'standard', target: 'ex-ws', stdExtensions: [] });
       await flushAsync();
 
       const stdoutEntry = outputEntries.find((e) => e.type === 'stdout');
@@ -110,7 +116,7 @@ describe('WasmExecutionBackend', () => {
 
     it('should NOT append trailing newline for mnemonic target', async () => {
       fakeCompileResult = { success: true, output: 'push 1\nend' };
-      backend.compile('code', { language: 'standard', target: 'mnemonic' });
+      backend.compile('code', { language: 'standard', target: 'mnemonic', stdExtensions: [] });
       await flushAsync();
 
       const stdoutEntry = outputEntries.find((e) => e.type === 'stdout');
@@ -121,7 +127,7 @@ describe('WasmExecutionBackend', () => {
 
     it('should NOT append trailing newline for json target', async () => {
       fakeCompileResult = { success: true, output: '{"ops":[]}' };
-      backend.compile('code', { language: 'standard', target: 'json' });
+      backend.compile('code', { language: 'standard', target: 'json', stdExtensions: [] });
       await flushAsync();
 
       const stdoutEntry = outputEntries.find((e) => e.type === 'stdout');
@@ -176,7 +182,7 @@ describe('WasmExecutionBackend', () => {
   });
 
   describe('compile - exception handling', () => {
-    const options: CompileOptions = { language: 'standard', target: 'ws' };
+    const options: CompileOptions = { language: 'standard', target: 'ws', stdExtensions: [] };
 
     it('should handle Error instance', async () => {
       fakeCompileShouldThrow = new Error('init failed');
@@ -237,7 +243,7 @@ describe('WasmExecutionBackend', () => {
   });
 
   describe('compile - onCompileErrors callback', () => {
-    const options: CompileOptions = { language: 'standard', target: 'ws' };
+    const options: CompileOptions = { language: 'standard', target: 'ws', stdExtensions: [] };
     let compileErrors: any[];
 
     beforeEach(() => {
@@ -402,6 +408,78 @@ describe('WasmExecutionBackend', () => {
       // step が complete を返すので finished になる（killed にはならない）
       expect(statuses).toContain('finished');
       expect(statuses).not.toContain('killed');
+    });
+  });
+
+  describe('compile - stdExtensions', () => {
+    it('stdExtensions が nospace20.compile() に渡される', async () => {
+      fakeCompileResult = { success: true, output: 'ok' };
+      const options: CompileOptions = {
+        language: 'standard',
+        target: 'ws',
+        stdExtensions: ['debug', 'alloc'],
+      };
+      backend.compile('code', options);
+      await flushAsync();
+
+      // compile(code, target, language, stdExtensions)
+      expect(lastCompileArgs[3]).toEqual(['debug', 'alloc']);
+    });
+
+    it('stdExtensions が空配列の場合は null が渡される', async () => {
+      fakeCompileResult = { success: true, output: 'ok' };
+      const options: CompileOptions = {
+        language: 'standard',
+        target: 'ws',
+        stdExtensions: [],
+      };
+      backend.compile('code', options);
+      await flushAsync();
+
+      expect(lastCompileArgs[3]).toBeNull();
+    });
+  });
+
+  describe('run - stdExtensions', () => {
+    it('stdExtensions が WasmWhitespaceVM コンストラクタに渡される', async () => {
+      const options: RunOptions = {
+        language: 'standard',
+        debug: false,
+        ignoreDebug: false,
+        inputMode: 'batch',
+      };
+      backend.run('code', options, '', ['debug']);
+      await flushAsync();
+
+      // WasmWhitespaceVM(code, stdin, interactive, stdExtensions)
+      expect(lastVMConstructorArgs[3]).toEqual(['debug']);
+    });
+
+    it('stdExtensions が未指定の場合は null が渡される', async () => {
+      const options: RunOptions = {
+        language: 'standard',
+        debug: false,
+        ignoreDebug: false,
+        inputMode: 'batch',
+      };
+      backend.run('code', options, '');
+      await flushAsync();
+
+      // stdExtensions はundefined → null が渡される
+      expect(lastVMConstructorArgs[3]).toBeNull();
+    });
+
+    it('stdExtensions が空配列の場合は null が渡される', async () => {
+      const options: RunOptions = {
+        language: 'standard',
+        debug: false,
+        ignoreDebug: false,
+        inputMode: 'batch',
+      };
+      backend.run('code', options, '', []);
+      await flushAsync();
+
+      expect(lastVMConstructorArgs[3]).toBeNull();
     });
   });
 });

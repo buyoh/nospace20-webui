@@ -31,7 +31,7 @@ export interface ExecutionBackend {
   /**
    * Execute source code.
    */
-  run(code: string, options: RunOptions, stdinData?: string): void;
+  run(code: string, options: RunOptions, stdinData?: string, stdExtensions?: string[]): void;
 
   /**
    * Compile only (no execution).

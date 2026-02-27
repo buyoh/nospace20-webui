@@ -16,6 +16,8 @@ export interface CompileOptions {
   language: LanguageSubset;
   /** Compile output format */
   target: CompileTarget;
+  /** 有効にする標準拡張 */
+  stdExtensions: string[];
 }
 
 export interface ExecutionOptions {
