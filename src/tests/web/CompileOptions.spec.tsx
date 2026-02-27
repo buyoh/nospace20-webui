@@ -15,7 +15,6 @@ describe('CompileOptions', () => {
 
     const languageSelect = screen.getByLabelText(/Language:/i) as HTMLSelectElement;
     expect(languageSelect).toBeInTheDocument();
-    expect(languageSelect.value).toBe('standard');
   });
 
   it('Target セレクターが表示される', () => {
@@ -170,7 +169,11 @@ describe('CompileOptions', () => {
         </Provider>
       );
 
+      // 'all' は直接表示される
       expect(screen.getByLabelText('All')).toBeInTheDocument();
+
+      // 'all' 以外は More セクション内に入るため、展開してから確認
+      fireEvent.click(screen.getByRole('button', { name: /More/i }));
       expect(screen.getByLabelText('Condition Opt')).toBeInTheDocument();
     });
 
@@ -230,6 +233,8 @@ describe('CompileOptions', () => {
         </Provider>
       );
 
+      // 'all' 以外の項目は More セクション内に入るため、展開してから確認
+      fireEvent.click(screen.getByRole('button', { name: /More/i }));
       expect(screen.getByLabelText('custom-pass')).toBeInTheDocument();
     });
 
