@@ -13,6 +13,8 @@ interface ExecutionControlsProps {
   onKill: () => void;
   /** Compile ボタンのコールバック。未指定の場合、Compile ボタンは非表示 */
   onCompile?: () => void;
+  /** Compile/Run ボタンのコールバック。未指定の場合、Compile/Run ボタンは非表示 */
+  onCompileAndRun?: () => void;
   /** 直前のコンパイル結果ステータス（Run/Stop ボタンの横に表示） */
   compileStatus?: CompileStatus;
 }
@@ -23,6 +25,7 @@ export const ExecutionControls: React.FC<ExecutionControlsProps> = ({
   runDisabled = false,
   onKill,
   onCompile,
+  onCompileAndRun,
   compileStatus,
 }) => {
   return (
@@ -35,6 +38,16 @@ export const ExecutionControls: React.FC<ExecutionControlsProps> = ({
           className="btn-compile"
         >
           Compile
+        </Button>
+      )}
+      {onCompileAndRun && (
+        <Button
+          variant="accent"
+          onClick={onCompileAndRun}
+          disabled={isRunning}
+          className="btn-compile-and-run"
+        >
+          Compile/Run
         </Button>
       )}
       {onRun && (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAtom, useAtomValue } from 'jotai';
 import { executionOptionsAtom } from '../stores/optionsAtom';
 import { flavorAtom } from '../stores/flavorAtom';
@@ -50,6 +50,9 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({ backendF
   const [operationMode, setOperationMode] = useAtom(operationModeAtom);
   const [compileOutputCollapsed, setCompileOutputCollapsed] = useState(true);
 
+  // Compile/Run: コンパイル完了後に自動実行するためのペンディング入力データ。null は待機中でないことを示す
+  const pendingAutoRunRef = useRef<{ batchInput: string } | null>(null);
+
   const {
     isRunning,
     handleRun,
@@ -74,6 +77,18 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({ backendF
     }
   }, [compileStatus]);
 
+  // Compile/Run: コンパイル完了後に自動的にコンパイル済みコードを実行する
+  useEffect(() => {
+    if (pendingAutoRunRef.current === null) return;
+    if (compileStatus === 'success' && compileOutput?.target === 'ws') {
+      const { batchInput: pendingInput } = pendingAutoRunRef.current;
+      pendingAutoRunRef.current = null;
+      handleRunCompileOutput(compileOutput.output, pendingInput);
+    } else if (compileStatus === 'error') {
+      pendingAutoRunRef.current = null;
+    }
+  }, [compileStatus, compileOutput, handleRunCompileOutput]);
+
   // WASM flavor は run-direct / test-editor 非対応のため compile に強制リダイレクト
   useEffect(() => {
     if (isWasm && (operationMode === 'run-direct' || operationMode === 'test-editor')) {
@@ -90,6 +105,12 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({ backendF
     if (compileOutput?.target === 'ws') {
       handleRunCompileOutput(compileOutput.output, batchInput);
     }
+  };
+
+  /** コンパイル完了後に自動実行する（Run タブの Compile/Run ボタン用） */
+  const handleCompileAndRun = () => {
+    pendingAutoRunRef.current = { batchInput };
+    handleCompile();
   };
 
   const canRunCompiled = compileOutput !== null && compileOutput.target === 'ws';
@@ -154,6 +175,7 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({ backendF
           <ExecutionOptionsImpl />
           <ExecutionControls
             isRunning={isRunning}
+            onCompileAndRun={handleCompileAndRun}
             onRun={handleRunCompiled}
             runDisabled={!canRunCompiled}
             onKill={handleKill}

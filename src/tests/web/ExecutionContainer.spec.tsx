@@ -134,6 +134,29 @@ describe('ExecutionContainer', () => {
     });
   });
 
+  describe('Run タブ - Compile/Run ボタン', () => {
+    it('Run タブに Compile/Run ボタンが表示される', async () => {
+      const store = createStore();
+      store.set(flavorAtom, 'wasm');
+      store.set(operationModeAtom, 'run');
+      const { container } = await act(async () => renderWithStore(store));
+
+      const compileAndRunButton = container.querySelector('.btn-compile-and-run') as HTMLButtonElement;
+      expect(compileAndRunButton).toBeTruthy();
+      expect(compileAndRunButton.textContent).toBe('Compile/Run');
+    });
+
+    it('実行中でない場合、Compile/Run ボタンが有効', async () => {
+      const store = createStore();
+      store.set(flavorAtom, 'wasm');
+      store.set(operationModeAtom, 'run');
+      const { container } = await act(async () => renderWithStore(store));
+
+      const compileAndRunButton = container.querySelector('.btn-compile-and-run') as HTMLButtonElement;
+      expect(compileAndRunButton).not.toBeDisabled();
+    });
+  });
+
   describe('Compile タブ - CompileOutputPanel の Run ボタン', () => {
     it('Compile タブの CompileOutputPanel には Run ボタンが表示されない（ws ターゲットでも）', async () => {
       const store = createStore();

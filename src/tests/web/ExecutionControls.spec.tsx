@@ -250,4 +250,71 @@ describe('ExecutionControls', () => {
       expect(runButton).not.toBeDisabled();
     });
   });
+
+  describe('onCompileAndRun プロップ', () => {
+    it('onCompileAndRun 未指定時に Compile/Run ボタンが表示されない', () => {
+      render(
+        <ExecutionControls
+          isRunning={false}
+          onKill={jest.fn()}
+          onRun={jest.fn()}
+        />
+      );
+
+      expect(screen.queryByText('Compile/Run')).not.toBeInTheDocument();
+    });
+
+    it('onCompileAndRun 指定時に Compile/Run ボタンが表示される', () => {
+      render(
+        <ExecutionControls
+          isRunning={false}
+          onKill={jest.fn()}
+          onCompileAndRun={jest.fn()}
+        />
+      );
+
+      expect(screen.getByText('Compile/Run')).toBeInTheDocument();
+    });
+
+    it('実行中でない場合、Compile/Run ボタンが有効', () => {
+      render(
+        <ExecutionControls
+          isRunning={false}
+          onKill={jest.fn()}
+          onCompileAndRun={jest.fn()}
+        />
+      );
+
+      const button = screen.getByText('Compile/Run');
+      expect(button).not.toBeDisabled();
+    });
+
+    it('実行中の場合、Compile/Run ボタンが無効', () => {
+      render(
+        <ExecutionControls
+          isRunning={true}
+          onKill={jest.fn()}
+          onCompileAndRun={jest.fn()}
+        />
+      );
+
+      const button = screen.getByText('Compile/Run');
+      expect(button).toBeDisabled();
+    });
+
+    it('Compile/Run ボタンクリック時に onCompileAndRun が呼ばれる', () => {
+      const mockOnCompileAndRun = jest.fn();
+      render(
+        <ExecutionControls
+          isRunning={false}
+          onKill={jest.fn()}
+          onCompileAndRun={mockOnCompileAndRun}
+        />
+      );
+
+      const button = screen.getByText('Compile/Run');
+      fireEvent.click(button);
+      expect(mockOnCompileAndRun).toHaveBeenCalledTimes(1);
+    });
+  });
 });
