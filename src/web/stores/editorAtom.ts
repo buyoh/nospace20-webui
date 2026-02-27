@@ -1,6 +1,6 @@
-import { atom } from 'jotai';
+import { atomWithStorage } from 'jotai/utils';
 
-const defaultCode = `func: puts(str) {
+export const defaultCode = `func: puts(str) {
   while: *str != 0 {
     __putc(*str);
     str += 1;
@@ -15,5 +15,5 @@ func: main() {
 }
 `;
 
-/** エディタのソースコード */
-export const sourceCodeAtom = atom<string>(defaultCode);
+/** エディタのソースコード（localStorage に永続化） */
+export const sourceCodeAtom = atomWithStorage<string>('nospace-source-code', defaultCode);

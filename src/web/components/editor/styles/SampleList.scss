@@ -1,0 +1,47 @@
+@use '../../../styles/colors';
+
+.sample-list {
+  padding: 1rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.sample-list__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  border: 1px solid colors.$border-primary;
+  margin-bottom: 0.5rem;
+  background-color: colors.$bg-tertiary;
+
+  &:hover {
+    background-color: colors.$bg-hover;
+  }
+}
+
+.sample-list__name {
+  color: colors.$text-primary;
+  font-size: 0.9rem;
+}
+
+.sample-list__load-btn {
+  padding: 0.25rem 0.75rem;
+  background-color: colors.$accent-primary;
+  color: colors.$text-white;
+  border: none;
+  border-radius: 3px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: colors.$accent-blue-hover;
+  }
+}
+
+.sample-list__empty {
+  color: colors.$text-muted;
+  font-size: 0.9rem;
+}

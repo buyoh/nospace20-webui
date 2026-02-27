@@ -7,3 +7,35 @@
   flex-direction: column;
   background-color: colors.$bg-primary;
 }
+
+.editor-container__editor {
+  flex: 1;
+  overflow: hidden;
+}
+
+.editor-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid colors.$border-primary;
+  flex-shrink: 0;
+
+  .editor-tab {
+    padding: 0.5rem 1rem;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: colors.$text-muted;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+
+    &:hover {
+      color: colors.$text-secondary;
+    }
+
+    &.active {
+      color: colors.$text-white;
+      border-bottom-color: colors.$accent-primary;
+    }
+  }
+}
