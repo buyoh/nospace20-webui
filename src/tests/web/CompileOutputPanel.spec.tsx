@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { Provider } from 'jotai';
 import { CompileOutputPanel } from '../../web/components/execution/CompileOutputPanel';
 import '@testing-library/jest-dom';
 
@@ -146,6 +147,135 @@ describe('CompileOutputPanel', () => {
       );
 
       expect(screen.queryByText('Run')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('表示モード切り替え', () => {
+    it('ws ターゲットの場合、表示モードトグルが表示される', () => {
+      render(
+        <Provider>
+          <CompileOutputPanel
+            {...defaultProps}
+            compileOutput={{ output: ' \t\n', target: 'ws' }}
+          />
+        </Provider>
+      );
+      expect(screen.getByText('Raw')).toBeInTheDocument();
+      expect(screen.getByText('SP TB LF')).toBeInTheDocument();
+    });
+
+    it('ex-ws ターゲットの場合、表示モードトグルが表示される', () => {
+      render(
+        <Provider>
+          <CompileOutputPanel
+            {...defaultProps}
+            compileOutput={{ output: ' \t\n', target: 'ex-ws' }}
+          />
+        </Provider>
+      );
+      expect(screen.getByText('Raw')).toBeInTheDocument();
+      expect(screen.getByText('SP TB LF')).toBeInTheDocument();
+    });
+
+    it('mnemonic ターゲットの場合、表示モードトグルが表示されない', () => {
+      render(
+        <Provider>
+          <CompileOutputPanel
+            {...defaultProps}
+            compileOutput={{ output: 'push 1', target: 'mnemonic' }}
+          />
+        </Provider>
+      );
+      expect(screen.queryByText('Raw')).not.toBeInTheDocument();
+      expect(screen.queryByText('SP TB LF')).not.toBeInTheDocument();
+    });
+
+    it('ws ターゲットのデフォルトは visible モード（SP/TB/LF 表示）', () => {
+      render(
+        <Provider>
+          <CompileOutputPanel
+            {...defaultProps}
+            compileOutput={{ output: ' \t\n', target: 'ws' }}
+          />
+        </Provider>
+      );
+      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+      expect(textarea.value).toContain('SP');
+      expect(textarea.value).toContain('TB');
+      expect(textarea.value).toContain('LF');
+    });
+
+    it('Raw ボタンをクリックすると生テキストが表示される', () => {
+      render(
+        <Provider>
+          <CompileOutputPanel
+            {...defaultProps}
+            compileOutput={{ output: ' \t\n', target: 'ws' }}
+          />
+        </Provider>
+      );
+      fireEvent.click(screen.getByText('Raw'));
+      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+      expect(textarea.value).toBe(' \t\n');
+    });
+  });
+
+  describe('ページネーション', () => {
+    const makeOutput = (lines: number) =>
+      Array.from({ length: lines }, (_, i) => `line${i + 1}`).join('\n');
+
+    it('100 行以下の場合、ページネーションが表示されない', () => {
+      render(
+        <Provider>
+          <CompileOutputPanel
+            {...defaultProps}
+            compileOutput={{ output: makeOutput(50), target: 'mnemonic' }}
+          />
+        </Provider>
+      );
+      expect(screen.queryByText(/\/ \d/)).not.toBeInTheDocument();
+    });
+
+    it('101 行以上の場合、ページネーションが表示される', () => {
+      render(
+        <Provider>
+          <CompileOutputPanel
+            {...defaultProps}
+            compileOutput={{ output: makeOutput(101), target: 'mnemonic' }}
+          />
+        </Provider>
+      );
+      // "1 / 2" のようなページ表示
+      expect(screen.getByText(/\d+ lines/)).toBeInTheDocument();
+    });
+
+    it('次のページボタンをクリックするとページが進む', () => {
+      render(
+        <Provider>
+          <CompileOutputPanel
+            {...defaultProps}
+            compileOutput={{ output: makeOutput(101), target: 'mnemonic' }}
+          />
+        </Provider>
+      );
+      const nextBtn = screen.getByLabelText('次のページ');
+      fireEvent.click(nextBtn);
+      // 2ページ目に "line101" が表示される
+      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+      expect(textarea.value).toContain('line101');
+    });
+
+    it('先頭ページボタンは先頭ページで無効になる', () => {
+      render(
+        <Provider>
+          <CompileOutputPanel
+            {...defaultProps}
+            compileOutput={{ output: makeOutput(101), target: 'mnemonic' }}
+          />
+        </Provider>
+      );
+      expect(screen.getByLabelText('先頭ページ')).toBeDisabled();
+      expect(screen.getByLabelText('前のページ')).toBeDisabled();
     });
   });
 });

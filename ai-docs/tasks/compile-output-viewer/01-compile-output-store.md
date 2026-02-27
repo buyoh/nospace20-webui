@@ -1,59 +1,55 @@
 # コンパイル結果のデータモデル・atom 設計
 
+## 実装状況（2026-02-27 完了）
+
+| 項目 | 状態 | 備考 |
+|------|------|------|
+| `CompileOutput` 型 | ✅ 実装済み | `src/web/stores/compileOutputAtom.ts` |
+| `compileOutputAtom` | ✅ 実装済み | `src/web/stores/compileOutputAtom.ts` |
+| `whitespaceDisplayModeAtom` | ✅ 実装済み | `src/web/stores/compileOutputAtom.ts` |
+| `compileOutputPageAtom` | ✅ 実装済み | `src/web/stores/compileOutputAtom.ts` |
+| `compileOutputPageSizeAtom` | ✅ 実装済み | `src/web/stores/compileOutputAtom.ts` |
+
 ## 概要
 
 コンパイル結果を実行出力（OutputPanel）とは分離して管理する。
 専用の atom に格納し、表示モードやページネーションの状態も atom で管理する。
 
-## データ型
+## 実装済みデータ型・atom
 
-### `CompileResultData`（新規）
+### `CompileOutput`（実装済み）
 
 ```typescript
-// src/interfaces/NospaceTypes.ts に追加
+// src/web/stores/compileOutputAtom.ts
 
-/**
- * コンパイル結果データ。
- * コンパイル成功時の出力テキストとメタ情報を保持する。
- */
-export interface CompileResultData {
-  /** コンパイル出力テキスト（全文） */
+import { atom } from 'jotai';
+import type { CompileTarget } from '../../interfaces/NospaceTypes';
+
+/** コンパイル結果（中間出力表示用） */
+export interface CompileOutput {
+  /** コンパイル結果テキスト */
   output: string;
-  /** コンパイルに使用したターゲット */
+  /** コンパイルに使用されたターゲット */
   target: CompileTarget;
-  /** コンパイルに使用した言語サブセット */
-  language: LanguageSubset;
-  /** コンパイル完了時刻 */
-  timestamp: number;
 }
+
+/** コンパイル中間出力を保持する atom */
+export const compileOutputAtom = atom<CompileOutput | null>(null);
 ```
 
-### Whitespace 表示モード
+## 残タスク（未実装 atom）
+
+### `src/web/stores/compileOutputAtom.ts` への追加
+
+以下の atom を `compileOutputAtom.ts` に追加する。
 
 ```typescript
-// src/interfaces/NospaceTypes.ts に追加
-
 /**
  * Whitespace 出力の表示モード。
  * - 'raw': そのまま表示（不可視文字のまま）
  * - 'visible': SP/TB/LF に置換して表示
  */
 export type WhitespaceDisplayMode = 'raw' | 'visible';
-```
-
-## Jotai Atoms
-
-### `src/web/stores/compileResultAtom.ts`（新規）
-
-```typescript
-import { atom } from 'jotai';
-import type { CompileResultData, WhitespaceDisplayMode } from '../../interfaces/NospaceTypes';
-
-/**
- * コンパイル結果。成功時にセットされる。
- * null はコンパイル未実行または結果クリア済みを示す。
- */
-export const compileResultAtom = atom<CompileResultData | null>(null);
 
 /**
  * Whitespace 表示モード。
@@ -76,143 +72,17 @@ export const compileOutputPageSizeAtom = atom<number>(100);
 
 | atom | デフォルト | 理由 |
 |------|----------|------|
-| `compileResultAtom` | `null` | コンパイル未実行状態 |
 | `whitespaceDisplayModeAtom` | `'visible'` | ws ターゲット出力はそのままでは視認不能なため、初回から可視モードにする |
 | `compileOutputPageAtom` | `0` | 先頭ページ |
 | `compileOutputPageSizeAtom` | `100` | 画面表示とパフォーマンスのバランス |
 
-## ExecutionBackend インターフェース変更
-
-### `onCompileOutput` コールバック追加
-
-```typescript
-// src/web/services/ExecutionBackend.ts に追加
-
-export interface ExecutionBackend {
-  // ... 既存メソッド ...
-
-  /**
-   * コンパイル結果を受け取るコールバックを登録する。
-   * compile() 成功時に呼び出される。
-   */
-  onCompileOutput(callback: (result: CompileResultData) => void): void;
-}
-```
-
-### WasmExecutionBackend の変更
-
-```typescript
-// src/web/services/WasmExecutionBackend.ts
-
-export class WasmExecutionBackend implements ExecutionBackend {
-  // ... 既存フィールド ...
-  private compileOutputCallback: ((result: CompileResultData) => void) | null = null;
-
-  compile(code: string, options: CompileOptions): void {
-    const sessionId = crypto.randomUUID();
-
-    (async () => {
-      const nospace20 = getNospace20();
-
-      try {
-        this.statusCallback?.('compiling', sessionId);
-        const result = nospace20.compile(code, options.target, options.language);
-
-        if (result.success) {
-          // 既存: stdout 出力（互換性維持のため残す）
-          this.outputCallback?.({
-            type: 'stdout',
-            data: result.output + '\n',
-            timestamp: Date.now(),
-          });
-
-          // 新規: コンパイル結果を専用コールバックで通知
-          this.compileOutputCallback?.({
-            output: result.output,
-            target: options.target,
-            language: options.language,
-            timestamp: Date.now(),
-          });
-
-          this.statusCallback?.('finished', sessionId, 0);
-        } else {
-          // エラー処理は既存のまま
-          const errorMessages = formatErrorEntries(result.errors);
-          this.outputCallback?.({
-            type: 'stderr',
-            data: errorMessages + '\n',
-            timestamp: Date.now(),
-          });
-          this.statusCallback?.('error', sessionId);
-        }
-      } catch (e) {
-        // ... 既存の例外処理 ...
-      }
-    })();
-  }
-
-  onCompileOutput(callback: (result: CompileResultData) => void): void {
-    this.compileOutputCallback = callback;
-  }
-}
-```
-
-### ServerExecutionBackend の変更
-
-Server flavor は compile 未サポートのため、`onCompileOutput` は no-op。
-
-```typescript
-onCompileOutput(_callback: (result: CompileResultData) => void): void {
-  // Server flavor does not support compile
-}
-```
-
-## useNospaceExecution フック変更
-
-```typescript
-// src/web/hooks/useNospaceExecution.ts
-
-import { compileResultAtom, compileOutputPageAtom } from '../stores/compileResultAtom';
-
-export function useNospaceExecution(...) {
-  // ... 既存 ...
-  const setCompileResult = useSetAtom(compileResultAtom);
-  const setCompileOutputPage = useSetAtom(compileOutputPageAtom);
-
-  // バックエンド初期化時に compileOutput コールバックを登録
-  useEffect(() => {
-    // ... 既存の backend 初期化 ...
-    backend.onCompileOutput((result) => {
-      setCompileResult(result);
-      setCompileOutputPage(0); // コンパイル時にページを先頭にリセット
-    });
-    // ...
-  }, [/* ... */]);
-
-  const handleCompile = useCallback(() => {
-    const backend = backendRef.current;
-    if (!backend || !backend.isReady() || isRunning) return;
-    setOutputEntries([]);
-    setCompileResult(null); // 前回の結果をクリア
-    backend.compile(sourceCode, compileOptions);
-  }, [sourceCode, compileOptions, isRunning, setOutputEntries, setCompileResult]);
-
-  return {
-    // ... 既存 ...
-    handleCompile,
-  };
-}
-```
-
-## データフロー図
+## データフロー図（現状）
 
 ```
                      Compile ボタン押下
                            │
                            ▼
                   handleCompile()
-                  ├── setOutputEntries([])
-                  ├── setCompileResult(null)
                   └── backend.compile(code, options)
                            │
                            ▼
@@ -221,20 +91,8 @@ export function useNospaceExecution(...) {
                   success       error
                       │           │
                       ▼           ▼
-        compileOutputCallback  outputCallback (stderr)
+           compileOutputAtom 更新  outputCallback (stderr)
                       │
                       ▼
-           setCompileResult({
-             output, target,
-             language, timestamp
-           })
-                      │
-                      ▼
-            compileResultAtom 更新
-                      │
-                      ▼
-            CompileOutputPanel 再描画
-            ├── whitespaceDisplayModeAtom → 表示モード
-            ├── compileOutputPageAtom → ページ番号
-            └── compileOutputPageSizeAtom → ページサイズ
+            CompileOutputPanel 再描画（textarea）
 ```
