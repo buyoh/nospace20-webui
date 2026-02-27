@@ -8,7 +8,7 @@ import {
   outputEntriesAtom,
   exitCodeAtom,
 } from '../stores/executionAtom';
-import { compileOutputAtom } from '../stores/compileOutputAtom';
+import { compileOutputAtom, compileStatusAtom, type CompileStatus } from '../stores/compileOutputAtom';
 import { compileErrorsAtom } from '../stores/compileErrorsAtom';
 import { flavorAtom } from '../stores/flavorAtom';
 import type { ExecutionBackend } from '../services/ExecutionBackend';
@@ -39,6 +39,8 @@ export interface UseNospaceExecutionResult {
   handleClearOutput: () => void;
   /** コンパイル結果 */
   compileOutput: CompileOutput | null;
+  /** 直前のコンパイル結果ステータス */
+  compileStatus: CompileStatus;
 }
 
 /** デフォルトの BackendFactory（動的インポートを使用） */
@@ -73,10 +75,16 @@ export function useNospaceExecution(
   const compileOutput = useAtomValue(compileOutputAtom);
   const setCompileOutput = useSetAtom(compileOutputAtom);
   const setCompileErrors = useSetAtom(compileErrorsAtom);
+  const compileStatus = useAtomValue(compileStatusAtom);
+  const setCompileStatus = useSetAtom(compileStatusAtom);
 
   const backendRef = useRef<ExecutionBackend | null>(null);
   /** コンパイル中のターゲット。null 以外の場合、stdout を compileOutputAtom にルーティングする */
   const compileTargetRef = useRef<CompileTarget | null>(null);
+  /** コンパイル中にエラーが発生したかどうかを追跡する */
+  const compileHadErrorRef = useRef(false);
+  /** 直前の executionStatus を追跡する（コンパイル完了検出用） */
+  const prevStatusRef = useRef<string | null>(null);
 
   const isRunning =
     executionStatus === 'running' || executionStatus === 'compiling';
@@ -123,7 +131,12 @@ export function useNospaceExecution(
         // コンパイル完了後に compileTargetRef をリセット
         if (status !== 'compiling') {
           compileTargetRef.current = null;
+          // compiling → 非compiling の遷移を検出してコンパイルステータスを確定する
+          if (prevStatusRef.current === 'compiling') {
+            setCompileStatus(compileHadErrorRef.current ? 'error' : 'success');
+          }
         }
+        prevStatusRef.current = status;
         setExecutionStatus(status);
         setCurrentSessionId(sessionId);
         if (exitCode !== undefined) {
@@ -133,6 +146,10 @@ export function useNospaceExecution(
 
       backend.onCompileErrors((errors) => {
         setCompileErrors(errors);
+        if (errors.length > 0) {
+          // エラー発生を記録（コンパイル完了時にステータスを 'error' に設定するため）
+          compileHadErrorRef.current = true;
+        }
       });
 
       // Initialize
@@ -163,6 +180,7 @@ export function useNospaceExecution(
     setOutputEntries,
     setCompileOutput,
     setCompileErrors,
+    setCompileStatus,
     setExecutionStatus,
     setCurrentSessionId,
     setExitCode,
@@ -213,11 +231,14 @@ export function useNospaceExecution(
     if (!backend || !backend.isReady() || isRunning) return;
 
     compileTargetRef.current = compileOptions.target;
+    compileHadErrorRef.current = false;
+    prevStatusRef.current = 'compiling';
     setCompileOutput(null);
     setCompileErrors([]);
+    setCompileStatus(null);
     setOutputEntries([]);
     backend.compile(sourceCode, compileOptions);
-  }, [sourceCode, compileOptions, isRunning, setOutputEntries, setCompileOutput, setCompileErrors]);
+  }, [sourceCode, compileOptions, isRunning, setOutputEntries, setCompileOutput, setCompileErrors, setCompileStatus]);
 
   /** コンパイル済みコードを実行する（Whitespace ターゲット時のみ） */
   const handleRunCompileOutput = useCallback(
@@ -264,5 +285,6 @@ export function useNospaceExecution(
     handleSendStdin,
     handleClearOutput,
     compileOutput,
+    compileStatus,
   };
 }

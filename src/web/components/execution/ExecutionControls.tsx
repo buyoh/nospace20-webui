@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button } from '../common/Button';
+import type { CompileStatus } from '../../stores/compileOutputAtom';
 import './styles/ExecutionControls.scss';
 
 /** 実行コントロール（Run/Compile/Kill ボタン）の Props */
@@ -12,6 +13,8 @@ interface ExecutionControlsProps {
   onKill: () => void;
   /** Compile ボタンのコールバック。未指定の場合、Compile ボタンは非表示 */
   onCompile?: () => void;
+  /** 直前のコンパイル結果ステータス（Run/Stop ボタンの横に表示） */
+  compileStatus?: CompileStatus;
 }
 
 export const ExecutionControls: React.FC<ExecutionControlsProps> = ({
@@ -20,6 +23,7 @@ export const ExecutionControls: React.FC<ExecutionControlsProps> = ({
   runDisabled = false,
   onKill,
   onCompile,
+  compileStatus,
 }) => {
   return (
     <div className="execution-controls">
@@ -51,6 +55,16 @@ export const ExecutionControls: React.FC<ExecutionControlsProps> = ({
       >
         Stop
       </Button>
+      {compileStatus === 'success' && (
+        <span className="compile-status compile-status--success" aria-label="コンパイル成功">
+          ✓ OK
+        </span>
+      )}
+      {compileStatus === 'error' && (
+        <span className="compile-status compile-status--error" aria-label="コンパイル失敗">
+          ✗ Error
+        </span>
+      )}
     </div>
   );
 };

@@ -29,7 +29,7 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({ backendF
   const executionOptions = useAtomValue(executionOptionsAtom);
   const [batchInput, setBatchInput] = useState('');
   const [operationMode, setOperationMode] = useAtom(operationModeAtom);
-  const [compileOutputCollapsed, setCompileOutputCollapsed] = useState(false);
+  const [compileOutputCollapsed, setCompileOutputCollapsed] = useState(true);
 
   const {
     isRunning,
@@ -40,10 +40,20 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({ backendF
     handleSendStdin,
     handleClearOutput,
     compileOutput,
+    compileStatus,
   } = useNospaceExecution(backendFactory);
 
   const isWasm = flavor === 'wasm';
   const isWebSocket = flavor === 'websocket';
+
+  // コンパイル成功後はパネルを折りたたむ、エラー時は展開する
+  useEffect(() => {
+    if (compileStatus === 'success') {
+      setCompileOutputCollapsed(true);
+    } else if (compileStatus === 'error') {
+      setCompileOutputCollapsed(false);
+    }
+  }, [compileStatus]);
 
   // WASM flavor は run-direct / test-editor 非対応のため compile に強制リダイレクト
   useEffect(() => {
@@ -109,6 +119,7 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({ backendF
             isRunning={isRunning}
             onCompile={handleCompile}
             onKill={handleKill}
+            compileStatus={compileStatus}
           />
           <CompileOutputPanel
             compileOutput={compileOutput}

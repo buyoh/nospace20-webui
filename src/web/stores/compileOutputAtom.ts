@@ -27,11 +27,12 @@ export type WhitespaceDisplayMode = 'raw' | 'visible';
 export const whitespaceDisplayModeAtom = atom<WhitespaceDisplayMode>('visible');
 
 /**
- * ページネーション: 現在のページ番号（0-based）。
+ * 直前のコンパイル結果ステータス。
+ * - null: コンパイル未実行またはコンパイル中
+ * - 'success': コンパイル成功
+ * - 'error': コンパイル失敗（エラーあり）
  */
-export const compileOutputPageAtom = atom<number>(0);
+export type CompileStatus = 'success' | 'error' | null;
 
-/**
- * ページネーション: 1 ページあたりの表示行数。
- */
-export const compileOutputPageSizeAtom = atom<number>(100);
+/** 直前のコンパイル結果ステータスを保持する atom */
+export const compileStatusAtom = atom<CompileStatus>(null);

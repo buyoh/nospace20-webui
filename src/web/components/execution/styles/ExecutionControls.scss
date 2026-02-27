@@ -2,6 +2,22 @@
 
 .execution-controls {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0;
+}
+
+.compile-status {
+  font-size: 0.85rem;
+  font-weight: bold;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+
+  &--success {
+    color: colors.$info-text;
+  }
+
+  &--error {
+    color: colors.$error-text;
+  }
 }
