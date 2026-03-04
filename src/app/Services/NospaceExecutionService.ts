@@ -92,8 +92,11 @@ class NospaceSessionImpl implements NospaceSession {
       this.callbacks.onStderr(data.toString());
     });
 
-    // Setup exit handler
-    process.on('exit', (code: number | null) => {
+    // Setup close handler
+    // BUG FIX: 'exit' イベントは stdio ストリームの読み取り完了を保証しない。
+    // 'close' イベントは stdio が閉じた後に発火するため、全 stdout/stderr データの
+    // 受信を保証できる。'exit' を使うとコンパイル出力が欠損し実行に失敗する原因になっていた。
+    process.on('close', (code: number | null) => {
       this._exitCode = code;
       // Don't overwrite 'killed' status
       if (this._status !== 'killed') {

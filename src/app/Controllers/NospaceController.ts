@@ -120,30 +120,39 @@ export class NospaceController {
       this.executionService.removeSession(existingSessionId);
     }
 
+    // BUG FIX: 初期ステータス 'compiling' を compile() 呼び出し前に emit する。
+    // compile() はサポート外ターゲットやバイナリ未検出時に onExit を同期的に呼ぶため、
+    // compile() 後に 'compiling' を emit すると順序が逆転し、UI が "コンパイル中" のまま
+    // 固着するバグがあった。sessionId は compile() 後に確定するため、
+    // 仮セッション変数を用意し emit 順序を保証する。
+    let sessionId: string;
+
     // Create new compile session
     const session = this.executionService.compile(code, options, {
       onStdout: (data) => {
         socket.emit('nospace_stdout', {
-          sessionId: session.sessionId,
+          sessionId,
           data,
         });
       },
       onStderr: (data) => {
         socket.emit('nospace_stderr', {
-          sessionId: session.sessionId,
+          sessionId,
           data,
         });
       },
       onExit: (exitCode) => {
         socket.emit('nospace_execution_status', {
-          sessionId: session.sessionId,
+          sessionId,
           status: session.status,
           exitCode,
         });
-        this.executionService.removeSession(session.sessionId);
+        this.executionService.removeSession(sessionId);
         this.sessionsBySocket.delete(socket.id);
       },
     });
+
+    sessionId = session.sessionId;
 
     // Register session
     this.sessionsBySocket.set(socket.id, session.sessionId);

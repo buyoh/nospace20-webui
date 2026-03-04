@@ -32,7 +32,7 @@ class FakeChildProcess extends EventEmitter {
       // Simulate process termination
       setTimeout(() => {
         this.exitCode = null;
-        this.emit('exit', null);
+        this.emit('close', null);
       }, 10);
     }
     return true;
@@ -298,7 +298,7 @@ describe('NospaceExecutionService', () => {
 
       // Simulate successful exit
       setTimeout(() => {
-        fakeProcess.emit('exit', 0);
+        fakeProcess.emit('close', 0);
       }, 50);
     });
 
@@ -328,7 +328,7 @@ describe('NospaceExecutionService', () => {
 
       // Simulate error exit
       setTimeout(() => {
-        fakeProcess.emit('exit', 1);
+        fakeProcess.emit('close', 1);
       }, 50);
     });
 
@@ -549,7 +549,7 @@ describe('NospaceExecutionService', () => {
         onExit,
       });
 
-      fakeProcess.emit('exit', 0);
+      fakeProcess.emit('close', 0);
     });
 
     it('compile でサポート外ターゲットをエラーにする', () => {
