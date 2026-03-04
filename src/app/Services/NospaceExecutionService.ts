@@ -200,6 +200,13 @@ export class NospaceExecutionService {
       args.push('--ignore-debug');
     }
 
+    // BUG FIX: stdExtensions が CLI に渡されていなかった。
+    // WASM backend は stdExtensions を VM コンストラクタに渡すが、
+    // サーバー側では --std-ext フラグとして渡す必要がある。
+    for (const ext of options.stdExtensions ?? []) {
+      args.push('--std-ext', ext);
+    }
+
     return this.spawnSession(code, args, callbacks);
   }
 
@@ -233,6 +240,12 @@ export class NospaceExecutionService {
     args.push('--mode', 'compile');
     args.push('--std', options.language);
     args.push('--target', options.target);
+
+    // BUG FIX: stdExtensions が CLI に渡されておらず、alloc 等の標準拡張を使うコードの
+    // コンパイルが失敗していた。CLI は --std-ext <ext> を複数指定可能。
+    for (const ext of options.stdExtensions ?? []) {
+      args.push('--std-ext', ext);
+    }
 
     return this.spawnSession(code, args, callbacks);
   }

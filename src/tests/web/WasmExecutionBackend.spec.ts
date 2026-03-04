@@ -449,8 +449,9 @@ describe('WasmExecutionBackend', () => {
         debug: false,
         ignoreDebug: false,
         inputMode: 'batch',
+        stdExtensions: ['debug'],
       };
-      backend.run('code', options, '', ['debug']);
+      backend.run('code', options, '');
       await flushAsync();
 
       // WasmWhitespaceVM(code, stdin, interactive, stdExtensions)
@@ -477,8 +478,9 @@ describe('WasmExecutionBackend', () => {
         debug: false,
         ignoreDebug: false,
         inputMode: 'batch',
+        stdExtensions: [],
       };
-      backend.run('code', options, '', []);
+      backend.run('code', options, '');
       await flushAsync();
 
       expect(lastVMConstructorArgs[3]).toBeNull();

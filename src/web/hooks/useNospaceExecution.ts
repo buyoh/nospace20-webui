@@ -116,9 +116,9 @@ export function useNospaceExecution(
           stepBudget: executionOptions.stepBudget,
           maxTotalSteps: executionOptions.maxTotalSteps,
           optPasses: executionOptions.optPasses,
+          stdExtensions: compileOptions.stdExtensions,
         },
         stdinData,
-        compileOptions.stdExtensions,
       );
     },
     [

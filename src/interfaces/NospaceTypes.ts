@@ -59,6 +59,8 @@ export interface RunOptions {
   maxTotalSteps?: number;
   /** 有効にする最適化パス（WASM only） */
   optPasses?: string[];
+  /** 有効にする標準拡張 */
+  stdExtensions?: string[];
 }
 
 // --- Socket.IO event types ---

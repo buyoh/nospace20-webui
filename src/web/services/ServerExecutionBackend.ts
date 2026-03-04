@@ -99,7 +99,7 @@ export class ServerExecutionBackend implements ExecutionBackend {
     return this.client.connected;
   }
 
-  run(code: string, options: RunOptions, stdinData?: string, _stdExtensions?: string[]): void {
+  run(code: string, options: RunOptions, stdinData?: string): void {
     this.client.emitRun(code, options, stdinData);
   }
 

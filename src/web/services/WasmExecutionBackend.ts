@@ -75,7 +75,7 @@ export class WasmExecutionBackend implements ExecutionBackend {
     return this.ready;
   }
 
-  run(code: string, options: RunOptions, stdinData?: string, stdExtensions?: string[]): void {
+  run(code: string, options: RunOptions, stdinData?: string): void {
     // Kill any existing execution
     this.kill();
 
@@ -87,7 +87,7 @@ export class WasmExecutionBackend implements ExecutionBackend {
     const maxTotalSteps = options.maxTotalSteps ?? DEFAULT_MAX_TOTAL_STEPS;
 
     // Start async execution loop
-    this.runAsync(code, options, stdinData ?? '', sessionId, signal, stepBudget, maxTotalSteps, stdExtensions);
+    this.runAsync(code, options, stdinData ?? '', sessionId, signal, stepBudget, maxTotalSteps);
   }
 
   private async runAsync(
@@ -98,7 +98,6 @@ export class WasmExecutionBackend implements ExecutionBackend {
     signal: AbortSignal,
     stepBudget: number,
     maxTotalSteps: number,
-    stdExtensions?: string[],
   ): Promise<void> {
     const nospace20 = this.loader.getNospace20();
 
@@ -108,6 +107,7 @@ export class WasmExecutionBackend implements ExecutionBackend {
       if (options.language === 'ws') {
         this.vm = nospace20.WasmWhitespaceVM.fromWhitespace(code, stdinData);
       } else {
+        const stdExtensions = options.stdExtensions;
         this.vm = new nospace20.WasmWhitespaceVM(
           code,
           stdinData,

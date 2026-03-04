@@ -262,6 +262,47 @@ describe('NospaceExecutionService', () => {
       expect(spawnCalls[0][0]).toBe(fakeConfig.nospaceBinPath);
       expect(spawnCalls[0][1]).toEqual(expect.arrayContaining(['--std', 'ws', '--debug', '--ignore-debug']));
     });
+
+    it('コマンド引数が正しく構築される (with stdExtensions)', () => {
+      const code = 'code';
+      const options: RunOptions = {
+        language: 'standard',
+        debug: false,
+        ignoreDebug: false,
+        inputMode: 'batch',
+        stdExtensions: ['alloc'],
+      };
+
+      files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+
+      service.run(code, options, {
+        onStdout: jest.fn(),
+        onStderr: jest.fn(),
+        onExit: jest.fn(),
+      });
+
+      expect(spawnCalls[0][1]).toEqual(expect.arrayContaining(['--std', 'standard', '--std-ext', 'alloc']));
+    });
+
+    it('コマンド引数が正しく構築される (stdExtensions 未指定)', () => {
+      const code = 'code';
+      const options: RunOptions = {
+        language: 'standard',
+        debug: false,
+        ignoreDebug: false,
+        inputMode: 'batch',
+      };
+
+      files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+
+      service.run(code, options, {
+        onStdout: jest.fn(),
+        onStderr: jest.fn(),
+        onExit: jest.fn(),
+      });
+
+      expect(spawnCalls[0][1]).not.toContain('--std-ext');
+    });
   });
 
   describe('session behavior', () => {
@@ -587,6 +628,54 @@ describe('NospaceExecutionService', () => {
         expect.stringContaining('nospace20 binary not found')
       );
       expect(onExit).toHaveBeenCalledWith(1);
+    });
+
+    it('compile で stdExtensions が --std-ext フラグとして渡される', () => {
+      files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+
+      service.compile('code', { language: 'standard', target: 'ws', stdExtensions: ['alloc', 'debug'], optPasses: [] }, {
+        onStdout: jest.fn(),
+        onStderr: jest.fn(),
+        onExit: jest.fn(),
+      });
+
+      const spawnArgs = spawnCalls[0][1];
+      expect(spawnArgs).toContain('--std-ext');
+      // --std-ext alloc と --std-ext debug が両方含まれる
+      const stdExtIndices = spawnArgs.reduce((acc: number[], arg: string, i: number) => {
+        if (arg === '--std-ext') acc.push(i);
+        return acc;
+      }, []);
+      expect(stdExtIndices).toHaveLength(2);
+      expect(spawnArgs[stdExtIndices[0] + 1]).toBe('alloc');
+      expect(spawnArgs[stdExtIndices[1] + 1]).toBe('debug');
+    });
+
+    it('compile で stdExtensions が空の場合 --std-ext は含まれない', () => {
+      files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+
+      service.compile('code', { language: 'standard', target: 'ws', stdExtensions: [], optPasses: [] }, {
+        onStdout: jest.fn(),
+        onStderr: jest.fn(),
+        onExit: jest.fn(),
+      });
+
+      const spawnArgs = spawnCalls[0][1];
+      expect(spawnArgs).not.toContain('--std-ext');
+    });
+
+    it('compile で stdExtensions が未定義の場合 --std-ext は含まれない', () => {
+      files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+
+      // CompileOptions の stdExtensions が undefined（旧クライアントからのリクエスト想定）
+      service.compile('code', { language: 'standard', target: 'ws' } as CompileOptions, {
+        onStdout: jest.fn(),
+        onStderr: jest.fn(),
+        onExit: jest.fn(),
+      });
+
+      const spawnArgs = spawnCalls[0][1];
+      expect(spawnArgs).not.toContain('--std-ext');
     });
   });
 

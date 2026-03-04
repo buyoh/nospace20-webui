@@ -6,11 +6,12 @@ Arguments:
   [FILE]  Source file to execute (reads from stdin if not provided)
 
 Options:
-      --std <STD>        Language subset [default: standard] [possible values: standard, min, ws]
-      --mode <MODE>      Execution mode [default: run] [possible values: run, compile]
-      --target <TARGET>  Compile target (only with --mode=compile) [default: ws] [possible values: ws, mnemonic, ex-ws, json]
-  -o, --output <OUTPUT>  Output file (only with --mode=compile, stdout if not specified)
-  -d, --debug            Show trace results after execution
-      --ignore-debug     Ignore debug built-in functions (__assert, __assert_not, __trace, __clog)
-  -h, --help             Print help
-  -V, --version          Print version
+      --std <STD>            Language subset [default: standard] [possible values: standard, min, ws]
+      --mode <MODE>          Execution mode [default: run] [possible values: run, compile]
+      --target <TARGET>      Compile target (only with --mode=compile) [default: ws] [possible values: ws, mnemonic, ex-ws, json]
+      --std-ext <STD_EXT>    Standard extension (can be specified multiple times) [possible values: debug, alloc]
+  -o, --output <OUTPUT>      Output file (only with --mode=compile, stdout if not specified)
+  -d, --debug                Show trace results after execution
+      --ignore-debug         Ignore debug built-in functions (__assert, __assert_not, __trace, __clog)
+  -h, --help                 Print help
+  -V, --version              Print version
