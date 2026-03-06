@@ -43,7 +43,7 @@ export const EditorContainer: React.FC<EditorContainerProps> = ({
     .map((e) => ({
       row: e.line! - 1, // Ace は 0-based row
       column: e.column ?? 0,
-      text: e.message,
+      text: e.details ? `${e.message}\n${e.details}` : e.message,
       type: 'error',
     }));
 

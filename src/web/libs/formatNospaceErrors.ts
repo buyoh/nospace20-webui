@@ -11,6 +11,7 @@ export interface NospaceErrorEntry {
   message: string;
   line?: number;
   column?: number;
+  details?: string;
 }
 
 /** nospace エラー JSON の構造 */
@@ -33,7 +34,8 @@ export function formatErrorEntries(errors: NospaceErrorEntry[]): string {
         e.line != null
           ? `:${e.line}${e.column != null ? ':' + e.column : ''}`
           : '';
-      return `${e.message}${loc}`;
+      const details = e.details ? `\n  ${e.details}` : '';
+      return `${e.message}${loc}${details}`;
     })
     .join('\n');
 }

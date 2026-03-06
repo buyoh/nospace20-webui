@@ -37,6 +37,20 @@ describe('formatErrorEntries', () => {
     const result = formatErrorEntries([]);
     expect(result).toBe('');
   });
+
+  it('should include details on a new indented line', () => {
+    const result = formatErrorEntries([
+      { message: 'type mismatch', line: 3, column: 1, details: 'expected int, got string' },
+    ]);
+    expect(result).toBe('type mismatch:3:1\n  expected int, got string');
+  });
+
+  it('should include details without location', () => {
+    const result = formatErrorEntries([
+      { message: 'internal error', details: 'stack overflow' },
+    ]);
+    expect(result).toBe('internal error\n  stack overflow');
+  });
 });
 
 describe('tryFormatNospaceErrorJson', () => {

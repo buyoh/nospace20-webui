@@ -84,4 +84,30 @@ describe('EditorContainer', () => {
       { row: 4, column: 0, text: 'no column error', type: 'error' },
     ]);
   });
+
+  it('details ありエラーはアノテーションの text に details が含まれる', () => {
+    const store = createStore();
+    const errors: NospaceErrorEntry[] = [
+      { message: 'type mismatch', line: 2, column: 4, details: 'expected int, got string' },
+    ];
+    store.set(compileErrorsAtom, errors);
+    renderWithStore(store);
+
+    expect(capturedAnnotations).toEqual([
+      { row: 1, column: 4, text: 'type mismatch\nexpected int, got string', type: 'error' },
+    ]);
+  });
+
+  it('details なしエラーはアノテーションの text に message のみ', () => {
+    const store = createStore();
+    const errors: NospaceErrorEntry[] = [
+      { message: 'simple error', line: 1 },
+    ];
+    store.set(compileErrorsAtom, errors);
+    renderWithStore(store);
+
+    expect(capturedAnnotations).toEqual([
+      { row: 0, column: 0, text: 'simple error', type: 'error' },
+    ]);
+  });
 });
