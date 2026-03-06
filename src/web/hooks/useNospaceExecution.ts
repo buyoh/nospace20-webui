@@ -23,7 +23,7 @@ export interface UseNospaceExecutionResult {
   /** 実行中またはコンパイル中かどうか */
   isRunning: boolean;
   /** ソースコードを実行する */
-  handleRun: (stdinData?: string) => void;
+  handleRun: (stdinData?: string, runOptions?: { direct?: boolean }) => void;
   /** ソースコードをコンパイルする */
   handleCompile: () => void;
   /** コンパイル済みコードを実行する（Whitespace ターゲット時のみ） */
@@ -83,16 +83,16 @@ export function useNospaceExecution(
   useEffect(() => {
     if (flavor === 'wasm') {
       // WASM 非対応のオプションをリセット
+      // NOTE: ignoreDebug は WasmNospaceVM 対応のためリセットしない
       setExecutionOptions((prev) => ({
         ...prev,
         inputMode: 'batch',
-        ignoreDebug: false,
       }));
     }
   }, [flavor, setExecutionOptions]);
 
   const handleRun = useCallback(
-    (stdinData?: string) => {
+    (stdinData?: string, runOptions?: { direct?: boolean }) => {
       const backend = backendRef.current;
       if (!backend || !backend.isReady() || isRunning) {
         console.warn('[useNospaceExecution] handleRun blocked:', {
@@ -117,6 +117,7 @@ export function useNospaceExecution(
           maxTotalSteps: executionOptions.maxTotalSteps,
           optPasses: executionOptions.optPasses,
           stdExtensions: compileOptions.stdExtensions,
+          direct: runOptions?.direct,
         },
         stdinData,
       );

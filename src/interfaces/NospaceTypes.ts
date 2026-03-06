@@ -61,6 +61,8 @@ export interface RunOptions {
   optPasses?: string[];
   /** 有効にする標準拡張 */
   stdExtensions?: string[];
+  /** WasmNospaceVM を使用した直接インタプリタ実行を行うか（WASM only） */
+  direct?: boolean;
 }
 
 // --- Socket.IO event types ---

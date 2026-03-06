@@ -95,9 +95,10 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({ backendF
     }
   }, [compileStatus, compileOutput, handleRunCompileOutput]);
 
-  // WASM flavor は run-direct / test-editor 非対応のため compile に強制リダイレクト
+  // WASM flavor は test-editor 非対応のため compile に強制リダイレクト
+  // NOTE: run-direct は WasmNospaceVM で対応するためリダイレクトしない
   useEffect(() => {
-    if (isWasm && (operationMode === 'run-direct' || operationMode === 'test-editor')) {
+    if (isWasm && operationMode === 'test-editor') {
       setOperationMode('compile');
     }
   }, [isWasm, operationMode]);
@@ -110,7 +111,10 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({ backendF
 
   const handleRunWithInput = () => {
     const inputMode = isWasm ? 'batch' : executionOptions.inputMode;
-    handleRun(inputMode === 'batch' ? batchInput : undefined);
+    handleRun(
+      inputMode === 'batch' ? batchInput : undefined,
+      operationMode === 'run-direct' ? { direct: true } : undefined,
+    );
   };
 
   const handleRunCompiled = () => {
@@ -143,14 +147,12 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({ backendF
         >
           Run
         </button>
-        {isWebSocket && (
-          <button
-            className={`mode-tab ${operationMode === 'run-direct' ? 'active' : ''}`}
-            onClick={() => setOperationMode('run-direct')}
-          >
-            Run(Direct)
-          </button>
-        )}
+        <button
+          className={`mode-tab ${operationMode === 'run-direct' ? 'active' : ''}`}
+          onClick={() => setOperationMode('run-direct')}
+        >
+          Run(Direct)
+        </button>
         {isWebSocket && (
           <button
             className={`mode-tab ${operationMode === 'test-editor' ? 'active' : ''}`}

@@ -17,6 +17,40 @@ const DEFAULT_STEP_BUDGET = 10000;
 const DEFAULT_MAX_TOTAL_STEPS = 100_000_000;
 
 /**
+ * ステップ実行ループ用 VM アダプタ。
+ * WasmWhitespaceVM と WasmNospaceVM のメソッド名の差異を吸収する。
+ */
+interface VmAdapter {
+  step(budget: number): { status: string; error?: string };
+  flushStdout(): string;
+  getTraced(): any;
+  totalSteps(): number;
+  free(): void;
+}
+
+/** WasmWhitespaceVM をアダプタ化する */
+function adaptWhitespaceVm(vm: any): VmAdapter {
+  return {
+    step: (b) => vm.step(b),
+    flushStdout: () => vm.flush_stdout(),
+    getTraced: () => vm.get_traced(),
+    totalSteps: () => vm.total_steps(),
+    free: () => vm.free(),
+  };
+}
+
+/** WasmNospaceVM をアダプタ化する */
+function adaptNospaceVm(vm: any): VmAdapter {
+  return {
+    step: (b) => vm.step(b),
+    flushStdout: () => vm.flushStdout(),
+    getTraced: () => vm.getTraced(),
+    totalSteps: () => vm.total_steps(),
+    free: () => vm.free(),
+  };
+}
+
+/**
  * WASM ローダーのインターフェース。
  * テスト時に環境に依存しないフェイク実装を注入できる。
  */
@@ -61,7 +95,7 @@ export class WasmExecutionBackend implements ExecutionBackend {
   static capabilities: ExecutionBackendCapabilities = {
     supportsInteractiveStdin: false,
     supportsCompile: true,
-    supportsIgnoreDebug: false,
+    supportsIgnoreDebug: true,
     supportsLanguageSubsetForRun: false,
     requiresServer: false,
   };
@@ -102,11 +136,23 @@ export class WasmExecutionBackend implements ExecutionBackend {
     const nospace20 = this.loader.getNospace20();
 
     try {
-      // Build VM
-      // If options.language is 'ws', use fromWhitespace
+      let adapter: VmAdapter;
+
       if (options.language === 'ws') {
+        // Whitespace ソースを直接実行
         this.vm = nospace20.WasmWhitespaceVM.fromWhitespace(code, stdinData);
+        adapter = adaptWhitespaceVm(this.vm);
+      } else if (options.direct) {
+        // WasmNospaceVM で nospace ソースを直接インタプリタ実行
+        this.vm = new nospace20.WasmNospaceVM(
+          code,
+          stdinData,
+          options.optPasses?.length ? options.optPasses as any : null,
+          options.ignoreDebug ?? null,
+        );
+        adapter = adaptNospaceVm(this.vm);
       } else {
+        // nospace → Whitespace コンパイル → WS VM 実行
         const stdExtensions = options.stdExtensions;
         this.vm = new nospace20.WasmWhitespaceVM(
           code,
@@ -114,6 +160,7 @@ export class WasmExecutionBackend implements ExecutionBackend {
           null,
           stdExtensions?.length ? stdExtensions as any : null,
         );
+        adapter = adaptWhitespaceVm(this.vm);
       }
 
       this.statusCallback?.('running', sessionId);
@@ -123,87 +170,98 @@ export class WasmExecutionBackend implements ExecutionBackend {
         timestamp: Date.now(),
       });
 
-      // Step execution loop
-      while (!signal.aborted) {
-        const result = this.vm.step(stepBudget);
-
-        // Flush stdout
-        const stdout = this.vm.flush_stdout();
-        if (stdout.length > 0) {
-          this.outputCallback?.({
-            type: 'stdout',
-            data: stdout,
-            timestamp: Date.now(),
-          });
-        }
-
-        if (result.status === 'complete') {
-          // Debug info
-          if (options.debug) {
-            const traced = this.vm.get_traced();
-            if (traced && Object.keys(traced).length > 0) {
-              this.outputCallback?.({
-                type: 'stderr',
-                data: `[Trace] ${JSON.stringify(traced)}\n`,
-                timestamp: Date.now(),
-              });
-            }
-          }
-
-          this.statusCallback?.('finished', sessionId, 0);
-          this.outputCallback?.({
-            type: 'system',
-            data: `\n[WASM execution completed (${this.vm.total_steps()} steps)]\n`,
-            timestamp: Date.now(),
-          });
-          break;
-        }
-
-        if (result.status === 'error') {
-          this.outputCallback?.({
-            type: 'stderr',
-            data: result.error ?? 'Unknown error',
-            timestamp: Date.now(),
-          });
-          this.statusCallback?.('error', sessionId);
-          this.outputCallback?.({
-            type: 'system',
-            data: `\n[WASM execution error]\n`,
-            timestamp: Date.now(),
-          });
-          break;
-        }
-
-        // Check max steps
-        if (this.vm.total_steps() >= maxTotalSteps) {
-          this.outputCallback?.({
-            type: 'stderr',
-            data: `Execution limit reached (${maxTotalSteps} steps)\n`,
-            timestamp: Date.now(),
-          });
-          this.statusCallback?.('killed', sessionId);
-          break;
-        }
-
-        // Yield control to UI
-        await new Promise<void>((resolve) => setTimeout(resolve, 0));
-      }
-
-      // If aborted
-      if (signal.aborted) {
-        this.statusCallback?.('killed', sessionId);
-        this.outputCallback?.({
-          type: 'system',
-          data: `\n[WASM execution killed]\n`,
-          timestamp: Date.now(),
-        });
-      }
+      await this.runVmLoop(adapter, signal, stepBudget, maxTotalSteps, sessionId, options);
     } catch (e) {
       this.handleWasmError(e);
       this.statusCallback?.('error', sessionId);
     } finally {
       this.vm?.free();
       this.vm = null;
+    }
+  }
+
+  /** VM アダプタを使ったステップ実行ループ */
+  private async runVmLoop(
+    adapter: VmAdapter,
+    signal: AbortSignal,
+    stepBudget: number,
+    maxTotalSteps: number,
+    sessionId: string,
+    options: RunOptions,
+  ): Promise<void> {
+    while (!signal.aborted) {
+      const result = adapter.step(stepBudget);
+
+      // Flush stdout
+      const stdout = adapter.flushStdout();
+      if (stdout.length > 0) {
+        this.outputCallback?.({
+          type: 'stdout',
+          data: stdout,
+          timestamp: Date.now(),
+        });
+      }
+
+      if (result.status === 'complete') {
+        // Debug info
+        if (options.debug) {
+          const traced = adapter.getTraced();
+          if (traced && Object.keys(traced).length > 0) {
+            this.outputCallback?.({
+              type: 'stderr',
+              data: `[Trace] ${JSON.stringify(traced)}\n`,
+              timestamp: Date.now(),
+            });
+          }
+        }
+
+        this.statusCallback?.('finished', sessionId, 0);
+        this.outputCallback?.({
+          type: 'system',
+          data: `\n[WASM execution completed (${adapter.totalSteps()} steps)]\n`,
+          timestamp: Date.now(),
+        });
+        break;
+      }
+
+      if (result.status === 'error') {
+        this.outputCallback?.({
+          type: 'stderr',
+          data: result.error ?? 'Unknown error',
+          timestamp: Date.now(),
+        });
+        this.statusCallback?.('error', sessionId);
+        this.outputCallback?.({
+          type: 'system',
+          data: `\n[WASM execution error]\n`,
+          timestamp: Date.now(),
+        });
+        break;
+      }
+
+      // Check max steps
+      if (adapter.totalSteps() >= maxTotalSteps) {
+        this.outputCallback?.({
+          type: 'stderr',
+          data: `Execution limit reached (${maxTotalSteps} steps)\n`,
+          timestamp: Date.now(),
+        });
+        this.statusCallback?.('killed', sessionId);
+        break;
+      }
+
+      // Yield control to UI
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    }
+
+    // If aborted
+    if (signal.aborted) {
+      this.statusCallback?.('killed', sessionId);
+      this.outputCallback?.({
+        type: 'system',
+        data: `\n[WASM execution killed]\n`,
+        timestamp: Date.now(),
+      });
     }
   }
 

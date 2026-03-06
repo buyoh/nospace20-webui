@@ -71,14 +71,23 @@ describe('ExecutionContainer', () => {
       expect(tabLabels).toContain('Run');
     });
 
-    it('WASM flavor で Run(Direct) / Test Editor タブが表示されない', async () => {
+    it('WASM flavor で Run(Direct) タブが表示される', async () => {
       const store = createStore();
       store.set(flavorAtom, 'wasm');
       const { container } = await act(async () => renderWithStore(store));
 
       const tabButtons = container.querySelectorAll('.mode-tab');
       const tabLabels = Array.from(tabButtons).map((btn) => btn.textContent);
-      expect(tabLabels).not.toContain('Run(Direct)');
+      expect(tabLabels).toContain('Run(Direct)');
+    });
+
+    it('WASM flavor で Test Editor タブが表示されない', async () => {
+      const store = createStore();
+      store.set(flavorAtom, 'wasm');
+      const { container } = await act(async () => renderWithStore(store));
+
+      const tabButtons = container.querySelectorAll('.mode-tab');
+      const tabLabels = Array.from(tabButtons).map((btn) => btn.textContent);
       expect(tabLabels).not.toContain('Test Editor');
     });
 
@@ -202,15 +211,6 @@ describe('ExecutionContainer', () => {
   });
 
   describe('WASM flavor のリダイレクト', () => {
-    it('WASM flavor で operationMode が "run-direct" の場合、"compile" にリダイレクトされる', async () => {
-      const store = createStore();
-      store.set(flavorAtom, 'wasm');
-      store.set(operationModeAtom, 'run-direct');
-      await act(async () => { renderWithStore(store); });
-
-      expect(store.get(operationModeAtom)).toBe('compile');
-    });
-
     it('WASM flavor で operationMode が "test-editor" の場合、"compile" にリダイレクトされる', async () => {
       const store = createStore();
       store.set(flavorAtom, 'wasm');
@@ -218,6 +218,16 @@ describe('ExecutionContainer', () => {
       await act(async () => { renderWithStore(store); });
 
       expect(store.get(operationModeAtom)).toBe('compile');
+    });
+
+    it('WASM flavor で operationMode が "run-direct" の場合、"compile" にリダイレクトされない', async () => {
+      const store = createStore();
+      store.set(flavorAtom, 'wasm');
+      store.set(operationModeAtom, 'run-direct');
+      await act(async () => { renderWithStore(store); });
+
+      // run-direct は WasmNospaceVM で対応するためリダイレクトしない
+      expect(store.get(operationModeAtom)).toBe('run-direct');
     });
   });
 });

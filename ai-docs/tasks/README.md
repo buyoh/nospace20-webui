@@ -9,7 +9,6 @@
 - [test-editor/](test-editor/) テスト編集機能（テストケースの閲覧・編集・追加）
 - [fix-build-missing-ace-deps.md](fix-build-missing-ace-deps.md) npm run build 失敗の修正: ace-builds / react-ace 依存不足
 - [extract-socket-client.md](extract-socket-client.md) ServerExecutionBackend からの Socket 管理の分離
-- [wasm-nospace-interpreter/](wasm-nospace-interpreter/) WASM NospaceVM インタプリタ実行機能（Run(Direct) モード対応）
 
 - [scss-color-variables/](scss-color-variables/) SCSS カラー変数の一元管理（カラーコード直指定を変数化）
 - [fix-compile-ws-trailing-newline/](fix-compile-ws-trailing-newline/) コンパイル後 Whitespace 実行時の末尾改行バグ修正
@@ -26,6 +25,7 @@
 
 ## 完了済みタスク
 
+- [wasm-nospace-interpreter/](../done-tasks/wasm-nospace-interpreter/) WASM NospaceVM インタプリタ実行機能（Run(Direct) モード対応）
 - [nospace-webui/](../done-tasks/nospace-webui/) nospace Web UI の設計・実装タスク（全実装済み）
 - [test-review.md](../done-tasks/test-review.md) テストコード レビュー・改善計画（フェーズ1-2完了）
   - 実装完了報告: [test-review-phase1-2-implementation.md](../done-tasks/test-review-phase1-2-implementation.md)
