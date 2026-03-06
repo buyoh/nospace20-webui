@@ -8,6 +8,7 @@ if [ ! -d ace-repo ]; then
 fi
 
 echo "Installing ace dependencies..."
+npm ci
 cd ace-repo
-npm install
+npm i  # TODO: unnecessary?
 echo "Setup complete."

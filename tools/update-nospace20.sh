@@ -36,4 +36,5 @@ cp "$NOSPACE20_DIR/pkg/nospace20"* \
   src/web/libs/nospace20
 set +x
 
+bash tools/tmlanguage-converter/setup.sh
 bash tools/tmlanguage-converter/convert.sh

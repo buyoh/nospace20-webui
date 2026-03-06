@@ -8,6 +8,8 @@
   },
   "dependencies": {
     "ace-builds": "^1.43.6",
+    "cson": "^8.4.0",
+    "plist": "^3.1.0",
     "react-ace": "^14.0.1"
   }
 }
