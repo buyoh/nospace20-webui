@@ -1,5 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
-import type { CheckResultType, CheckResultSchema } from '../../interfaces/CheckResultSchema';
+import type {
+  CheckResultType,
+  CheckResultSchema,
+} from '../../interfaces/CheckResultSchema';
 import {
   parseCheckResult,
   detectCheckResultType,
@@ -39,7 +42,7 @@ export interface UseCheckResultEditorResult {
  */
 export function useCheckResultEditor(
   value: string,
-  onChange: (json: string) => void,
+  onChange: (json: string) => void
 ): UseCheckResultEditorResult {
   const [resultType, setResultType] = useState<CheckResultType>('unknown');
   const [schema, setSchema] = useState<CheckResultSchema | null>(null);
@@ -84,7 +87,7 @@ export function useCheckResultEditor(
       if (schema && resultType !== 'unknown') {
         if (
           !window.confirm(
-            'Changing the type will reset the current data. Continue?',
+            'Changing the type will reset the current data. Continue?'
           )
         ) {
           return;
@@ -103,7 +106,7 @@ export function useCheckResultEditor(
       }
       setEditMode('form');
     },
-    [schema, resultType, onChange],
+    [schema, resultType, onChange]
   );
 
   // フォーム編集ハンドラー
@@ -118,7 +121,7 @@ export function useCheckResultEditor(
       setJsonText(newJson);
       onChange(newJson);
     },
-    [onChange],
+    [onChange]
   );
 
   // JSON テキスト編集ハンドラー
@@ -140,7 +143,7 @@ export function useCheckResultEditor(
         setValidationErrors(['Invalid JSON syntax']);
       }
     },
-    [onChange],
+    [onChange]
   );
 
   // モード切り替えハンドラー

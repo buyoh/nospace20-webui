@@ -1,5 +1,8 @@
 import { NospaceController } from '../../app/Controllers/NospaceController';
-import { NospaceExecutionService, NospaceSession } from '../../app/Services/NospaceExecutionService';
+import {
+  NospaceExecutionService,
+  NospaceSession,
+} from '../../app/Services/NospaceExecutionService';
 import type { RunOptions, CompileOptions } from '../../interfaces/NospaceTypes';
 
 // Fake Socket implementation
@@ -110,7 +113,11 @@ class FakeNospaceExecutionService extends NospaceExecutionService {
     return session;
   }
 
-  compile(code: string, options: CompileOptions, callbacks: any): NospaceSession {
+  compile(
+    code: string,
+    options: CompileOptions,
+    callbacks: any
+  ): NospaceSession {
     const session = new FakeNospaceSession();
     this.fakeSessions.set(session.sessionId, session);
     this.compileCalls.push({ code, options, callbacks });
@@ -216,7 +223,12 @@ describe('NospaceController', () => {
       // First run
       socket.trigger('nospace_run', {
         code: 'first',
-        options: { language: 'nospace20', inputMode: 'interactive', debug: false, ignoreDebug: false },
+        options: {
+          language: 'nospace20',
+          inputMode: 'interactive',
+          debug: false,
+          ignoreDebug: false,
+        },
       });
 
       const calls = executionService.getRunCalls();
@@ -226,7 +238,12 @@ describe('NospaceController', () => {
       // Second run (should kill first session)
       socket.trigger('nospace_run', {
         code: 'second',
-        options: { language: 'nospace20', inputMode: 'interactive', debug: false, ignoreDebug: false },
+        options: {
+          language: 'nospace20',
+          inputMode: 'interactive',
+          debug: false,
+          ignoreDebug: false,
+        },
       });
 
       expect(calls).toHaveLength(2);
@@ -342,7 +359,12 @@ describe('NospaceController', () => {
       // Create a session
       socket.trigger('nospace_run', {
         code: 'test',
-        options: { language: 'nospace20', inputMode: 'interactive', debug: false, ignoreDebug: false },
+        options: {
+          language: 'nospace20',
+          inputMode: 'interactive',
+          debug: false,
+          ignoreDebug: false,
+        },
       });
 
       const calls = executionService.getRunCalls();
@@ -350,7 +372,9 @@ describe('NospaceController', () => {
 
       // Get the session ID
       const sessionId = executionService.getSessionIds()[0];
-      const createdSession = executionService.getSession(sessionId) as FakeNospaceSession;
+      const createdSession = executionService.getSession(
+        sessionId
+      ) as FakeNospaceSession;
 
       expect(createdSession).toBeDefined();
 
@@ -379,7 +403,12 @@ describe('NospaceController', () => {
     it('should emit execution status and remove session on exit', () => {
       socket.trigger('nospace_run', {
         code: 'test',
-        options: { language: 'nospace20', inputMode: 'interactive', debug: false, ignoreDebug: false },
+        options: {
+          language: 'nospace20',
+          inputMode: 'interactive',
+          debug: false,
+          ignoreDebug: false,
+        },
       });
 
       const calls = executionService.getRunCalls();
@@ -437,7 +466,9 @@ describe('NospaceController', () => {
       });
 
       const sessionId = executionService.getSessionIds()[0];
-      const session = executionService.getSession(sessionId) as FakeNospaceSession;
+      const session = executionService.getSession(
+        sessionId
+      ) as FakeNospaceSession;
 
       socket.trigger('disconnect');
 
@@ -452,7 +483,9 @@ describe('NospaceController', () => {
       });
 
       const firstSessionId = executionService.getSessionIds()[0];
-      const firstSession = executionService.getSession(firstSessionId) as FakeNospaceSession;
+      const firstSession = executionService.getSession(
+        firstSessionId
+      ) as FakeNospaceSession;
 
       // Second compile
       socket.trigger('nospace_compile', {

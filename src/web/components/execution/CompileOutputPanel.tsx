@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
 import { useAtom } from 'jotai';
 import type { CompileOutput } from '../../stores/compileOutputAtom';
+import { whitespaceDisplayModeAtom } from '../../stores/compileOutputAtom';
 import {
-  whitespaceDisplayModeAtom,
-} from '../../stores/compileOutputAtom';
-import { formatWhitespaceVisible, isWhitespaceTarget } from '../../libs/whitespaceFormatter';
+  formatWhitespaceVisible,
+  isWhitespaceTarget,
+} from '../../libs/whitespaceFormatter';
 import { CollapsibleSection } from '../common/CollapsibleSection';
 import { Button } from '../common/Button';
 import './styles/CompileOutputPanel.scss';
@@ -36,8 +37,12 @@ export const CompileOutputPanel: React.FC<CompileOutputPanelProps> = ({
   collapsed,
   onToggleCollapse,
 }) => {
-  const canRun = onRunCompiled !== undefined && compileOutput !== null && compileOutput.target === 'ws';
-  const showDisplayToggle = compileOutput !== null && isWhitespaceTarget(compileOutput.target);
+  const canRun =
+    onRunCompiled !== undefined &&
+    compileOutput !== null &&
+    compileOutput.target === 'ws';
+  const showDisplayToggle =
+    compileOutput !== null && isWhitespaceTarget(compileOutput.target);
 
   const [displayMode, setDisplayMode] = useAtom(whitespaceDisplayModeAtom);
 

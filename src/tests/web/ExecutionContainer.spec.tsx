@@ -12,7 +12,10 @@ import { flavorAtom } from '../../web/stores/flavorAtom';
 import { operationModeAtom } from '../../web/stores/testEditorAtom';
 import { compileOutputAtom } from '../../web/stores/compileOutputAtom';
 import type { ExecutionBackend } from '../../web/services/ExecutionBackend';
-import type { OutputEntry, ExecutionStatus } from '../../interfaces/NospaceTypes';
+import type {
+  OutputEntry,
+  ExecutionStatus,
+} from '../../interfaces/NospaceTypes';
 import type { Flavor } from '../../web/stores/flavorAtom';
 
 // 子コンポーネントは components prop 経由で注入するフェイク実装（jest.mock() 不要）
@@ -35,26 +38,41 @@ class FakeExecutionBackend implements ExecutionBackend {
   async init(): Promise<void> {
     this.isReadyValue = true;
   }
-  isReady(): boolean { return this.isReadyValue; }
+  isReady(): boolean {
+    return this.isReadyValue;
+  }
   run(_code: string, _options: any, _stdinData?: string): void {}
   compile(_code: string, _options: any): void {}
   sendStdin(_data: string): void {}
   kill(): void {}
-  dispose(): void { this.isReadyValue = false; }
+  dispose(): void {
+    this.isReadyValue = false;
+  }
   onOutput(_callback: (entry: OutputEntry) => void): void {}
-  onStatusChange(_callback: (status: ExecutionStatus, sessionId: string, exitCode?: number | null) => void): void {}
+  onStatusChange(
+    _callback: (
+      status: ExecutionStatus,
+      sessionId: string,
+      exitCode?: number | null
+    ) => void
+  ): void {}
   onCompileErrors(_callback: (errors: any[]) => void): void {}
 }
 
-const fakeBackendFactory = async (_flavor: Flavor): Promise<ExecutionBackend> => {
+const fakeBackendFactory = async (
+  _flavor: Flavor
+): Promise<ExecutionBackend> => {
   return new FakeExecutionBackend();
 };
 
 function renderWithStore(store: ReturnType<typeof createStore>) {
   return render(
     <Provider store={store}>
-      <ExecutionContainer backendFactory={fakeBackendFactory} components={fakeComponents} />
-    </Provider>,
+      <ExecutionContainer
+        backendFactory={fakeBackendFactory}
+        components={fakeComponents}
+      />
+    </Provider>
   );
 }
 
@@ -113,7 +131,9 @@ describe('ExecutionContainer', () => {
       store.set(compileOutputAtom, null);
       const { container } = await act(async () => renderWithStore(store));
 
-      const runButton = container.querySelector('.btn-run') as HTMLButtonElement;
+      const runButton = container.querySelector(
+        '.btn-run'
+      ) as HTMLButtonElement;
       expect(runButton).toBeTruthy();
       expect(runButton).toBeDisabled();
     });
@@ -122,10 +142,15 @@ describe('ExecutionContainer', () => {
       const store = createStore();
       store.set(flavorAtom, 'wasm');
       store.set(operationModeAtom, 'run');
-      store.set(compileOutputAtom, { output: 'mnemonic output', target: 'mnemonic' });
+      store.set(compileOutputAtom, {
+        output: 'mnemonic output',
+        target: 'mnemonic',
+      });
       const { container } = await act(async () => renderWithStore(store));
 
-      const runButton = container.querySelector('.btn-run') as HTMLButtonElement;
+      const runButton = container.querySelector(
+        '.btn-run'
+      ) as HTMLButtonElement;
       expect(runButton).toBeTruthy();
       expect(runButton).toBeDisabled();
     });
@@ -137,7 +162,9 @@ describe('ExecutionContainer', () => {
       store.set(compileOutputAtom, { output: '   \n   \n', target: 'ws' });
       const { container } = await act(async () => renderWithStore(store));
 
-      const runButton = container.querySelector('.btn-run') as HTMLButtonElement;
+      const runButton = container.querySelector(
+        '.btn-run'
+      ) as HTMLButtonElement;
       expect(runButton).toBeTruthy();
       expect(runButton).not.toBeDisabled();
     });
@@ -150,7 +177,9 @@ describe('ExecutionContainer', () => {
       store.set(operationModeAtom, 'run');
       const { container } = await act(async () => renderWithStore(store));
 
-      const compileAndRunButton = container.querySelector('.btn-compile-and-run') as HTMLButtonElement;
+      const compileAndRunButton = container.querySelector(
+        '.btn-compile-and-run'
+      ) as HTMLButtonElement;
       expect(compileAndRunButton).toBeTruthy();
       expect(compileAndRunButton.textContent).toBe('Compile/Run');
     });
@@ -161,7 +190,9 @@ describe('ExecutionContainer', () => {
       store.set(operationModeAtom, 'run');
       const { container } = await act(async () => renderWithStore(store));
 
-      const compileAndRunButton = container.querySelector('.btn-compile-and-run') as HTMLButtonElement;
+      const compileAndRunButton = container.querySelector(
+        '.btn-compile-and-run'
+      ) as HTMLButtonElement;
       expect(compileAndRunButton).not.toBeDisabled();
     });
   });
@@ -185,12 +216,18 @@ describe('ExecutionContainer', () => {
       const store = createStore();
       store.set(flavorAtom, 'wasm');
       store.set(operationModeAtom, 'compile');
-      await act(async () => { renderWithStore(store); });
+      await act(async () => {
+        renderWithStore(store);
+      });
 
       const tabButtons = screen.getAllByRole('button');
-      const runTabButton = tabButtons.find((btn) => btn.textContent === 'Run' && btn.classList.contains('mode-tab'));
+      const runTabButton = tabButtons.find(
+        (btn) => btn.textContent === 'Run' && btn.classList.contains('mode-tab')
+      );
       expect(runTabButton).toBeTruthy();
-      await act(async () => { fireEvent.click(runTabButton!); });
+      await act(async () => {
+        fireEvent.click(runTabButton!);
+      });
 
       expect(store.get(operationModeAtom)).toBe('run');
     });
@@ -199,12 +236,19 @@ describe('ExecutionContainer', () => {
       const store = createStore();
       store.set(flavorAtom, 'wasm');
       store.set(operationModeAtom, 'run');
-      await act(async () => { renderWithStore(store); });
+      await act(async () => {
+        renderWithStore(store);
+      });
 
       const tabButtons = screen.getAllByRole('button');
-      const compileTabButton = tabButtons.find((btn) => btn.textContent === 'Compile' && btn.classList.contains('mode-tab'));
+      const compileTabButton = tabButtons.find(
+        (btn) =>
+          btn.textContent === 'Compile' && btn.classList.contains('mode-tab')
+      );
       expect(compileTabButton).toBeTruthy();
-      await act(async () => { fireEvent.click(compileTabButton!); });
+      await act(async () => {
+        fireEvent.click(compileTabButton!);
+      });
 
       expect(store.get(operationModeAtom)).toBe('compile');
     });
@@ -215,7 +259,9 @@ describe('ExecutionContainer', () => {
       const store = createStore();
       store.set(flavorAtom, 'wasm');
       store.set(operationModeAtom, 'test-editor');
-      await act(async () => { renderWithStore(store); });
+      await act(async () => {
+        renderWithStore(store);
+      });
 
       expect(store.get(operationModeAtom)).toBe('compile');
     });
@@ -224,7 +270,9 @@ describe('ExecutionContainer', () => {
       const store = createStore();
       store.set(flavorAtom, 'wasm');
       store.set(operationModeAtom, 'run-direct');
-      await act(async () => { renderWithStore(store); });
+      await act(async () => {
+        renderWithStore(store);
+      });
 
       // run-direct は WasmNospaceVM で対応するためリダイレクトしない
       expect(store.get(operationModeAtom)).toBe('run-direct');

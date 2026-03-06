@@ -63,8 +63,8 @@ export interface ExecutionBackend {
     callback: (
       status: ExecutionStatus,
       sessionId: string,
-      exitCode?: number | null,
-    ) => void,
+      exitCode?: number | null
+    ) => void
   ): void;
   /**
    * コンパイルエラー発生時に構造化エラー配列を通知するコールバックを設定する。

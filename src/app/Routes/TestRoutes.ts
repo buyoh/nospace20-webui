@@ -13,7 +13,9 @@ export function bindTestRoutes(app: Express, testDir: string): void {
   app.use('/api/tests', (req, res, next) => {
     if (!req.headers['content-type']?.includes('application/json')) {
       if (req.method === 'POST' || req.method === 'PUT') {
-        res.status(400).json({ error: 'Content-Type must be application/json' });
+        res
+          .status(400)
+          .json({ error: 'Content-Type must be application/json' });
         return;
       }
     }

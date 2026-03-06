@@ -11,7 +11,10 @@ import type {
   ExecutionBackend,
   ExecutionBackendCapabilities,
 } from './ExecutionBackend';
-import { formatErrorEntries, isNospaceErrorResult } from '../libs/formatNospaceErrors';
+import {
+  formatErrorEntries,
+  isNospaceErrorResult,
+} from '../libs/formatNospaceErrors';
 
 const DEFAULT_STEP_BUDGET = 10000;
 const DEFAULT_MAX_TOTAL_STEPS = 100_000_000;
@@ -79,7 +82,7 @@ export class WasmExecutionBackend implements ExecutionBackend {
     | ((
         status: ExecutionStatus,
         sessionId: string,
-        exitCode?: number | null,
+        exitCode?: number | null
       ) => void)
     | null = null;
   private compileErrorsCallback: ((errors: any[]) => void) | null = null;
@@ -121,7 +124,15 @@ export class WasmExecutionBackend implements ExecutionBackend {
     const maxTotalSteps = options.maxTotalSteps ?? DEFAULT_MAX_TOTAL_STEPS;
 
     // Start async execution loop
-    this.runAsync(code, options, stdinData ?? '', sessionId, signal, stepBudget, maxTotalSteps);
+    this.runAsync(
+      code,
+      options,
+      stdinData ?? '',
+      sessionId,
+      signal,
+      stepBudget,
+      maxTotalSteps
+    );
   }
 
   private async runAsync(
@@ -131,7 +142,7 @@ export class WasmExecutionBackend implements ExecutionBackend {
     sessionId: string,
     signal: AbortSignal,
     stepBudget: number,
-    maxTotalSteps: number,
+    maxTotalSteps: number
   ): Promise<void> {
     const nospace20 = this.loader.getNospace20();
 
@@ -147,8 +158,8 @@ export class WasmExecutionBackend implements ExecutionBackend {
         this.vm = new nospace20.WasmNospaceVM(
           code,
           stdinData,
-          options.optPasses?.length ? options.optPasses as any : null,
-          options.ignoreDebug ?? null,
+          options.optPasses?.length ? (options.optPasses as any) : null,
+          options.ignoreDebug ?? null
         );
         adapter = adaptNospaceVm(this.vm);
       } else {
@@ -158,7 +169,7 @@ export class WasmExecutionBackend implements ExecutionBackend {
           code,
           stdinData,
           null,
-          stdExtensions?.length ? stdExtensions as any : null,
+          stdExtensions?.length ? (stdExtensions as any) : null
         );
         adapter = adaptWhitespaceVm(this.vm);
       }
@@ -170,7 +181,14 @@ export class WasmExecutionBackend implements ExecutionBackend {
         timestamp: Date.now(),
       });
 
-      await this.runVmLoop(adapter, signal, stepBudget, maxTotalSteps, sessionId, options);
+      await this.runVmLoop(
+        adapter,
+        signal,
+        stepBudget,
+        maxTotalSteps,
+        sessionId,
+        options
+      );
     } catch (e) {
       this.handleWasmError(e);
       this.statusCallback?.('error', sessionId);
@@ -187,7 +205,7 @@ export class WasmExecutionBackend implements ExecutionBackend {
     stepBudget: number,
     maxTotalSteps: number,
     sessionId: string,
-    options: RunOptions,
+    options: RunOptions
   ): Promise<void> {
     while (!signal.aborted) {
       const result = adapter.step(stepBudget);
@@ -278,8 +296,10 @@ export class WasmExecutionBackend implements ExecutionBackend {
           code,
           options.target,
           options.language,
-          options.stdExtensions.length > 0 ? options.stdExtensions as any : null,
-          options.optPasses?.length > 0 ? options.optPasses as any : null,
+          options.stdExtensions.length > 0
+            ? (options.stdExtensions as any)
+            : null,
+          options.optPasses?.length > 0 ? (options.optPasses as any) : null
         );
 
         // CompileResult は discriminated union:
@@ -367,8 +387,8 @@ export class WasmExecutionBackend implements ExecutionBackend {
     callback: (
       status: ExecutionStatus,
       sessionId: string,
-      exitCode?: number | null,
-    ) => void,
+      exitCode?: number | null
+    ) => void
   ): void {
     this.statusCallback = callback;
   }

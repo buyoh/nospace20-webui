@@ -47,26 +47,22 @@ describe('CompileOutputPanel', () => {
   it('折りたたみトグルボタンをクリックすると onToggleCollapse が呼ばれる', () => {
     const onToggle = jest.fn();
     render(
-      <CompileOutputPanel
-        {...defaultProps}
-        onToggleCollapse={onToggle}
-      />
+      <CompileOutputPanel {...defaultProps} onToggleCollapse={onToggle} />
     );
 
-    const toggleButton = screen.getByRole('button', { name: /Compiled Output/ });
+    const toggleButton = screen.getByRole('button', {
+      name: /Compiled Output/,
+    });
     fireEvent.click(toggleButton);
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
 
   it('折りたたみ中のトグルボタンに aria-expanded="false" が設定される', () => {
-    render(
-      <CompileOutputPanel
-        {...defaultProps}
-        collapsed={true}
-      />
-    );
+    render(<CompileOutputPanel {...defaultProps} collapsed={true} />);
 
-    const toggleButton = screen.getByRole('button', { name: /Compiled Output/ });
+    const toggleButton = screen.getByRole('button', {
+      name: /Compiled Output/,
+    });
     expect(toggleButton).toHaveAttribute('aria-expanded', 'false');
   });
 
@@ -219,5 +215,4 @@ describe('CompileOutputPanel', () => {
       expect(textarea.value).toBe(' \t\n');
     });
   });
-
 });

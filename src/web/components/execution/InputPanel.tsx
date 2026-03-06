@@ -54,7 +54,9 @@ export const InputPanel: React.FC<InputPanelProps> = ({
   };
 
   // WASM flavor（forceBatchMode=true）の場合は常に batch UI
-  const effectiveInputMode = forceBatchMode ? 'batch' : executionOptions.inputMode;
+  const effectiveInputMode = forceBatchMode
+    ? 'batch'
+    : executionOptions.inputMode;
 
   if (effectiveInputMode === 'interactive') {
     return (

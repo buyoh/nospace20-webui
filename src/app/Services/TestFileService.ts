@@ -129,7 +129,10 @@ export class TestFileService {
     }
 
     // Create parent directory if it doesn't exist
-    const parentDir = join(absoluteTestDir, safePath.split('/').slice(0, -1).join('/'));
+    const parentDir = join(
+      absoluteTestDir,
+      safePath.split('/').slice(0, -1).join('/')
+    );
     if (!this.fs.existsSync(parentDir)) {
       this.fs.mkdirSync(parentDir, { recursive: true });
     }
@@ -169,7 +172,9 @@ export class TestFileService {
 
     // Add directories
     for (const dir of dirs) {
-      const dirRelativePath = relativePath ? `${relativePath}/${dir.name}` : dir.name;
+      const dirRelativePath = relativePath
+        ? `${relativePath}/${dir.name}`
+        : dir.name;
       const dirAbsolutePath = join(absoluteDir, dir.name);
       const children = this.buildTree(dirAbsolutePath, dirRelativePath);
 
@@ -183,7 +188,9 @@ export class TestFileService {
 
     // Add test files
     for (const { baseName } of nsFiles) {
-      const testRelativePath = relativePath ? `${relativePath}/${baseName}` : baseName;
+      const testRelativePath = relativePath
+        ? `${relativePath}/${baseName}`
+        : baseName;
       const checkPath = join(absoluteDir, `${baseName}.check.json`);
       const hasCheck = this.fs.existsSync(checkPath);
 

@@ -11,10 +11,16 @@ import {
   outputEntriesAtom,
   exitCodeAtom,
 } from '../../web/stores/executionAtom';
-import { compileOutputAtom, compileStatusAtom } from '../../web/stores/compileOutputAtom';
+import {
+  compileOutputAtom,
+  compileStatusAtom,
+} from '../../web/stores/compileOutputAtom';
 import { compileErrorsAtom } from '../../web/stores/compileErrorsAtom';
 import type { ExecutionBackend } from '../../web/services/ExecutionBackend';
-import type { OutputEntry, ExecutionStatus } from '../../interfaces/NospaceTypes';
+import type {
+  OutputEntry,
+  ExecutionStatus,
+} from '../../interfaces/NospaceTypes';
 import type { Flavor } from '../../web/stores/flavorAtom';
 
 /** テスト用の Fake ExecutionBackend (jest.fn() を使わない手動実装) */
@@ -27,7 +33,11 @@ class FakeExecutionBackend implements ExecutionBackend {
 
   outputCallback: ((entry: OutputEntry) => void) | null = null;
   statusCallback:
-    | ((status: ExecutionStatus, sessionId: string, exitCode?: number | null) => void)
+    | ((
+        status: ExecutionStatus,
+        sessionId: string,
+        exitCode?: number | null
+      ) => void)
     | null = null;
   compileErrorsCallback: ((errors: any[]) => void) | null = null;
 
@@ -71,7 +81,11 @@ class FakeExecutionBackend implements ExecutionBackend {
   }
 
   onStatusChange(
-    callback: (status: ExecutionStatus, sessionId: string, exitCode?: number | null) => void,
+    callback: (
+      status: ExecutionStatus,
+      sessionId: string,
+      exitCode?: number | null
+    ) => void
   ): void {
     this.statusCallback = callback;
   }
@@ -89,7 +103,7 @@ class FakeExecutionBackend implements ExecutionBackend {
   triggerStatusChange(
     status: ExecutionStatus,
     sessionId: string,
-    exitCode?: number | null,
+    exitCode?: number | null
   ): void {
     this.statusCallback?.(status, sessionId, exitCode);
   }
@@ -138,7 +152,7 @@ describe('useExecutionBackend', () => {
 
     const { result } = renderHook(
       () => useExecutionBackend('wasm', backendFactory),
-      { wrapper },
+      { wrapper }
     );
 
     await waitFor(() => {
@@ -158,7 +172,9 @@ describe('useExecutionBackend', () => {
       fakeBackend.triggerOutput({ type: 'stdout', data: 'hello' });
     });
 
-    expect(store.get(outputEntriesAtom)).toEqual([{ type: 'stdout', data: 'hello' }]);
+    expect(store.get(outputEntriesAtom)).toEqual([
+      { type: 'stdout', data: 'hello' },
+    ]);
   });
 
   it('stderr イベントが outputEntriesAtom に追加される', async () => {
@@ -171,7 +187,9 @@ describe('useExecutionBackend', () => {
       fakeBackend.triggerOutput({ type: 'stderr', data: 'error msg' });
     });
 
-    expect(store.get(outputEntriesAtom)).toEqual([{ type: 'stderr', data: 'error msg' }]);
+    expect(store.get(outputEntriesAtom)).toEqual([
+      { type: 'stderr', data: 'error msg' },
+    ]);
   });
 
   it('compileTargetRef が設定された状態では stdout が compileOutputAtom にルーティングされる', async () => {
@@ -179,7 +197,7 @@ describe('useExecutionBackend', () => {
 
     const { result } = renderHook(
       () => useExecutionBackend('wasm', backendFactory),
-      { wrapper },
+      { wrapper }
     );
     await waitFor(() => expect(fakeBackend.initCalled).toBe(true));
 
@@ -233,7 +251,7 @@ describe('useExecutionBackend', () => {
 
     const { result } = renderHook(
       () => useExecutionBackend('wasm', backendFactory),
-      { wrapper },
+      { wrapper }
     );
     await waitFor(() => expect(fakeBackend.initCalled).toBe(true));
 
@@ -255,7 +273,7 @@ describe('useExecutionBackend', () => {
 
     const { result } = renderHook(
       () => useExecutionBackend('wasm', backendFactory),
-      { wrapper },
+      { wrapper }
     );
     await waitFor(() => expect(fakeBackend.initCalled).toBe(true));
 
@@ -278,7 +296,7 @@ describe('useExecutionBackend', () => {
 
     const { result } = renderHook(
       () => useExecutionBackend('wasm', backendFactory),
-      { wrapper },
+      { wrapper }
     );
     await waitFor(() => expect(fakeBackend.initCalled).toBe(true));
 
@@ -298,7 +316,7 @@ describe('useExecutionBackend', () => {
 
     const { unmount } = renderHook(
       () => useExecutionBackend('wasm', backendFactory),
-      { wrapper },
+      { wrapper }
     );
     await waitFor(() => expect(fakeBackend.initCalled).toBe(true));
 
@@ -324,7 +342,7 @@ describe('useExecutionBackend', () => {
     const { rerender, result } = renderHook(
       ({ flavor }: { flavor: Flavor }) =>
         useExecutionBackend(flavor, multiFactory),
-      { wrapper, initialProps: { flavor: 'wasm' as Flavor } },
+      { wrapper, initialProps: { flavor: 'wasm' as Flavor } }
     );
     await waitFor(() => expect(fakeBackend.initCalled).toBe(true));
 

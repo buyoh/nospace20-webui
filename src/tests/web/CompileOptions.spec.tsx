@@ -13,7 +13,9 @@ describe('CompileOptions', () => {
       </Provider>
     );
 
-    const languageSelect = screen.getByLabelText(/Language:/i) as HTMLSelectElement;
+    const languageSelect = screen.getByLabelText(
+      /Language:/i
+    ) as HTMLSelectElement;
     expect(languageSelect).toBeInTheDocument();
   });
 
@@ -40,8 +42,10 @@ describe('CompileOptions', () => {
       </Provider>
     );
 
-    const languageSelect = screen.getByLabelText(/Language:/i) as HTMLSelectElement;
-    const options = Array.from(languageSelect.options).map(o => o.value);
+    const languageSelect = screen.getByLabelText(
+      /Language:/i
+    ) as HTMLSelectElement;
+    const options = Array.from(languageSelect.options).map((o) => o.value);
     expect(options).toEqual(['standard', 'min']);
   });
 
@@ -58,7 +62,7 @@ describe('CompileOptions', () => {
     );
 
     const targetSelect = screen.getByLabelText(/Target:/i) as HTMLSelectElement;
-    const options = Array.from(targetSelect.options).map(o => o.value);
+    const options = Array.from(targetSelect.options).map((o) => o.value);
     expect(options).toEqual(['ws', 'mnemonic', 'ex-ws']);
   });
 
@@ -69,7 +73,9 @@ describe('CompileOptions', () => {
       </Provider>
     );
 
-    const languageSelect = screen.getByLabelText(/Language:/i) as HTMLSelectElement;
+    const languageSelect = screen.getByLabelText(
+      /Language:/i
+    ) as HTMLSelectElement;
     fireEvent.change(languageSelect, { target: { value: 'min' } });
     expect(languageSelect.value).toBe('min');
   });

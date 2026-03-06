@@ -122,17 +122,19 @@ describe('NospaceSocketClient', () => {
       const connectPromise = client.connect(handlers, 100);
 
       // Don't trigger connect event, let it timeout
-      await expect(connectPromise).rejects.toThrow('Socket.IO connection timeout');
+      await expect(connectPromise).rejects.toThrow(
+        'Socket.IO connection timeout'
+      );
     });
 
     it('should throw if socketFactory returns null', async () => {
       const client = new NospaceSocketClient(
-        () => null as unknown as AppSocket,
+        () => null as unknown as AppSocket
       );
       const { handlers } = createMockHandlers();
 
       await expect(client.connect(handlers)).rejects.toThrow(
-        'Failed to create Socket client',
+        'Failed to create Socket client'
       );
     });
   });

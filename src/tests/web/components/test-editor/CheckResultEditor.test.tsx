@@ -8,9 +8,7 @@ describe('CheckResultEditor', () => {
     it('success_trace の JSON を渡すとフォームモードで表示される', () => {
       const mockOnChange = jest.fn();
       const json = '{"trace_hit_counts":[1,2,3]}';
-      render(
-        <CheckResultEditor value={json} onChange={mockOnChange} />,
-      );
+      render(<CheckResultEditor value={json} onChange={mockOnChange} />);
 
       // フォームモードになっていることを確認
       const formRadio = screen.getByDisplayValue('form') as HTMLInputElement;
@@ -23,9 +21,7 @@ describe('CheckResultEditor', () => {
     it('unknown JSON を渡すと JSON テキストモードで表示される', () => {
       const mockOnChange = jest.fn();
       const json = '{"unknown_field": 123}';
-      render(
-        <CheckResultEditor value={json} onChange={mockOnChange} />,
-      );
+      render(<CheckResultEditor value={json} onChange={mockOnChange} />);
 
       // JSON テキストモードになっていることを確認
       const jsonRadio = screen.getByDisplayValue('json') as HTMLInputElement;
@@ -39,7 +35,7 @@ describe('CheckResultEditor', () => {
     it('無効な JSON を渡すと JSON テキストモードで表示される', () => {
       const mockOnChange = jest.fn();
       render(
-        <CheckResultEditor value="invalid json" onChange={mockOnChange} />,
+        <CheckResultEditor value="invalid json" onChange={mockOnChange} />
       );
 
       // JSON テキストモードになっていることを確認
@@ -108,12 +104,12 @@ describe('CheckResultEditor', () => {
     it('JSON テキストモードで値を変更すると onChange が呼ばれる', () => {
       const mockOnChange = jest.fn();
       render(
-        <CheckResultEditor value='{"unknown":1}' onChange={mockOnChange} />,
+        <CheckResultEditor value='{"unknown":1}' onChange={mockOnChange} />
       );
 
-      const textarea = screen.getAllByRole('textbox').find(
-        (el) => el.tagName === 'TEXTAREA',
-      ) as HTMLTextAreaElement;
+      const textarea = screen
+        .getAllByRole('textbox')
+        .find((el) => el.tagName === 'TEXTAREA') as HTMLTextAreaElement;
 
       fireEvent.change(textarea, {
         target: { value: '{"trace_hit_counts":[1]}' },
@@ -128,7 +124,7 @@ describe('CheckResultEditor', () => {
       const mockOnChange = jest.fn();
       const json = '{"trace_hit_counts":[1]}';
       render(
-        <CheckResultEditor value={json} onChange={mockOnChange} disabled />,
+        <CheckResultEditor value={json} onChange={mockOnChange} disabled />
       );
 
       const input = screen.getByRole('spinbutton') as HTMLInputElement;
@@ -143,7 +139,7 @@ describe('CheckResultEditor', () => {
         <CheckResultEditor
           value='{"trace_hit_counts":[1,2,3]}'
           onChange={mockOnChange}
-        />,
+        />
       );
 
       // 最初は success_trace フォームが表示される
@@ -156,7 +152,7 @@ describe('CheckResultEditor', () => {
         <CheckResultEditor
           value='{"type":"compile_error","contains":["error msg"]}'
           onChange={mockOnChange}
-        />,
+        />
       );
 
       // compile_error フォームの内容に更新される
@@ -170,12 +166,12 @@ describe('CheckResultEditor', () => {
         <CheckResultEditor
           value='{"trace_hit_counts":[1]}'
           onChange={mockOnChange}
-        />,
+        />
       );
 
       // 最初はフォームモード
       expect(
-        (screen.getByDisplayValue('form') as HTMLInputElement).checked,
+        (screen.getByDisplayValue('form') as HTMLInputElement).checked
       ).toBe(true);
 
       // unknown JSON に切り替え
@@ -183,12 +179,12 @@ describe('CheckResultEditor', () => {
         <CheckResultEditor
           value='{"unknown_field":999}'
           onChange={mockOnChange}
-        />,
+        />
       );
 
       // JSON テキストモードに切り替わる
       expect(
-        (screen.getByDisplayValue('json') as HTMLInputElement).checked,
+        (screen.getByDisplayValue('json') as HTMLInputElement).checked
       ).toBe(true);
     });
 
@@ -198,7 +194,7 @@ describe('CheckResultEditor', () => {
         <CheckResultEditor
           value='{"trace_hit_counts":[1]}'
           onChange={mockOnChange}
-        />,
+        />
       );
 
       let inputs = screen.getAllByRole('spinbutton') as HTMLInputElement[];
@@ -209,7 +205,7 @@ describe('CheckResultEditor', () => {
         <CheckResultEditor
           value='{"trace_hit_counts":[5,10]}'
           onChange={mockOnChange}
-        />,
+        />
       );
 
       inputs = screen.getAllByRole('spinbutton') as HTMLInputElement[];

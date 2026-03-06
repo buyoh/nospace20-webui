@@ -37,7 +37,12 @@ describe('testEditorAtom', () => {
   describe('OperationMode 型', () => {
     it('有効な値が代入可能であること（型チェック）', () => {
       // 型として 'compile' | 'run' | 'run-direct' | 'test-editor' が有効
-      const modes: OperationMode[] = ['compile', 'run', 'run-direct', 'test-editor'];
+      const modes: OperationMode[] = [
+        'compile',
+        'run',
+        'run-direct',
+        'test-editor',
+      ];
       expect(modes).toHaveLength(4);
       expect(modes).toContain('compile');
       expect(modes).toContain('run');

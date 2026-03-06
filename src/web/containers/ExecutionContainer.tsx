@@ -12,7 +12,10 @@ import { OutputPanel } from '../components/execution/OutputPanel';
 import { InputPanel } from '../components/execution/InputPanel';
 import { SampleList } from '../components/editor/SampleList';
 import { editorSamples } from '../libs/editorSamples';
-import { useNospaceExecution, type BackendFactory } from '../hooks/useNospaceExecution';
+import {
+  useNospaceExecution,
+  type BackendFactory,
+} from '../hooks/useNospaceExecution';
 import { TestEditorContainer } from './TestEditorContainer';
 import './styles/ExecutionContainer.scss';
 
@@ -39,7 +42,10 @@ interface ExecutionContainerProps {
  * Compile / Run / Run(Direct) / TestEditor の4タブ構成。
  * Flavor に応じて利用可能なタブのみを表示する。
  */
-export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({ backendFactory, components }) => {
+export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({
+  backendFactory,
+  components,
+}) => {
   const {
     TestEditorContainer: TestEditorContainerImpl = TestEditorContainer,
     ExecutionOptions: ExecutionOptionsImpl = ExecutionOptions,
@@ -113,7 +119,7 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({ backendF
     const inputMode = isWasm ? 'batch' : executionOptions.inputMode;
     handleRun(
       inputMode === 'batch' ? batchInput : undefined,
-      operationMode === 'run-direct' ? { direct: true } : undefined,
+      operationMode === 'run-direct' ? { direct: true } : undefined
     );
   };
 
@@ -129,7 +135,8 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({ backendF
     handleCompile();
   };
 
-  const canRunCompiled = compileOutput !== null && compileOutput.target === 'ws';
+  const canRunCompiled =
+    compileOutput !== null && compileOutput.target === 'ws';
 
   return (
     <div className="execution-container">

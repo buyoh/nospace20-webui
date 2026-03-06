@@ -1,8 +1,14 @@
 import React, { useMemo } from 'react';
 import { useAtom } from 'jotai';
 import { compileOptionsAtom } from '../../stores/optionsAtom';
-import type { LanguageSubset, CompileTarget } from '../../../interfaces/NospaceTypes';
-import { getNospace20, isNospace20WasmInitialized } from '../../libs/nospace20/loader';
+import type {
+  LanguageSubset,
+  CompileTarget,
+} from '../../../interfaces/NospaceTypes';
+import {
+  getNospace20,
+  isNospace20WasmInitialized,
+} from '../../libs/nospace20/loader';
 import { CollapsibleSection } from '../common/CollapsibleSection';
 import { Select } from '../common/Select';
 import { Checkbox } from '../common/Checkbox';
@@ -60,7 +66,13 @@ const FALLBACK_TARGET_OPTIONS: OptionItem<CompileTarget>[] = [
 ];
 
 const FALLBACK_STD_EXTENSION_OPTIONS: string[] = ['debug', 'alloc'];
-const FALLBACK_OPT_PASS_OPTIONS: string[] = ['all', 'condition-opt', 'geti-opt', 'constant-folding', 'dead-code'];
+const FALLBACK_OPT_PASS_OPTIONS: string[] = [
+  'all',
+  'condition-opt',
+  'geti-opt',
+  'constant-folding',
+  'dead-code',
+];
 
 /**
  * WASM の getOptions() から利用可能なオプションを取得する。
@@ -114,7 +126,8 @@ export const CompileOptions: React.FC<CompileOptionsProps> = (props) => {
   const wasmOptions = useMemo(() => getWasmDerivedOptions(), []);
   const languageOptions = props.languageOptions ?? wasmOptions.languageOptions;
   const targetOptions = props.targetOptions ?? wasmOptions.targetOptions;
-  const stdExtensionOptions = props.stdExtensionOptions ?? wasmOptions.stdExtensionOptions;
+  const stdExtensionOptions =
+    props.stdExtensionOptions ?? wasmOptions.stdExtensionOptions;
   const optPassOptions = props.optPassOptions ?? wasmOptions.optPassOptions;
   const [options, setOptions] = useAtom(compileOptionsAtom);
 
@@ -150,7 +163,9 @@ export const CompileOptions: React.FC<CompileOptionsProps> = (props) => {
             }
           >
             {languageOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
             ))}
           </Select>
         </label>
@@ -169,7 +184,9 @@ export const CompileOptions: React.FC<CompileOptionsProps> = (props) => {
             }
           >
             {targetOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
             ))}
           </Select>
         </label>
@@ -184,7 +201,9 @@ export const CompileOptions: React.FC<CompileOptionsProps> = (props) => {
                 key={ext}
                 label={STD_EXTENSION_LABELS[ext] ?? ext}
                 checked={options.stdExtensions.includes(ext)}
-                onChange={(e) => handleStdExtensionChange(ext, e.target.checked)}
+                onChange={(e) =>
+                  handleStdExtensionChange(ext, e.target.checked)
+                }
               />
             ))}
           </div>
@@ -206,7 +225,11 @@ export const CompileOptions: React.FC<CompileOptionsProps> = (props) => {
                 />
               ))}
             {optPassOptions.some((pass) => pass !== 'all') && (
-              <CollapsibleSection title="More" defaultCollapsed={true} className="opt-pass-more">
+              <CollapsibleSection
+                title="More"
+                defaultCollapsed={true}
+                className="opt-pass-more"
+              >
                 {optPassOptions
                   .filter((pass) => pass !== 'all')
                   .map((pass) => (
@@ -214,7 +237,9 @@ export const CompileOptions: React.FC<CompileOptionsProps> = (props) => {
                       key={pass}
                       label={OPT_PASS_LABELS[pass] ?? pass}
                       checked={(options.optPasses ?? []).includes(pass)}
-                      onChange={(e) => handleOptPassChange(pass, e.target.checked)}
+                      onChange={(e) =>
+                        handleOptPassChange(pass, e.target.checked)
+                      }
                     />
                   ))}
               </CollapsibleSection>

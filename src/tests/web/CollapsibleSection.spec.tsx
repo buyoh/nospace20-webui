@@ -20,7 +20,9 @@ describe('CollapsibleSection', () => {
           <div>本体コンテンツ</div>
         </CollapsibleSection>
       );
-      const toggleButton = screen.getByRole('button', { name: /テストタイトル/ });
+      const toggleButton = screen.getByRole('button', {
+        name: /テストタイトル/,
+      });
       fireEvent.click(toggleButton);
       expect(screen.queryByText('本体コンテンツ')).not.toBeInTheDocument();
     });
@@ -31,7 +33,9 @@ describe('CollapsibleSection', () => {
           <div>本体コンテンツ</div>
         </CollapsibleSection>
       );
-      const toggleButton = screen.getByRole('button', { name: /テストタイトル/ });
+      const toggleButton = screen.getByRole('button', {
+        name: /テストタイトル/,
+      });
       fireEvent.click(toggleButton);
       fireEvent.click(toggleButton);
       expect(screen.getByText('本体コンテンツ')).toBeInTheDocument();
@@ -85,7 +89,9 @@ describe('CollapsibleSection', () => {
           <div>本体コンテンツ</div>
         </CollapsibleSection>
       );
-      const toggleButton = screen.getByRole('button', { name: /テストタイトル/ });
+      const toggleButton = screen.getByRole('button', {
+        name: /テストタイトル/,
+      });
       fireEvent.click(toggleButton);
       expect(onToggle).toHaveBeenCalledTimes(1);
     });
@@ -112,7 +118,9 @@ describe('CollapsibleSection', () => {
           <div>本体コンテンツ</div>
         </CollapsibleSection>
       );
-      const toggleButton = screen.getByRole('button', { name: /テストタイトル/ });
+      const toggleButton = screen.getByRole('button', {
+        name: /テストタイトル/,
+      });
       expect(toggleButton).toHaveAttribute('aria-expanded', 'true');
     });
 
@@ -122,7 +130,9 @@ describe('CollapsibleSection', () => {
           <div>本体コンテンツ</div>
         </CollapsibleSection>
       );
-      const toggleButton = screen.getByRole('button', { name: /テストタイトル/ });
+      const toggleButton = screen.getByRole('button', {
+        name: /テストタイトル/,
+      });
       expect(toggleButton).toHaveAttribute('aria-expanded', 'false');
     });
   });

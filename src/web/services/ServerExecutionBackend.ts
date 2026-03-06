@@ -11,10 +11,7 @@ import type {
   ExecutionBackend,
   ExecutionBackendCapabilities,
 } from './ExecutionBackend';
-import {
-  NospaceSocketClient,
-  type SocketFactory,
-} from './NospaceSocketClient';
+import { NospaceSocketClient, type SocketFactory } from './NospaceSocketClient';
 import {
   tryFormatNospaceErrorJson,
   tryParseNospaceErrors,
@@ -38,10 +35,12 @@ export class ServerExecutionBackend implements ExecutionBackend {
     | ((
         status: ExecutionStatus,
         sessionId: string,
-        exitCode?: number | null,
+        exitCode?: number | null
       ) => void)
     | null = null;
-  private compileErrorsCallback: ((errors: NospaceErrorEntry[]) => void) | null = null;
+  private compileErrorsCallback:
+    | ((errors: NospaceErrorEntry[]) => void)
+    | null = null;
 
   static capabilities: ExecutionBackendCapabilities = {
     supportsInteractiveStdin: true,
@@ -85,11 +84,11 @@ export class ServerExecutionBackend implements ExecutionBackend {
         this.statusCallback?.(
           payload.status as ExecutionStatus,
           payload.sessionId,
-          payload.exitCode,
+          payload.exitCode
         );
         this.emitSystemMessage(
           payload.status as ExecutionStatus,
-          payload.exitCode,
+          payload.exitCode
         );
       },
     });
@@ -129,8 +128,8 @@ export class ServerExecutionBackend implements ExecutionBackend {
     callback: (
       status: ExecutionStatus,
       sessionId: string,
-      exitCode?: number | null,
-    ) => void,
+      exitCode?: number | null
+    ) => void
   ): void {
     this.statusCallback = callback;
   }
@@ -143,7 +142,7 @@ export class ServerExecutionBackend implements ExecutionBackend {
 
   private emitSystemMessage(
     status: ExecutionStatus,
-    exitCode?: number | null,
+    exitCode?: number | null
   ): void {
     let systemMessage: string | null = null;
     if (status === 'running') {

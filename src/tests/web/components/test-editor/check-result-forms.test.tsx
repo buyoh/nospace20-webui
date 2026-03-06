@@ -23,7 +23,7 @@ describe('SuccessTraceForm', () => {
 
   it('trace_hit_counts の各値が number input として表示される', () => {
     render(
-      <SuccessTraceForm schema={makeSchema([3, 7])} onChange={jest.fn()} />,
+      <SuccessTraceForm schema={makeSchema([3, 7])} onChange={jest.fn()} />
     );
 
     const inputs = screen.getAllByRole('spinbutton') as HTMLInputElement[];
@@ -35,7 +35,7 @@ describe('SuccessTraceForm', () => {
   it('数値を変更すると onChange が正しいスキーマで呼ばれる', () => {
     const mockOnChange = jest.fn();
     render(
-      <SuccessTraceForm schema={makeSchema([1])} onChange={mockOnChange} />,
+      <SuccessTraceForm schema={makeSchema([1])} onChange={mockOnChange} />
     );
 
     const input = screen.getByRole('spinbutton') as HTMLInputElement;
@@ -47,7 +47,7 @@ describe('SuccessTraceForm', () => {
   it('+ Add ボタンで要素が追加される', () => {
     const mockOnChange = jest.fn();
     render(
-      <SuccessTraceForm schema={makeSchema([1, 2])} onChange={mockOnChange} />,
+      <SuccessTraceForm schema={makeSchema([1, 2])} onChange={mockOnChange} />
     );
 
     fireEvent.click(screen.getByText('+ Add'));
@@ -60,7 +60,7 @@ describe('SuccessTraceForm', () => {
   it('× ボタンで指定した要素が削除される', () => {
     const mockOnChange = jest.fn();
     render(
-      <SuccessTraceForm schema={makeSchema([10, 20])} onChange={mockOnChange} />,
+      <SuccessTraceForm schema={makeSchema([10, 20])} onChange={mockOnChange} />
     );
 
     const removeButtons = screen.getAllByText('×');
@@ -70,9 +70,7 @@ describe('SuccessTraceForm', () => {
   });
 
   it('要素が 1 つのとき × ボタンが無効化される', () => {
-    render(
-      <SuccessTraceForm schema={makeSchema([5])} onChange={jest.fn()} />,
-    );
+    render(<SuccessTraceForm schema={makeSchema([5])} onChange={jest.fn()} />);
 
     const removeButton = screen.getByText('×');
     expect(removeButton).toBeDisabled();
@@ -84,7 +82,7 @@ describe('SuccessTraceForm', () => {
         schema={makeSchema([1])}
         onChange={jest.fn()}
         disabled
-      />,
+      />
     );
 
     expect(screen.getByRole('spinbutton')).toBeDisabled();
@@ -119,7 +117,7 @@ describe('SuccessIOForm - Single モード', () => {
     fireEvent.change(stdinArea, { target: { value: 'new_stdin' } });
 
     expect(mockOnChange).toHaveBeenCalledWith(
-      expect.objectContaining({ stdin: 'new_stdin' }),
+      expect.objectContaining({ stdin: 'new_stdin' })
     );
   });
 
@@ -132,7 +130,7 @@ describe('SuccessIOForm - Single モード', () => {
     fireEvent.change(stdoutArea, { target: { value: 'new_stdout' } });
 
     expect(mockOnChange).toHaveBeenCalledWith(
-      expect.objectContaining({ stdout: 'new_stdout' }),
+      expect.objectContaining({ stdout: 'new_stdout' })
     );
   });
 
@@ -149,7 +147,7 @@ describe('SuccessIOForm - Single モード', () => {
         cases: expect.arrayContaining([
           expect.objectContaining({ stdin: 'hello', stdout: 'world' }),
         ]),
-      }),
+      })
     );
   });
 });
@@ -207,7 +205,7 @@ describe('SuccessIOForm - Multiple モード', () => {
         type: 'success_io',
         stdin: 'in1',
         stdout: 'out1',
-      }),
+      })
     );
   });
 });
@@ -226,7 +224,7 @@ describe('CompileErrorForm', () => {
       <CompileErrorForm
         schema={makeSchema(['err1', 'err2'])}
         onChange={jest.fn()}
-      />,
+      />
     );
 
     expect(screen.getByDisplayValue('err1')).toBeInTheDocument();
@@ -236,7 +234,7 @@ describe('CompileErrorForm', () => {
   it('テキストを変更すると onChange が呼ばれる', () => {
     const mockOnChange = jest.fn();
     render(
-      <CompileErrorForm schema={makeSchema(['old'])} onChange={mockOnChange} />,
+      <CompileErrorForm schema={makeSchema(['old'])} onChange={mockOnChange} />
     );
 
     fireEvent.change(screen.getByDisplayValue('old'), {
@@ -244,20 +242,20 @@ describe('CompileErrorForm', () => {
     });
 
     expect(mockOnChange).toHaveBeenCalledWith(
-      expect.objectContaining({ contains: ['new'] }),
+      expect.objectContaining({ contains: ['new'] })
     );
   });
 
   it('+ Add ボタンで空文字列要素が追加される', () => {
     const mockOnChange = jest.fn();
     render(
-      <CompileErrorForm schema={makeSchema(['a'])} onChange={mockOnChange} />,
+      <CompileErrorForm schema={makeSchema(['a'])} onChange={mockOnChange} />
     );
 
     fireEvent.click(screen.getByText('+ Add'));
 
     expect(mockOnChange).toHaveBeenCalledWith(
-      expect.objectContaining({ contains: ['a', ''] }),
+      expect.objectContaining({ contains: ['a', ''] })
     );
   });
 
@@ -267,20 +265,20 @@ describe('CompileErrorForm', () => {
       <CompileErrorForm
         schema={makeSchema(['x', 'y'])}
         onChange={mockOnChange}
-      />,
+      />
     );
 
     const removeButtons = screen.getAllByText('×');
     fireEvent.click(removeButtons[0]);
 
     expect(mockOnChange).toHaveBeenCalledWith(
-      expect.objectContaining({ contains: ['y'] }),
+      expect.objectContaining({ contains: ['y'] })
     );
   });
 
   it('要素が 1 つのとき × ボタンが無効化される', () => {
     render(
-      <CompileErrorForm schema={makeSchema(['only'])} onChange={jest.fn()} />,
+      <CompileErrorForm schema={makeSchema(['only'])} onChange={jest.fn()} />
     );
 
     expect(screen.getByText('×')).toBeDisabled();
@@ -292,7 +290,7 @@ describe('CompileErrorForm', () => {
         schema={makeSchema(['e'])}
         onChange={jest.fn()}
         disabled
-      />,
+      />
     );
 
     expect(screen.getByDisplayValue('e')).toBeDisabled();
@@ -306,17 +304,15 @@ describe('CompileErrorForm', () => {
 describe('ParseErrorForm', () => {
   const makeSchema = (
     phase: 'tree' | 'tokenize',
-    contains?: string[],
+    contains?: string[]
   ): ParseErrorSchema => ({ type: 'parse_error', phase, contains });
 
   it('phase ラジオボタンが表示され初期値が正しい (tree)', () => {
-    render(
-      <ParseErrorForm schema={makeSchema('tree')} onChange={jest.fn()} />,
-    );
+    render(<ParseErrorForm schema={makeSchema('tree')} onChange={jest.fn()} />);
 
     const treeRadio = screen.getByDisplayValue('tree') as HTMLInputElement;
     const tokenizeRadio = screen.getByDisplayValue(
-      'tokenize',
+      'tokenize'
     ) as HTMLInputElement;
     expect(treeRadio.checked).toBe(true);
     expect(tokenizeRadio.checked).toBe(false);
@@ -324,34 +320,29 @@ describe('ParseErrorForm', () => {
 
   it('phase ラジオボタンが表示され初期値が正しい (tokenize)', () => {
     render(
-      <ParseErrorForm
-        schema={makeSchema('tokenize')}
-        onChange={jest.fn()}
-      />,
+      <ParseErrorForm schema={makeSchema('tokenize')} onChange={jest.fn()} />
     );
 
     expect(
-      (screen.getByDisplayValue('tokenize') as HTMLInputElement).checked,
+      (screen.getByDisplayValue('tokenize') as HTMLInputElement).checked
     ).toBe(true);
   });
 
   it('phase を変更すると onChange が呼ばれる', () => {
     const mockOnChange = jest.fn();
     render(
-      <ParseErrorForm schema={makeSchema('tree')} onChange={mockOnChange} />,
+      <ParseErrorForm schema={makeSchema('tree')} onChange={mockOnChange} />
     );
 
     fireEvent.click(screen.getByDisplayValue('tokenize'));
 
     expect(mockOnChange).toHaveBeenCalledWith(
-      expect.objectContaining({ phase: 'tokenize' }),
+      expect.objectContaining({ phase: 'tokenize' })
     );
   });
 
   it('contains がないときは空のリストが表示される', () => {
-    render(
-      <ParseErrorForm schema={makeSchema('tree')} onChange={jest.fn()} />,
-    );
+    render(<ParseErrorForm schema={makeSchema('tree')} onChange={jest.fn()} />);
 
     // 要素が存在しないので + Add ボタンのみある
     expect(screen.getByText('+ Add')).toBeInTheDocument();
@@ -363,7 +354,7 @@ describe('ParseErrorForm', () => {
       <ParseErrorForm
         schema={makeSchema('tree', ['token error'])}
         onChange={jest.fn()}
-      />,
+      />
     );
 
     expect(screen.getByDisplayValue('token error')).toBeInTheDocument();
@@ -372,13 +363,13 @@ describe('ParseErrorForm', () => {
   it('+ Add ボタンで contains に空文字列が追加される', () => {
     const mockOnChange = jest.fn();
     render(
-      <ParseErrorForm schema={makeSchema('tree')} onChange={mockOnChange} />,
+      <ParseErrorForm schema={makeSchema('tree')} onChange={mockOnChange} />
     );
 
     fireEvent.click(screen.getByText('+ Add'));
 
     expect(mockOnChange).toHaveBeenCalledWith(
-      expect.objectContaining({ contains: [''] }),
+      expect.objectContaining({ contains: [''] })
     );
   });
 
@@ -388,7 +379,7 @@ describe('ParseErrorForm', () => {
       <ParseErrorForm
         schema={makeSchema('tree', ['msg'])}
         onChange={mockOnChange}
-      />,
+      />
     );
 
     fireEvent.click(screen.getByText('×'));
@@ -403,14 +394,14 @@ describe('ParseErrorForm', () => {
       <ParseErrorForm
         schema={makeSchema('tokenize', ['a', 'b'])}
         onChange={mockOnChange}
-      />,
+      />
     );
 
     const removeButtons = screen.getAllByText('×');
     fireEvent.click(removeButtons[0]);
 
     expect(mockOnChange).toHaveBeenCalledWith(
-      expect.objectContaining({ contains: ['b'] }),
+      expect.objectContaining({ contains: ['b'] })
     );
   });
 
@@ -420,7 +411,7 @@ describe('ParseErrorForm', () => {
         schema={makeSchema('tree')}
         onChange={jest.fn()}
         disabled
-      />,
+      />
     );
 
     expect(screen.getByDisplayValue('tree')).toBeDisabled();

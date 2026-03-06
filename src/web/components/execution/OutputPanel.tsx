@@ -24,7 +24,12 @@ export const OutputPanel: React.FC<OutputPanelProps> = ({ onClear }) => {
     <div className="output-panel">
       <div className="output-panel-header">
         <h3>Output</h3>
-        <Button variant="outline" size="sm" onClick={onClear} className="btn-clear">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onClear}
+          className="btn-clear"
+        >
           Clear
         </Button>
       </div>

@@ -2,7 +2,10 @@ import React from 'react';
 import { useAtom, useAtomValue } from 'jotai';
 import type { Ace } from 'ace-builds';
 import { sourceCodeAtom } from '../stores/editorAtom';
-import { operationModeAtom, editingTestCaseAtom } from '../stores/testEditorAtom';
+import {
+  operationModeAtom,
+  editingTestCaseAtom,
+} from '../stores/testEditorAtom';
 import { compileErrorsAtom } from '../stores/compileErrorsAtom';
 import { useTestEditor } from '../hooks/useTestEditor';
 import { NospaceEditor } from '../components/editor/NospaceEditor';
@@ -19,7 +22,10 @@ interface EditorContainerProps {
    * テスト・DI 用: useTestEditor フックの差し替え。
    * 省略時はデフォルトの useTestEditor を使用する。
    */
-  useTestEditorHook?: () => Pick<ReturnType<typeof useTestEditor>, 'updateSource'>;
+  useTestEditorHook?: () => Pick<
+    ReturnType<typeof useTestEditor>,
+    'updateSource'
+  >;
 }
 
 export const EditorContainer: React.FC<EditorContainerProps> = ({
@@ -34,7 +40,9 @@ export const EditorContainer: React.FC<EditorContainerProps> = ({
 
   // テストエディタモードの場合、テストケースのソースを表示
   const isTestEditorMode = operationMode === 'test-editor';
-  const displayValue = isTestEditorMode ? (editingTestCase?.source || '') : sourceCode;
+  const displayValue = isTestEditorMode
+    ? editingTestCase?.source || ''
+    : sourceCode;
   const handleChange = isTestEditorMode ? updateSource : setSourceCode;
 
   // NospaceErrorEntry[] を Ace.Annotation[] に変換する（line がないエラーは指定不可なので除外）
@@ -50,7 +58,11 @@ export const EditorContainer: React.FC<EditorContainerProps> = ({
   return (
     <div className="editor-container">
       <div className="editor-container__editor">
-        <NospaceEditorImpl value={displayValue} onChange={handleChange} annotations={annotations} />
+        <NospaceEditorImpl
+          value={displayValue}
+          onChange={handleChange}
+          annotations={annotations}
+        />
       </div>
     </div>
   );

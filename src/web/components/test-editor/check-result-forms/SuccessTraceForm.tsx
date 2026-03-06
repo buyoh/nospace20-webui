@@ -45,9 +45,7 @@ export const SuccessTraceForm: React.FC<SuccessTraceFormProps> = ({
             <TextInput
               type="number"
               value={count}
-              onChange={(e) =>
-                handleCountChange(index, Number(e.target.value))
-              }
+              onChange={(e) => handleCountChange(index, Number(e.target.value))}
               disabled={disabled}
               min={0}
             />

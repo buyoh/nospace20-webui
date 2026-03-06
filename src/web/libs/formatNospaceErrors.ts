@@ -61,7 +61,9 @@ export function tryFormatNospaceErrorJson(text: string): string | null {
 }
 
 /** 値が NospaceErrorResult であるかを判定する型ガード */
-export function isNospaceErrorResult(value: unknown): value is NospaceErrorResult {
+export function isNospaceErrorResult(
+  value: unknown
+): value is NospaceErrorResult {
   if (typeof value !== 'object' || value === null) return false;
   const obj = value as Record<string, unknown>;
   if (obj.success !== false) return false;
@@ -70,7 +72,7 @@ export function isNospaceErrorResult(value: unknown): value is NospaceErrorResul
     (e: unknown) =>
       typeof e === 'object' &&
       e !== null &&
-      typeof (e as Record<string, unknown>).message === 'string',
+      typeof (e as Record<string, unknown>).message === 'string'
   );
 }
 
@@ -80,7 +82,9 @@ export function isNospaceErrorResult(value: unknown): value is NospaceErrorResul
  * パースに失敗した場合やエラーフォーマットに一致しない場合は null を返す。
  * バックエンドから送信される stderr が構造化エラーかどうかを判定するために使用する。
  */
-export function tryParseNospaceErrors(text: string): NospaceErrorEntry[] | null {
+export function tryParseNospaceErrors(
+  text: string
+): NospaceErrorEntry[] | null {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);

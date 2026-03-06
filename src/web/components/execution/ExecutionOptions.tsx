@@ -24,9 +24,7 @@ export const ExecutionOptions: React.FC = () => {
         <Checkbox
           label="Debug trace (--debug)"
           checked={options.debug}
-          onChange={(e) =>
-            setOptions({ ...options, debug: e.target.checked })
-          }
+          onChange={(e) => setOptions({ ...options, debug: e.target.checked })}
         />
       </div>
 
@@ -93,13 +91,15 @@ export const ExecutionOptions: React.FC = () => {
               max={10000000000}
               value={options.maxTotalSteps}
               onChange={(e) =>
-                setOptions({ ...options, maxTotalSteps: Number(e.target.value) })
+                setOptions({
+                  ...options,
+                  maxTotalSteps: Number(e.target.value),
+                })
               }
             />
           </label>
         </div>
       )}
-
     </CollapsibleSection>
   );
 };

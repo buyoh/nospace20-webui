@@ -1,17 +1,27 @@
 import { useEffect, useCallback } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { sourceCodeAtom } from '../stores/editorAtom';
-import { executionOptionsAtom, compileOptionsAtom } from '../stores/optionsAtom';
+import {
+  executionOptionsAtom,
+  compileOptionsAtom,
+} from '../stores/optionsAtom';
 import {
   executionStatusAtom,
   outputEntriesAtom,
 } from '../stores/executionAtom';
-import { compileOutputAtom, compileStatusAtom, type CompileStatus } from '../stores/compileOutputAtom';
+import {
+  compileOutputAtom,
+  compileStatusAtom,
+  type CompileStatus,
+} from '../stores/compileOutputAtom';
 import { compileErrorsAtom } from '../stores/compileErrorsAtom';
 import { flavorAtom } from '../stores/flavorAtom';
 import type { Flavor } from '../stores/flavorAtom';
 import type { CompileOutput } from '../stores/compileOutputAtom';
-import { useExecutionBackend, type BackendFactory } from './useExecutionBackend';
+import {
+  useExecutionBackend,
+  type BackendFactory,
+} from './useExecutionBackend';
 // Note: ServerExecutionBackend is dynamically imported for tree-shaking
 // import { WasmExecutionBackend } from '../services/WasmExecutionBackend';
 
@@ -43,21 +53,19 @@ export interface UseNospaceExecutionResult {
 /** デフォルトの BackendFactory（動的インポートを使用） */
 const defaultBackendFactory: BackendFactory = async (flavor: Flavor) => {
   if (flavor === 'websocket') {
-    const { ServerExecutionBackend } = await import(
-      '../services/ServerExecutionBackend'
-    );
+    const { ServerExecutionBackend } =
+      await import('../services/ServerExecutionBackend');
     return new ServerExecutionBackend();
   } else {
     // WASM backend
-    const { WasmExecutionBackend } = await import(
-      '../services/WasmExecutionBackend'
-    );
+    const { WasmExecutionBackend } =
+      await import('../services/WasmExecutionBackend');
     return new WasmExecutionBackend();
   }
 };
 
 export function useNospaceExecution(
-  backendFactory: BackendFactory = defaultBackendFactory,
+  backendFactory: BackendFactory = defaultBackendFactory
 ): UseNospaceExecutionResult {
   const flavor = useAtomValue(flavorAtom);
   const sourceCode = useAtomValue(sourceCodeAtom);
@@ -119,7 +127,7 @@ export function useNospaceExecution(
           stdExtensions: compileOptions.stdExtensions,
           direct: runOptions?.direct,
         },
-        stdinData,
+        stdinData
       );
     },
     [
@@ -129,7 +137,7 @@ export function useNospaceExecution(
       isRunning,
       setOutputEntries,
       setCompileErrors,
-    ],
+    ]
   );
 
   const handleCompile = useCallback(() => {
@@ -144,7 +152,15 @@ export function useNospaceExecution(
     setCompileStatus(null);
     setOutputEntries([]);
     backend.compile(sourceCode, compileOptions);
-  }, [sourceCode, compileOptions, isRunning, setOutputEntries, setCompileOutput, setCompileErrors, setCompileStatus]);
+  }, [
+    sourceCode,
+    compileOptions,
+    isRunning,
+    setOutputEntries,
+    setCompileOutput,
+    setCompileErrors,
+    setCompileStatus,
+  ]);
 
   /** コンパイル済みコードを実行する（Whitespace ターゲット時のみ） */
   const handleRunCompileOutput = useCallback(
@@ -164,10 +180,10 @@ export function useNospaceExecution(
           stepBudget: executionOptions.stepBudget,
           maxTotalSteps: executionOptions.maxTotalSteps,
         },
-        stdinData,
+        stdinData
       );
     },
-    [executionOptions, isRunning, setOutputEntries],
+    [executionOptions, isRunning, setOutputEntries]
   );
 
   const handleKill = useCallback(() => {

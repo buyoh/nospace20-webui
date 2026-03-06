@@ -11,7 +11,11 @@ import type { NospaceErrorEntry } from '../../web/libs/formatNospaceErrors';
 // NospaceEditorComponent prop 経由で注入するフェイクコンポーネント（jest.mock() 不要）
 let capturedAnnotations: Ace.Annotation[] | undefined;
 
-const MockNospaceEditor = (props: { value: string; onChange: () => void; annotations?: Ace.Annotation[] }) => {
+const MockNospaceEditor = (props: {
+  value: string;
+  onChange: () => void;
+  annotations?: Ace.Annotation[];
+}) => {
   capturedAnnotations = props.annotations;
   return <div data-testid="mock-nospace-editor" />;
 };
@@ -28,7 +32,7 @@ function renderWithStore(store: ReturnType<typeof createStore>) {
         NospaceEditorComponent={MockNospaceEditor as any}
         useTestEditorHook={fakeUseTestEditor}
       />
-    </Provider>,
+    </Provider>
   );
 }
 
@@ -88,21 +92,29 @@ describe('EditorContainer', () => {
   it('details ありエラーはアノテーションの text に details が含まれる', () => {
     const store = createStore();
     const errors: NospaceErrorEntry[] = [
-      { message: 'type mismatch', line: 2, column: 4, details: 'expected int, got string' },
+      {
+        message: 'type mismatch',
+        line: 2,
+        column: 4,
+        details: 'expected int, got string',
+      },
     ];
     store.set(compileErrorsAtom, errors);
     renderWithStore(store);
 
     expect(capturedAnnotations).toEqual([
-      { row: 1, column: 4, text: 'type mismatch\nexpected int, got string', type: 'error' },
+      {
+        row: 1,
+        column: 4,
+        text: 'type mismatch\nexpected int, got string',
+        type: 'error',
+      },
     ]);
   });
 
   it('details なしエラーはアノテーションの text に message のみ', () => {
     const store = createStore();
-    const errors: NospaceErrorEntry[] = [
-      { message: 'simple error', line: 1 },
-    ];
+    const errors: NospaceErrorEntry[] = [{ message: 'simple error', line: 1 }];
     store.set(compileErrorsAtom, errors);
     renderWithStore(store);
 

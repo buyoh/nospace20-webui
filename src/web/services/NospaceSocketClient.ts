@@ -46,7 +46,7 @@ export class NospaceSocketClient {
    */
   async connect(
     handlers: NospaceSocketEventHandlers,
-    timeoutMs = 10000,
+    timeoutMs = 10000
   ): Promise<void> {
     const socket = this.socketFactory();
     if (!socket) {

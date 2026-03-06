@@ -6,7 +6,10 @@ import {
   type BackendFactory,
 } from '../../web/hooks/useNospaceExecution';
 import { sourceCodeAtom } from '../../web/stores/editorAtom';
-import { executionOptionsAtom, compileOptionsAtom } from '../../web/stores/optionsAtom';
+import {
+  executionOptionsAtom,
+  compileOptionsAtom,
+} from '../../web/stores/optionsAtom';
 import {
   executionStatusAtom,
   currentSessionIdAtom,
@@ -16,7 +19,10 @@ import {
 import { compileOutputAtom } from '../../web/stores/compileOutputAtom';
 import { flavorAtom } from '../../web/stores/flavorAtom';
 import type { ExecutionBackend } from '../../web/services/ExecutionBackend';
-import type { OutputEntry, ExecutionStatus } from '../../interfaces/NospaceTypes';
+import type {
+  OutputEntry,
+  ExecutionStatus,
+} from '../../interfaces/NospaceTypes';
 import type { Flavor } from '../../web/stores/flavorAtom';
 
 /** テスト用の Fake ExecutionBackend (jest.fn() を使わない手動実装) */
@@ -28,7 +34,11 @@ class FakeExecutionBackend implements ExecutionBackend {
   disposeCalled = false;
   outputCallback: ((entry: OutputEntry) => void) | null = null;
   statusCallback:
-    | ((status: ExecutionStatus, sessionId: string, exitCode?: number | null) => void)
+    | ((
+        status: ExecutionStatus,
+        sessionId: string,
+        exitCode?: number | null
+      ) => void)
     | null = null;
 
   /** run() 呼び出し引数の記録: [code, options, stdinData] */
@@ -75,7 +85,11 @@ class FakeExecutionBackend implements ExecutionBackend {
   }
 
   onStatusChange(
-    callback: (status: ExecutionStatus, sessionId: string, exitCode?: number | null) => void,
+    callback: (
+      status: ExecutionStatus,
+      sessionId: string,
+      exitCode?: number | null
+    ) => void
   ): void {
     this.statusCallback = callback;
   }
@@ -93,7 +107,7 @@ class FakeExecutionBackend implements ExecutionBackend {
   triggerStatusChange(
     status: ExecutionStatus,
     sessionId: string,
-    exitCode?: number | null,
+    exitCode?: number | null
   ): void {
     this.statusCallback?.(status, sessionId, exitCode);
   }
@@ -145,7 +159,10 @@ describe('useNospaceExecution', () => {
     it('unmount 時に backend が dispose される', async () => {
       const { wrapper } = createTestWrapper();
 
-      const { unmount } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+      const { unmount } = renderHook(
+        () => useNospaceExecution(backendFactory),
+        { wrapper }
+      );
 
       await waitFor(() => {
         expect(fakeBackend.initCalled).toBe(true);
@@ -169,7 +186,9 @@ describe('useNospaceExecution', () => {
         return factoryResults[factoryCalls++];
       };
 
-      const { rerender } = renderHook(() => useNospaceExecution(factoryFn), { wrapper });
+      const { rerender } = renderHook(() => useNospaceExecution(factoryFn), {
+        wrapper,
+      });
 
       await waitFor(() => {
         expect(oldBackend.initCalled).toBe(true);
@@ -194,7 +213,9 @@ describe('useNospaceExecution', () => {
       const { store, wrapper } = createTestWrapper();
       store.set(executionStatusAtom, 'running');
 
-      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
+        wrapper,
+      });
 
       expect(result.current.isRunning).toBe(true);
     });
@@ -203,7 +224,9 @@ describe('useNospaceExecution', () => {
       const { store, wrapper } = createTestWrapper();
       store.set(executionStatusAtom, 'idle');
 
-      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
+        wrapper,
+      });
 
       expect(result.current.isRunning).toBe(false);
     });
@@ -226,7 +249,9 @@ describe('useNospaceExecution', () => {
         target: 'ws',
       });
 
-      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
+        wrapper,
+      });
 
       await waitFor(() => {
         expect(fakeBackend.isReadyValue).toBe(true);
@@ -263,7 +288,9 @@ describe('useNospaceExecution', () => {
         maxTotalSteps: 100_000_000,
       });
 
-      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
+        wrapper,
+      });
 
       await waitFor(() => {
         expect(fakeBackend.isReadyValue).toBe(true);
@@ -275,9 +302,11 @@ describe('useNospaceExecution', () => {
 
       expect(fakeBackend.runCalls).toHaveLength(1);
       expect(fakeBackend.runCalls[0][0]).toBe('code');
-      expect(fakeBackend.runCalls[0][1]).toEqual(expect.objectContaining({
-        inputMode: 'batch',
-      }));
+      expect(fakeBackend.runCalls[0][1]).toEqual(
+        expect.objectContaining({
+          inputMode: 'batch',
+        })
+      );
       expect(fakeBackend.runCalls[0][2]).toBe('input data');
     });
 
@@ -293,7 +322,9 @@ describe('useNospaceExecution', () => {
         maxTotalSteps: 5000,
       });
 
-      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
+        wrapper,
+      });
 
       await waitFor(() => {
         expect(fakeBackend.isReadyValue).toBe(true);
@@ -304,19 +335,25 @@ describe('useNospaceExecution', () => {
       });
 
       expect(fakeBackend.runCalls).toHaveLength(1);
-      expect(fakeBackend.runCalls[0][1]).toEqual(expect.objectContaining({
-        stepBudget: 500,
-        maxTotalSteps: 5000,
-      }));
+      expect(fakeBackend.runCalls[0][1]).toEqual(
+        expect.objectContaining({
+          stepBudget: 500,
+          maxTotalSteps: 5000,
+        })
+      );
     });
 
     it('実行前に outputEntries がクリアされる', async () => {
       const { store, wrapper } = createTestWrapper();
       store.set(sourceCodeAtom, 'code');
       store.set(executionStatusAtom, 'idle');
-      store.set(outputEntriesAtom, [{ type: 'stdout', data: 'old', timestamp: 123 }]);
+      store.set(outputEntriesAtom, [
+        { type: 'stdout', data: 'old', timestamp: 123 },
+      ]);
 
-      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
+        wrapper,
+      });
 
       await waitFor(() => {
         expect(fakeBackend.isReadyValue).toBe(true);
@@ -336,7 +373,9 @@ describe('useNospaceExecution', () => {
 
       fakeBackend.isReadyValue = false;
 
-      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
+        wrapper,
+      });
 
       act(() => {
         result.current.handleRun();
@@ -350,7 +389,9 @@ describe('useNospaceExecution', () => {
       store.set(sourceCodeAtom, 'code');
       store.set(executionStatusAtom, 'running');
 
-      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
+        wrapper,
+      });
 
       await waitFor(() => {
         expect(fakeBackend.isReadyValue).toBe(true);
@@ -368,7 +409,9 @@ describe('useNospaceExecution', () => {
     it('backend.kill が呼ばれる', async () => {
       const { wrapper } = createTestWrapper();
 
-      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
+        wrapper,
+      });
 
       await waitFor(() => {
         expect(fakeBackend.initCalled).toBe(true);
@@ -386,7 +429,9 @@ describe('useNospaceExecution', () => {
     it('backend.sendStdin が呼ばれる', async () => {
       const { wrapper } = createTestWrapper();
 
-      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
+        wrapper,
+      });
 
       await waitFor(() => {
         expect(fakeBackend.initCalled).toBe(true);
@@ -408,7 +453,9 @@ describe('useNospaceExecution', () => {
         { type: 'stderr', data: 'error', timestamp: 200 },
       ]);
 
-      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
+        wrapper,
+      });
 
       act(() => {
         result.current.handleClearOutput();
@@ -477,7 +524,9 @@ describe('useNospaceExecution', () => {
       store.set(executionStatusAtom, 'idle');
       store.set(compileOptionsAtom, { language: 'standard', target: 'ws' });
 
-      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
+        wrapper,
+      });
 
       await waitFor(() => {
         expect(fakeBackend.isReadyValue).toBe(true);
@@ -512,9 +561,14 @@ describe('useNospaceExecution', () => {
       const { store, wrapper } = createTestWrapper();
       store.set(sourceCodeAtom, 'bad code');
       store.set(executionStatusAtom, 'idle');
-      store.set(compileOptionsAtom, { language: 'standard', target: 'mnemonic' });
+      store.set(compileOptionsAtom, {
+        language: 'standard',
+        target: 'mnemonic',
+      });
 
-      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
+        wrapper,
+      });
 
       await waitFor(() => {
         expect(fakeBackend.isReadyValue).toBe(true);
@@ -547,9 +601,14 @@ describe('useNospaceExecution', () => {
       store.set(sourceCodeAtom, 'code');
       store.set(executionStatusAtom, 'idle');
       store.set(compileOptionsAtom, { language: 'standard', target: 'ws' });
-      store.set(compileOutputAtom, { output: 'old output', target: 'mnemonic' });
+      store.set(compileOutputAtom, {
+        output: 'old output',
+        target: 'mnemonic',
+      });
 
-      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
+        wrapper,
+      });
 
       await waitFor(() => {
         expect(fakeBackend.isReadyValue).toBe(true);
@@ -569,7 +628,9 @@ describe('useNospaceExecution', () => {
       store.set(executionStatusAtom, 'idle');
       store.set(compileOptionsAtom, { language: 'standard', target: 'ws' });
 
-      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
+        wrapper,
+      });
 
       await waitFor(() => {
         expect(fakeBackend.isReadyValue).toBe(true);
@@ -611,7 +672,9 @@ describe('useNospaceExecution', () => {
         maxTotalSteps: 100_000_000,
       });
 
-      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
+        wrapper,
+      });
 
       await waitFor(() => {
         expect(fakeBackend.isReadyValue).toBe(true);
@@ -623,21 +686,27 @@ describe('useNospaceExecution', () => {
 
       expect(fakeBackend.runCalls).toHaveLength(1);
       expect(fakeBackend.runCalls[0][0]).toBe('compiled ws code');
-      expect(fakeBackend.runCalls[0][1]).toEqual(expect.objectContaining({
-        language: 'ws',
-        debug: true,
-        ignoreDebug: false,
-        inputMode: 'batch',
-      }));
+      expect(fakeBackend.runCalls[0][1]).toEqual(
+        expect.objectContaining({
+          language: 'ws',
+          debug: true,
+          ignoreDebug: false,
+          inputMode: 'batch',
+        })
+      );
       expect(fakeBackend.runCalls[0][2]).toBe('stdin data');
     });
 
     it('実行前に outputEntries がクリアされる', async () => {
       const { store, wrapper } = createTestWrapper();
       store.set(executionStatusAtom, 'idle');
-      store.set(outputEntriesAtom, [{ type: 'stdout', data: 'old', timestamp: 1 }]);
+      store.set(outputEntriesAtom, [
+        { type: 'stdout', data: 'old', timestamp: 1 },
+      ]);
 
-      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
+        wrapper,
+      });
 
       await waitFor(() => {
         expect(fakeBackend.isReadyValue).toBe(true);
@@ -661,7 +730,9 @@ describe('useNospaceExecution', () => {
         maxTotalSteps: 3000,
       });
 
-      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
+        wrapper,
+      });
 
       await waitFor(() => {
         expect(fakeBackend.isReadyValue).toBe(true);
@@ -672,10 +743,12 @@ describe('useNospaceExecution', () => {
       });
 
       expect(fakeBackend.runCalls).toHaveLength(1);
-      expect(fakeBackend.runCalls[0][1]).toEqual(expect.objectContaining({
-        stepBudget: 200,
-        maxTotalSteps: 3000,
-      }));
+      expect(fakeBackend.runCalls[0][1]).toEqual(
+        expect.objectContaining({
+          stepBudget: 200,
+          maxTotalSteps: 3000,
+        })
+      );
     });
   });
 
@@ -684,7 +757,9 @@ describe('useNospaceExecution', () => {
       const { store, wrapper } = createTestWrapper();
       store.set(compileOutputAtom, { output: 'test', target: 'ws' });
 
-      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
+        wrapper,
+      });
 
       expect(result.current.compileOutput).toEqual({
         output: 'test',
@@ -695,7 +770,9 @@ describe('useNospaceExecution', () => {
     it('compileOutput が null のとき null が返される', async () => {
       const { wrapper } = createTestWrapper();
 
-      const { result } = renderHook(() => useNospaceExecution(backendFactory), { wrapper });
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
+        wrapper,
+      });
 
       expect(result.current.compileOutput).toBeNull();
     });

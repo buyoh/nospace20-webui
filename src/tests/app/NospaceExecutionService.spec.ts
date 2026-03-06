@@ -239,7 +239,9 @@ describe('NospaceExecutionService', () => {
       });
 
       expect(spawnCalls[0][0]).toBe(fakeConfig.nospaceBinPath);
-      expect(spawnCalls[0][1]).toEqual(expect.arrayContaining(['--std', 'standard']));
+      expect(spawnCalls[0][1]).toEqual(
+        expect.arrayContaining(['--std', 'standard'])
+      );
     });
 
     it('コマンド引数が正しく構築される (with debug and ignoreDebug)', () => {
@@ -260,7 +262,9 @@ describe('NospaceExecutionService', () => {
       });
 
       expect(spawnCalls[0][0]).toBe(fakeConfig.nospaceBinPath);
-      expect(spawnCalls[0][1]).toEqual(expect.arrayContaining(['--std', 'ws', '--debug', '--ignore-debug']));
+      expect(spawnCalls[0][1]).toEqual(
+        expect.arrayContaining(['--std', 'ws', '--debug', '--ignore-debug'])
+      );
     });
 
     it('コマンド引数が正しく構築される (with stdExtensions)', () => {
@@ -281,7 +285,9 @@ describe('NospaceExecutionService', () => {
         onExit: jest.fn(),
       });
 
-      expect(spawnCalls[0][1]).toEqual(expect.arrayContaining(['--std', 'standard', '--std-ext', 'alloc']));
+      expect(spawnCalls[0][1]).toEqual(
+        expect.arrayContaining(['--std', 'standard', '--std-ext', 'alloc'])
+      );
     });
 
     it('コマンド引数が正しく構築される (stdExtensions 未指定)', () => {
@@ -508,17 +514,30 @@ describe('NospaceExecutionService', () => {
 
       expect(spawnCalls).toHaveLength(1);
       expect(spawnCalls[0][0]).toBe(fakeConfig.nospaceBinPath);
-      expect(spawnCalls[0][1]).toEqual(expect.arrayContaining(['--mode', 'compile', '--std', 'standard', '--target', 'ws']));
+      expect(spawnCalls[0][1]).toEqual(
+        expect.arrayContaining([
+          '--mode',
+          'compile',
+          '--std',
+          'standard',
+          '--target',
+          'ws',
+        ])
+      );
     });
 
     it('compile で --mode compile が含まれる', () => {
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
 
-      service.compile('code', { language: 'min', target: 'mnemonic' }, {
-        onStdout: jest.fn(),
-        onStderr: jest.fn(),
-        onExit: jest.fn(),
-      });
+      service.compile(
+        'code',
+        { language: 'min', target: 'mnemonic' },
+        {
+          onStdout: jest.fn(),
+          onStderr: jest.fn(),
+          onExit: jest.fn(),
+        }
+      );
 
       const spawnArgs = spawnCalls[0][1];
       expect(spawnArgs).toContain('--mode');
@@ -597,14 +616,20 @@ describe('NospaceExecutionService', () => {
       const onStderr = jest.fn();
       const onExit = jest.fn();
 
-      const session = service.compile('code', { language: 'standard', target: 'ex-ws' }, {
-        onStdout: jest.fn(),
-        onStderr,
-        onExit,
-      });
+      const session = service.compile(
+        'code',
+        { language: 'standard', target: 'ex-ws' },
+        {
+          onStdout: jest.fn(),
+          onStderr,
+          onExit,
+        }
+      );
 
       expect(session.status).toBe('error');
-      expect(onStderr).toHaveBeenCalledWith(expect.stringContaining('Unsupported compile target'));
+      expect(onStderr).toHaveBeenCalledWith(
+        expect.stringContaining('Unsupported compile target')
+      );
       expect(onExit).toHaveBeenCalledWith(1);
       // spawn は呼ばれない
       expect(spawnCalls).toHaveLength(0);
@@ -633,19 +658,31 @@ describe('NospaceExecutionService', () => {
     it('compile で stdExtensions が --std-ext フラグとして渡される', () => {
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
 
-      service.compile('code', { language: 'standard', target: 'ws', stdExtensions: ['alloc', 'debug'], optPasses: [] }, {
-        onStdout: jest.fn(),
-        onStderr: jest.fn(),
-        onExit: jest.fn(),
-      });
+      service.compile(
+        'code',
+        {
+          language: 'standard',
+          target: 'ws',
+          stdExtensions: ['alloc', 'debug'],
+          optPasses: [],
+        },
+        {
+          onStdout: jest.fn(),
+          onStderr: jest.fn(),
+          onExit: jest.fn(),
+        }
+      );
 
       const spawnArgs = spawnCalls[0][1];
       expect(spawnArgs).toContain('--std-ext');
       // --std-ext alloc と --std-ext debug が両方含まれる
-      const stdExtIndices = spawnArgs.reduce((acc: number[], arg: string, i: number) => {
-        if (arg === '--std-ext') acc.push(i);
-        return acc;
-      }, []);
+      const stdExtIndices = spawnArgs.reduce(
+        (acc: number[], arg: string, i: number) => {
+          if (arg === '--std-ext') acc.push(i);
+          return acc;
+        },
+        []
+      );
       expect(stdExtIndices).toHaveLength(2);
       expect(spawnArgs[stdExtIndices[0] + 1]).toBe('alloc');
       expect(spawnArgs[stdExtIndices[1] + 1]).toBe('debug');
@@ -654,11 +691,20 @@ describe('NospaceExecutionService', () => {
     it('compile で stdExtensions が空の場合 --std-ext は含まれない', () => {
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
 
-      service.compile('code', { language: 'standard', target: 'ws', stdExtensions: [], optPasses: [] }, {
-        onStdout: jest.fn(),
-        onStderr: jest.fn(),
-        onExit: jest.fn(),
-      });
+      service.compile(
+        'code',
+        {
+          language: 'standard',
+          target: 'ws',
+          stdExtensions: [],
+          optPasses: [],
+        },
+        {
+          onStdout: jest.fn(),
+          onStderr: jest.fn(),
+          onExit: jest.fn(),
+        }
+      );
 
       const spawnArgs = spawnCalls[0][1];
       expect(spawnArgs).not.toContain('--std-ext');
@@ -668,11 +714,15 @@ describe('NospaceExecutionService', () => {
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
 
       // CompileOptions の stdExtensions が undefined（旧クライアントからのリクエスト想定）
-      service.compile('code', { language: 'standard', target: 'ws' } as CompileOptions, {
-        onStdout: jest.fn(),
-        onStderr: jest.fn(),
-        onExit: jest.fn(),
-      });
+      service.compile(
+        'code',
+        { language: 'standard', target: 'ws' } as CompileOptions,
+        {
+          onStdout: jest.fn(),
+          onStderr: jest.fn(),
+          onExit: jest.fn(),
+        }
+      );
 
       const spawnArgs = spawnCalls[0][1];
       expect(spawnArgs).not.toContain('--std-ext');

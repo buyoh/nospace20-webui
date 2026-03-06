@@ -1,4 +1,7 @@
-import { TestFileService, TestFileSystem } from '../../app/Services/TestFileService';
+import {
+  TestFileService,
+  TestFileSystem,
+} from '../../app/Services/TestFileService';
 import type { Dirent, Stats } from 'fs';
 
 /** Fake Dirent implementation */

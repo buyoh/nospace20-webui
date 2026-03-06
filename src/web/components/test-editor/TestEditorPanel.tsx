@@ -1,6 +1,9 @@
 import React, { useEffect } from 'react';
 import { useAtomValue } from 'jotai';
-import { selectedTestPathAtom, testTreeAtom } from '../../stores/testEditorAtom';
+import {
+  selectedTestPathAtom,
+  testTreeAtom,
+} from '../../stores/testEditorAtom';
 import { useTestEditor } from '../../hooks/useTestEditor';
 import { useTestTree } from '../../hooks/useTestTree';
 import { TestCaseEditForm } from './TestCaseEditForm';
@@ -94,9 +97,7 @@ export const TestEditorPanel: React.FC = () => {
   if (!testCase) {
     return (
       <div className="test-editor-panel">
-        <div className="test-editor-empty">
-          Select a test case to edit
-        </div>
+        <div className="test-editor-empty">Select a test case to edit</div>
       </div>
     );
   }

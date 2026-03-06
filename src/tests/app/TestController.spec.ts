@@ -101,9 +101,11 @@ describe('TestController', () => {
       await controller.handleGetTree(req, res);
 
       expect(res.statusCalls).toEqual([200]);
-      expect(res.jsonCalls).toEqual([{
-        tree: service.getTreeResult,
-      }]);
+      expect(res.jsonCalls).toEqual([
+        {
+          tree: service.getTreeResult,
+        },
+      ]);
     });
 
     it('should return 500 on error', async () => {
@@ -163,9 +165,11 @@ describe('TestController', () => {
       await controller.handleGetTestCase(req, res);
 
       expect(res.statusCalls).toEqual([404]);
-      expect(res.jsonCalls).toEqual([{
-        error: 'Test file not found: passes/test1',
-      }]);
+      expect(res.jsonCalls).toEqual([
+        {
+          error: 'Test file not found: passes/test1',
+        },
+      ]);
     });
 
     it('should return 400 on path traversal', async () => {
@@ -279,9 +283,11 @@ describe('TestController', () => {
       await controller.handleCreateTestCase(req, res);
 
       expect(res.statusCalls).toEqual([400]);
-      expect(res.jsonCalls).toEqual([{
-        error: 'Path and source are required',
-      }]);
+      expect(res.jsonCalls).toEqual([
+        {
+          error: 'Path and source are required',
+        },
+      ]);
     });
 
     it('should return 409 when test file already exists', async () => {
@@ -301,9 +307,11 @@ describe('TestController', () => {
       await controller.handleCreateTestCase(req, res);
 
       expect(res.statusCalls).toEqual([409]);
-      expect(res.jsonCalls).toEqual([{
-        error: 'Test file already exists: passes/test1',
-      }]);
+      expect(res.jsonCalls).toEqual([
+        {
+          error: 'Test file already exists: passes/test1',
+        },
+      ]);
     });
   });
 });

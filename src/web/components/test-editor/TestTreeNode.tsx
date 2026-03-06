@@ -44,7 +44,9 @@ export const TestTreeNode: React.FC<TestTreeNodeProps> = ({
         {node.type === 'test' && (
           <span className="tree-icon">{isSelected ? '●' : '○'}</span>
         )}
-        <span className={`tree-name ${node.type === 'test' && !node.hasCheck ? 'no-check' : ''}`}>
+        <span
+          className={`tree-name ${node.type === 'test' && !node.hasCheck ? 'no-check' : ''}`}
+        >
           {node.name}
         </span>
       </div>

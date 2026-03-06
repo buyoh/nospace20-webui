@@ -24,7 +24,13 @@ describe('NospaceEditor', () => {
   });
 
   it('annotations prop が渡されない場合 undefined が AceEditor に渡される', () => {
-    render(<NospaceEditor value="code" onChange={() => {}} AceEditorComponent={MockAceEditor} />);
+    render(
+      <NospaceEditor
+        value="code"
+        onChange={() => {}}
+        AceEditorComponent={MockAceEditor}
+      />
+    );
     expect(capturedProps.annotations).toBeUndefined();
   });
 
@@ -32,13 +38,27 @@ describe('NospaceEditor', () => {
     const annotations: Ace.Annotation[] = [
       { row: 2, column: 0, text: 'syntax error', type: 'error' },
     ];
-    render(<NospaceEditor value="code" onChange={() => {}} annotations={annotations} AceEditorComponent={MockAceEditor} />);
+    render(
+      <NospaceEditor
+        value="code"
+        onChange={() => {}}
+        annotations={annotations}
+        AceEditorComponent={MockAceEditor}
+      />
+    );
     expect(capturedProps.annotations).toEqual(annotations);
   });
 
   it('空の annotations 配列も AceEditor に渡されること', () => {
     const annotations: Ace.Annotation[] = [];
-    render(<NospaceEditor value="code" onChange={() => {}} annotations={annotations} AceEditorComponent={MockAceEditor} />);
+    render(
+      <NospaceEditor
+        value="code"
+        onChange={() => {}}
+        annotations={annotations}
+        AceEditorComponent={MockAceEditor}
+      />
+    );
     expect(capturedProps.annotations).toEqual([]);
   });
 });

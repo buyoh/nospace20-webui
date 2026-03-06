@@ -18,7 +18,7 @@ function renderHeader(options?: { flavor?: 'wasm' | 'websocket' }) {
   const result = render(
     <Provider store={store}>
       <Header />
-    </Provider>,
+    </Provider>
   );
   // テスト後にリセット
   if (options?.flavor) {
@@ -53,7 +53,9 @@ describe('Header', () => {
 
   it('server有効時、フレーバーを切り替えられる', () => {
     const { store } = renderHeader({ flavor: 'websocket' });
-    const select = screen.getByLabelText('Execution flavor') as HTMLSelectElement;
+    const select = screen.getByLabelText(
+      'Execution flavor'
+    ) as HTMLSelectElement;
     fireEvent.change(select, { target: { value: 'websocket' } });
     expect(store.get(flavorAtom)).toBe('websocket');
   });

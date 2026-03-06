@@ -9,11 +9,9 @@ export interface CheckResultTypeSelectorProps {
 }
 
 /** check.json のスキーマ型を選択するドロップダウン */
-export const CheckResultTypeSelector: React.FC<CheckResultTypeSelectorProps> = ({
-  value,
-  onChange,
-  disabled,
-}) => (
+export const CheckResultTypeSelector: React.FC<
+  CheckResultTypeSelectorProps
+> = ({ value, onChange, disabled }) => (
   <Select
     className="check-result-type-selector"
     value={value}

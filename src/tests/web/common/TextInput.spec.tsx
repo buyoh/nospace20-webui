@@ -18,7 +18,10 @@ describe('TextInput', () => {
 
   it('className がマージされる', () => {
     render(<TextInput className="extra" />);
-    expect(screen.getByRole('textbox')).toHaveClass('common-text-input', 'extra');
+    expect(screen.getByRole('textbox')).toHaveClass(
+      'common-text-input',
+      'extra'
+    );
   });
 
   it('disabled が反映される', () => {

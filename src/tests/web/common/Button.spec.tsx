@@ -53,7 +53,11 @@ describe('Button', () => {
 
   it('disabled 時にクリックが無効になる', () => {
     const onClick = jest.fn();
-    render(<Button disabled onClick={onClick}>ボタン</Button>);
+    render(
+      <Button disabled onClick={onClick}>
+        ボタン
+      </Button>
+    );
     const btn = screen.getByRole('button');
     expect(btn).toBeDisabled();
     fireEvent.click(btn);

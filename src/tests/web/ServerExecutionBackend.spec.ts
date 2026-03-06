@@ -1,7 +1,10 @@
 // Unit test for ServerExecutionBackend
 
 import { ServerExecutionBackend } from '../../web/services/ServerExecutionBackend';
-import type { ExecutionStatus, OutputEntry } from '../../interfaces/NospaceTypes';
+import type {
+  ExecutionStatus,
+  OutputEntry,
+} from '../../interfaces/NospaceTypes';
 import type { Socket } from 'socket.io-client';
 import type {
   NospaceClientToServerEvents,
@@ -35,7 +38,7 @@ function createFakeSocket(): {
 async function connectBackend(
   backend: ServerExecutionBackend,
   socket: AppSocket,
-  listeners: Record<string, Function>,
+  listeners: Record<string, Function>
 ): Promise<void> {
   const initPromise = backend.init();
   (socket as any).connected = true;
@@ -155,7 +158,10 @@ describe('ServerExecutionBackend', () => {
         errors: [{ message: 'undefined function: foo', line: 3, column: 1 }],
       });
 
-      listeners['nospace_stderr']({ sessionId: 'test-session', data: errorJson });
+      listeners['nospace_stderr']({
+        sessionId: 'test-session',
+        data: errorJson,
+      });
 
       expect(compileErrorsCallback).toHaveBeenCalledWith([
         { message: 'undefined function: foo', line: 3, column: 1 },
@@ -228,7 +234,7 @@ describe('ServerExecutionBackend', () => {
         expect.objectContaining({
           type: 'stdout',
           data: 'output data',
-        }),
+        })
       );
     });
 
@@ -244,7 +250,7 @@ describe('ServerExecutionBackend', () => {
         expect.objectContaining({
           type: 'stderr',
           data: 'error data',
-        }),
+        })
       );
     });
 
@@ -262,7 +268,7 @@ describe('ServerExecutionBackend', () => {
         expect.objectContaining({
           type: 'stderr',
           data: 'undefined function: sdf__puti',
-        }),
+        })
       );
     });
 
@@ -282,7 +288,7 @@ describe('ServerExecutionBackend', () => {
         expect.objectContaining({
           type: 'stderr',
           data: 'syntax error:5:3',
-        }),
+        })
       );
     });
 
@@ -300,7 +306,7 @@ describe('ServerExecutionBackend', () => {
       expect(statusCallback).toHaveBeenCalledWith(
         'running',
         'test-session',
-        undefined,
+        undefined
       );
     });
 
@@ -319,7 +325,7 @@ describe('ServerExecutionBackend', () => {
         expect.objectContaining({
           type: 'system',
           data: expect.stringContaining('Process started'),
-        }),
+        })
       );
     });
 
@@ -339,7 +345,7 @@ describe('ServerExecutionBackend', () => {
         expect.objectContaining({
           type: 'system',
           data: expect.stringContaining('Process exited with code'),
-        }),
+        })
       );
     });
 
@@ -358,7 +364,7 @@ describe('ServerExecutionBackend', () => {
         expect.objectContaining({
           type: 'system',
           data: expect.stringContaining('Process killed'),
-        }),
+        })
       );
     });
 
@@ -377,7 +383,7 @@ describe('ServerExecutionBackend', () => {
         expect.objectContaining({
           type: 'system',
           data: expect.stringContaining('Process error'),
-        }),
+        })
       );
     });
   });

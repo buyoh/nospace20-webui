@@ -8,7 +8,10 @@ import {
   outputEntriesAtom,
   exitCodeAtom,
 } from '../stores/executionAtom';
-import { compileOutputAtom, compileStatusAtom } from '../stores/compileOutputAtom';
+import {
+  compileOutputAtom,
+  compileStatusAtom,
+} from '../stores/compileOutputAtom';
 import { compileErrorsAtom } from '../stores/compileErrorsAtom';
 import type { ExecutionBackend } from '../services/ExecutionBackend';
 import type { Flavor } from '../stores/flavorAtom';
@@ -46,7 +49,7 @@ export interface UseExecutionBackendResult {
  */
 export function useExecutionBackend(
   flavor: Flavor,
-  backendFactory: BackendFactory,
+  backendFactory: BackendFactory
 ): UseExecutionBackendResult {
   const setOutputEntries = useSetAtom(outputEntriesAtom);
   const setCompileOutput = useSetAtom(compileOutputAtom);
@@ -120,7 +123,7 @@ export function useExecutionBackend(
       } catch (err) {
         console.error(
           `[useExecutionBackend] Failed to initialize ${flavor} backend:`,
-          err,
+          err
         );
       }
 

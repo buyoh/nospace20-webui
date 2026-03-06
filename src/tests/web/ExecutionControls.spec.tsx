@@ -21,24 +21,14 @@ describe('ExecutionControls', () => {
 
   it('onRun 未指定時に Run ボタンが表示されない', () => {
     const mockOnKill = jest.fn();
-    render(
-      <ExecutionControls
-        isRunning={false}
-        onKill={mockOnKill}
-      />
-    );
+    render(<ExecutionControls isRunning={false} onKill={mockOnKill} />);
 
     expect(screen.queryByText('Run')).not.toBeInTheDocument();
   });
 
   it('Stop ボタンが表示される', () => {
     const mockOnKill = jest.fn();
-    render(
-      <ExecutionControls
-        isRunning={false}
-        onKill={mockOnKill}
-      />
-    );
+    render(<ExecutionControls isRunning={false} onKill={mockOnKill} />);
 
     const stopButton = screen.getByText('Stop');
     expect(stopButton).toBeInTheDocument();
@@ -92,12 +82,7 @@ describe('ExecutionControls', () => {
 
   it('Stop ボタンクリック時に onKill が呼ばれる', () => {
     const mockOnKill = jest.fn();
-    render(
-      <ExecutionControls
-        isRunning={true}
-        onKill={mockOnKill}
-      />
-    );
+    render(<ExecutionControls isRunning={true} onKill={mockOnKill} />);
 
     const stopButton = screen.getByText('Stop');
     fireEvent.click(stopButton);

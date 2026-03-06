@@ -9,7 +9,9 @@ import {
 
 describe('formatErrorEntries', () => {
   it('should format a single error without location', () => {
-    const result = formatErrorEntries([{ message: 'undefined function: sdf__puti' }]);
+    const result = formatErrorEntries([
+      { message: 'undefined function: sdf__puti' },
+    ]);
     expect(result).toBe('undefined function: sdf__puti');
   });
 
@@ -40,7 +42,12 @@ describe('formatErrorEntries', () => {
 
   it('should include details on a new indented line', () => {
     const result = formatErrorEntries([
-      { message: 'type mismatch', line: 3, column: 1, details: 'expected int, got string' },
+      {
+        message: 'type mismatch',
+        line: 3,
+        column: 1,
+        details: 'expected int, got string',
+      },
     ]);
     expect(result).toBe('type mismatch:3:1\n  expected int, got string');
   });
@@ -55,7 +62,8 @@ describe('formatErrorEntries', () => {
 
 describe('tryFormatNospaceErrorJson', () => {
   it('should format valid error JSON', () => {
-    const json = '{"success":false,"errors":[{"message":"undefined function: sdf__puti"}]}';
+    const json =
+      '{"success":false,"errors":[{"message":"undefined function: sdf__puti"}]}';
     const result = tryFormatNospaceErrorJson(json);
     expect(result).toBe('undefined function: sdf__puti');
   });
@@ -72,10 +80,7 @@ describe('tryFormatNospaceErrorJson', () => {
   it('should format multiple errors', () => {
     const json = JSON.stringify({
       success: false,
-      errors: [
-        { message: 'error one' },
-        { message: 'error two', line: 10 },
-      ],
+      errors: [{ message: 'error one' }, { message: 'error two', line: 10 }],
     });
     const result = tryFormatNospaceErrorJson(json);
     expect(result).toBe('error one\nerror two:10');
@@ -113,7 +118,7 @@ describe('isNospaceErrorResult', () => {
       isNospaceErrorResult({
         success: false,
         errors: [{ message: 'error' }],
-      }),
+      })
     ).toBe(true);
   });
 
@@ -122,14 +127,12 @@ describe('isNospaceErrorResult', () => {
       isNospaceErrorResult({
         success: false,
         errors: [{ message: 'error', line: 1, column: 2 }],
-      }),
+      })
     ).toBe(true);
   });
 
   it('should return false for success=true', () => {
-    expect(
-      isNospaceErrorResult({ success: true, output: 'ok' }),
-    ).toBe(false);
+    expect(isNospaceErrorResult({ success: true, output: 'ok' })).toBe(false);
   });
 
   it('should return false for non-object values', () => {
@@ -145,7 +148,7 @@ describe('isNospaceErrorResult', () => {
 
   it('should return false for errors without message field', () => {
     expect(
-      isNospaceErrorResult({ success: false, errors: [{ foo: 'bar' }] }),
+      isNospaceErrorResult({ success: false, errors: [{ foo: 'bar' }] })
     ).toBe(false);
   });
 });
@@ -157,16 +160,15 @@ describe('tryParseNospaceErrors', () => {
       errors: [{ message: 'undefined function: foo', line: 3, column: 1 }],
     });
     const result = tryParseNospaceErrors(json);
-    expect(result).toEqual([{ message: 'undefined function: foo', line: 3, column: 1 }]);
+    expect(result).toEqual([
+      { message: 'undefined function: foo', line: 3, column: 1 },
+    ]);
   });
 
   it('tryParseNospaceErrors で複数エラーをパースする', () => {
     const json = JSON.stringify({
       success: false,
-      errors: [
-        { message: 'error one' },
-        { message: 'error two', line: 10 },
-      ],
+      errors: [{ message: 'error one' }, { message: 'error two', line: 10 }],
     });
     const result = tryParseNospaceErrors(json);
     expect(result).toEqual([

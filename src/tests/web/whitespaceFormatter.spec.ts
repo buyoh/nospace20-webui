@@ -1,4 +1,7 @@
-import { formatWhitespaceVisible, isWhitespaceTarget } from '../../web/libs/whitespaceFormatter';
+import {
+  formatWhitespaceVisible,
+  isWhitespaceTarget,
+} from '../../web/libs/whitespaceFormatter';
 
 describe('formatWhitespaceVisible', () => {
   it('空文字列の場合、空文字列を返す', () => {
@@ -28,7 +31,9 @@ describe('formatWhitespaceVisible', () => {
 
   it('ws ターゲット出力を正しく変換する', () => {
     // "  \t\n \t \n" → "SPSPTBLF\nSPTBSPLF\n"
-    expect(formatWhitespaceVisible('  \t\n \t \n')).toBe('SPSPTBLF\nSPTBSPLF\n');
+    expect(formatWhitespaceVisible('  \t\n \t \n')).toBe(
+      'SPSPTBLF\nSPTBSPLF\n'
+    );
   });
 
   it('対象外の文字はそのまま通過させる（ex-ws 等）', () => {

@@ -12,7 +12,9 @@ interface TestListPanelProps {
 /**
  * テスト一覧パネル
  */
-export const TestListPanel: React.FC<TestListPanelProps> = ({ onCreateNew }) => {
+export const TestListPanel: React.FC<TestListPanelProps> = ({
+  onCreateNew,
+}) => {
   const { tree, selectedPath, isLoading, error, loadTree, selectTest } =
     useTestTree();
 

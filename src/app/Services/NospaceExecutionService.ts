@@ -219,7 +219,9 @@ export class NospaceExecutionService {
     callbacks: SessionCallbacks
   ): NospaceSession {
     // Validate compile target: ex-ws is WASM-only and not supported by CLI
-    if (!NospaceExecutionService.SUPPORTED_COMPILE_TARGETS.has(options.target)) {
+    if (
+      !NospaceExecutionService.SUPPORTED_COMPILE_TARGETS.has(options.target)
+    ) {
       const sessionId = randomUUID();
       const errorMsg = `Unsupported compile target: ${options.target}\n`;
       callbacks.onStderr(errorMsg);

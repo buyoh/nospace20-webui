@@ -69,12 +69,18 @@ export const ExecutionControls: React.FC<ExecutionControlsProps> = ({
         Stop
       </Button>
       {compileStatus === 'success' && (
-        <span className="compile-status compile-status--success" aria-label="コンパイル成功">
+        <span
+          className="compile-status compile-status--success"
+          aria-label="コンパイル成功"
+        >
           ✓ OK
         </span>
       )}
       {compileStatus === 'error' && (
-        <span className="compile-status compile-status--error" aria-label="コンパイル失敗">
+        <span
+          className="compile-status compile-status--error"
+          aria-label="コンパイル失敗"
+        >
           ✗ Error
         </span>
       )}

@@ -2,7 +2,12 @@ import { atom } from 'jotai';
 import type { TestTreeNode } from '../../interfaces/TestTypes';
 
 /** オペレーションモード */
-export type OperationMode = 'compile' | 'run' | 'run-direct' | 'test-editor' | 'sample';
+export type OperationMode =
+  | 'compile'
+  | 'run'
+  | 'run-direct'
+  | 'test-editor'
+  | 'sample';
 
 /** 現在のオペレーションモード */
 export const operationModeAtom = atom<OperationMode>('compile');

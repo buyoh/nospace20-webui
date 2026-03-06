@@ -214,7 +214,10 @@ describe('checkResultParser', () => {
     });
 
     it('validates parse_error schema - invalid phase', () => {
-      const schema = { type: 'parse_error' as const, phase: 'invalid' as 'tree' };
+      const schema = {
+        type: 'parse_error' as const,
+        phase: 'invalid' as 'tree',
+      };
       const errors = validateCheckResult(schema);
       expect(errors.length).toBeGreaterThan(0);
       expect(errors[0]).toContain('phase');

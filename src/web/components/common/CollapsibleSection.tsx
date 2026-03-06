@@ -64,9 +64,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
           <div className="collapsible-actions">{headerActions}</div>
         )}
       </div>
-      {!isCollapsed && (
-        <div className="collapsible-body">{children}</div>
-      )}
+      {!isCollapsed && <div className="collapsible-body">{children}</div>}
     </div>
   );
 };

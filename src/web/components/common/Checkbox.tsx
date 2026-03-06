@@ -2,8 +2,10 @@ import React from 'react';
 import './styles/Checkbox.scss';
 
 /** Checkbox コンポーネントの Props（type="checkbox" は固定） */
-interface CheckboxProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
+interface CheckboxProps extends Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  'type'
+> {
   /** チェックボックスの横に表示するラベルテキスト */
   label: string;
 }

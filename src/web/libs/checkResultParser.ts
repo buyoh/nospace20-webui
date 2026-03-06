@@ -93,7 +93,7 @@ export function detectCheckResultType(obj: any): CheckResultType {
  */
 export function serializeCheckResult(
   schema: CheckResultSchema,
-  pretty: boolean = true,
+  pretty: boolean = true
 ): string {
   if (pretty) {
     return JSON.stringify(schema, null, 2);
@@ -119,7 +119,7 @@ export function validateCheckResult(schema: CheckResultSchema): string[] {
       counts.forEach((count, index) => {
         if (!Number.isInteger(count) || count < 0) {
           errors.push(
-            `trace_hit_counts[${index}] must be a non-negative integer`,
+            `trace_hit_counts[${index}] must be a non-negative integer`
           );
         }
       });
@@ -199,7 +199,9 @@ export function validateCheckResult(schema: CheckResultSchema): string[] {
  * @param type - スキーマの型
  * @returns 初期化されたスキーマ（unknown の場合は null）
  */
-export function createEmptySchema(type: CheckResultType): CheckResultSchema | null {
+export function createEmptySchema(
+  type: CheckResultType
+): CheckResultSchema | null {
   switch (type) {
     case 'success_trace':
       return { trace_hit_counts: [1] };
