@@ -28,6 +28,9 @@ ace.define(
             include: '#strings',
           },
           {
+            include: '#double-strings',
+          },
+          {
             include: '#numbers',
           },
           {
@@ -69,7 +72,7 @@ ace.define(
           },
           {
             token: 'keyword.declaration.nospace',
-            regex: /\b(?:func|let)\b/,
+            regex: /\b(?:func|let|static|final|constexpr|alias)\b/,
           },
         ],
         '#builtins': [
@@ -94,6 +97,10 @@ ace.define(
               },
               {
                 token: 'constant.character.escape.nospace',
+                regex: /\\x[0-9A-Fa-f]+/,
+              },
+              {
+                token: 'constant.character.escape.nospace',
                 regex: /\\[\\tns'r]/,
               },
               {
@@ -103,6 +110,10 @@ ace.define(
           },
         ],
         '#numbers': [
+          {
+            token: 'constant.numeric.hex.nospace',
+            regex: /\b0x[0-9A-Fa-f]+\b/,
+          },
           {
             token: 'constant.numeric.integer.nospace',
             regex: /\b[0-9]+\b/,
@@ -122,8 +133,16 @@ ace.define(
             regex: /[+\-*\/%]/,
           },
           {
+            token: 'keyword.operator.assignment.compound.nospace',
+            regex: /\+=|\-=|\*=|\/=|%=/,
+          },
+          {
             token: 'keyword.operator.assignment.nospace',
             regex: /=/,
+          },
+          {
+            token: 'keyword.operator.reference.nospace',
+            regex: /&/,
           },
         ],
         '#punctuation': [
@@ -154,6 +173,26 @@ ace.define(
           {
             token: 'punctuation.section.parens.end.nospace',
             regex: /\)/,
+          },
+        ],
+        '#double-strings': [
+          {
+            token: 'punctuation.definition.string.begin.nospace',
+            regex: /"/,
+            push: [
+              {
+                token: 'punctuation.definition.string.end.nospace',
+                regex: /"/,
+                next: 'pop',
+              },
+              {
+                token: 'constant.character.escape.nospace',
+                regex: /\\./,
+              },
+              {
+                defaultToken: 'string.quoted.double.nospace',
+              },
+            ],
           },
         ],
         '#function-definition': [

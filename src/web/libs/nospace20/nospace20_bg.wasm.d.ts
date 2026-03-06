@@ -1,13 +1,18 @@
 /* tslint:disable */
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
+export const __wbg_wasmnospacevm_free: (a: number, b: number) => void;
 export const __wbg_wasmwhitespacevm_free: (a: number, b: number) => void;
 export const compile: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
-export const compile_to_mnemonic_string: (a: number, b: number) => number;
-export const compile_to_whitespace_string: (a: number, b: number) => number;
 export const getOptions: () => number;
 export const parse: (a: number, b: number) => number;
-export const run: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
+export const wasmnospacevm_flushStdout: (a: number, b: number) => void;
+export const wasmnospacevm_getReturnValue: (a: number, b: number) => void;
+export const wasmnospacevm_getTraced: (a: number) => number;
+export const wasmnospacevm_is_complete: (a: number) => number;
+export const wasmnospacevm_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
+export const wasmnospacevm_step: (a: number, b: number) => number;
+export const wasmnospacevm_total_steps: (a: number) => number;
 export const wasmwhitespacevm_call_stack_depth: (a: number) => number;
 export const wasmwhitespacevm_closeStdin: (a: number) => void;
 export const wasmwhitespacevm_current_instruction: (a: number, b: number) => void;

@@ -1,4 +1,128 @@
 /**
+ * NospaceVM の WASM ラッパー
+ *
+ * JS 側ではオペーク型として扱われ、メソッド呼び出しで状態を操作する。
+ * `WasmWhitespaceVM` と同パターンのインターフェースを提供する。
+ */
+export class WasmNospaceVM {
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        WasmNospaceVMFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_wasmnospacevm_free(ptr, 0);
+    }
+    /**
+     * 標準出力バッファの内容を取得しクリアする
+     * @returns {string}
+     */
+    flushStdout() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.wasmnospacevm_flushStdout(retptr, this.__wbg_ptr);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            deferred1_0 = r0;
+            deferred1_1 = r1;
+            return getStringFromWasm0(r0, r1);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+            wasm.__wbindgen_export4(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * 戻り値を取得（完了時のみ有効）
+     * @returns {bigint | undefined}
+     */
+    getReturnValue() {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.wasmnospacevm_getReturnValue(retptr, this.__wbg_ptr);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r2 = getDataViewMemory0().getBigInt64(retptr + 8 * 1, true);
+            return r0 === 0 ? undefined : r2;
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
+     * トレース情報を取得
+     *
+     * 戻り値: { [key: string]: number }
+     * @returns {any}
+     */
+    getTraced() {
+        const ret = wasm.wasmnospacevm_getTraced(this.__wbg_ptr);
+        return takeObject(ret);
+    }
+    /**
+     * 実行完了済みか
+     * @returns {boolean}
+     */
+    is_complete() {
+        const ret = wasm.wasmnospacevm_is_complete(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * nospace ソースコードから VM を構築する
+     *
+     * - `stdin`: 標準入力の内容
+     * - `opt_passes`: 最適化パスの配列（省略可; 例: `["all"]`）
+     * - `ignore_debug`: デバッグ用組み込み関数を無視するか（省略可、デフォルト false）
+     * @param {string} source
+     * @param {string} stdin
+     * @param {OptPass[] | null} [opt_passes]
+     * @param {boolean | null} [ignore_debug]
+     */
+    constructor(source, stdin, opt_passes, ignore_debug) {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passStringToWasm0(source, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(stdin, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+            const len1 = WASM_VECTOR_LEN;
+            wasm.wasmnospacevm_new(retptr, ptr0, len0, ptr1, len1, isLikeNone(opt_passes) ? 0 : addHeapObject(opt_passes), isLikeNone(ignore_debug) ? 0xFFFFFF : ignore_debug ? 1 : 0);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+            if (r2) {
+                throw takeObject(r1);
+            }
+            this.__wbg_ptr = r0 >>> 0;
+            WasmNospaceVMFinalization.register(this, this.__wbg_ptr, this);
+            return this;
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
+     * 指定ステップ数だけ実行する
+     *
+     * 戻り値: VmStepResult ({ status: "suspended" | "complete" | "error", error?: string })
+     * @param {number} budget
+     * @returns {VmStepResult}
+     */
+    step(budget) {
+        const ret = wasm.wasmnospacevm_step(this.__wbg_ptr, budget);
+        return takeObject(ret);
+    }
+    /**
+     * 総式評価回数
+     * @returns {number}
+     */
+    total_steps() {
+        const ret = wasm.wasmnospacevm_total_steps(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+}
+if (Symbol.dispose) WasmNospaceVM.prototype[Symbol.dispose] = WasmNospaceVM.prototype.free;
+
+/**
  * Whitespace VM の WASM ラッパー
  *
  * JS 側ではオペーク型として扱われ、メソッド呼び出しで状態を操作する。
@@ -162,7 +286,7 @@ export class WasmWhitespaceVM {
      * トレース情報を取得
      *
      * 戻り値: { [key: string]: number }
-     * @returns {Record<string, number>}
+     * @returns {any}
      */
     get_traced() {
         const ret = wasm.wasmwhitespacevm_get_traced(this.__wbg_ptr);
@@ -273,30 +397,6 @@ export function compile(source, target, lang_std, std_extensions, opt_passes) {
 }
 
 /**
- * nospace ソースコードをニーモニックにコンパイル（ヘルパー関数）
- * @param {string} source
- * @returns {CompileResult}
- */
-export function compile_to_mnemonic_string(source) {
-    const ptr0 = passStringToWasm0(source, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.compile_to_mnemonic_string(ptr0, len0);
-    return takeObject(ret);
-}
-
-/**
- * nospace ソースコードを Whitespace にコンパイル（ヘルパー関数）
- * @param {string} source
- * @returns {CompileResult}
- */
-export function compile_to_whitespace_string(source) {
-    const ptr0 = passStringToWasm0(source, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.compile_to_whitespace_string(ptr0, len0);
-    return takeObject(ret);
-}
-
-/**
  * 利用可能なオプションの一覧を返す
  *
  * compile() や WasmWhitespaceVM で指定可能なオプション値を取得できる。
@@ -318,83 +418,61 @@ export function parse(source) {
     const ret = wasm.parse(ptr0, len0);
     return takeObject(ret);
 }
-
-/**
- * nospace ソースコードを解析・実行する。
- * CLI の `--mode=run` に相当。
- *
- * - `ignore_debug`: デバッグ用組み込み関数（__assert, __trace 等）を無視する（CLI の `--ignore-debug` 相当）
- * - `opt_passes`: 有効にする最適化パスの配列（例: `["all"]` または `["constant-folding", "dead-code"]`）
- * @param {string} source
- * @param {string} stdin
- * @param {boolean} debug
- * @param {boolean | null} [ignore_debug]
- * @param {OptPass[] | null} [opt_passes]
- * @returns {RunResult}
- */
-export function run(source, stdin, debug, ignore_debug, opt_passes) {
-    const ptr0 = passStringToWasm0(source, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(stdin, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.run(ptr0, len0, ptr1, len1, debug, isLikeNone(ignore_debug) ? 0xFFFFFF : ignore_debug ? 1 : 0, isLikeNone(opt_passes) ? 0 : addHeapObject(opt_passes));
-    return takeObject(ret);
-}
-export function __wbg_Error_8c4e43fe74559d73(arg0, arg1) {
+export function __wbg_Error_83742b46f01ce22d(arg0, arg1) {
     const ret = Error(getStringFromWasm0(arg0, arg1));
     return addHeapObject(ret);
 }
-export function __wbg_String_8f0eb39a4a4c2f66(arg0, arg1) {
+export function __wbg_String_8564e559799eccda(arg0, arg1) {
     const ret = String(getObject(arg1));
     const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_export, wasm.__wbindgen_export2);
     const len1 = WASM_VECTOR_LEN;
     getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
     getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
 }
-export function __wbg___wbindgen_boolean_get_bbbb1c18aa2f5e25(arg0) {
+export function __wbg___wbindgen_boolean_get_c0f3f60bac5a78d1(arg0) {
     const v = getObject(arg0);
     const ret = typeof(v) === 'boolean' ? v : undefined;
     return isLikeNone(ret) ? 0xFFFFFF : ret ? 1 : 0;
 }
-export function __wbg___wbindgen_debug_string_0bc8482c6e3508ae(arg0, arg1) {
+export function __wbg___wbindgen_debug_string_5398f5bb970e0daa(arg0, arg1) {
     const ret = debugString(getObject(arg1));
     const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_export, wasm.__wbindgen_export2);
     const len1 = WASM_VECTOR_LEN;
     getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
     getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
 }
-export function __wbg___wbindgen_is_function_0095a73b8b156f76(arg0) {
+export function __wbg___wbindgen_is_function_3c846841762788c1(arg0) {
     const ret = typeof(getObject(arg0)) === 'function';
     return ret;
 }
-export function __wbg___wbindgen_is_null_ac34f5003991759a(arg0) {
+export function __wbg___wbindgen_is_null_0b605fc6b167c56f(arg0) {
     const ret = getObject(arg0) === null;
     return ret;
 }
-export function __wbg___wbindgen_is_object_5ae8e5880f2c1fbd(arg0) {
+export function __wbg___wbindgen_is_object_781bc9f159099513(arg0) {
     const val = getObject(arg0);
     const ret = typeof(val) === 'object' && val !== null;
     return ret;
 }
-export function __wbg___wbindgen_is_string_cd444516edc5b180(arg0) {
+export function __wbg___wbindgen_is_string_7ef6b97b02428fae(arg0) {
     const ret = typeof(getObject(arg0)) === 'string';
     return ret;
 }
-export function __wbg___wbindgen_is_undefined_9e4d92534c42d778(arg0) {
+export function __wbg___wbindgen_is_undefined_52709e72fb9f179c(arg0) {
     const ret = getObject(arg0) === undefined;
     return ret;
 }
-export function __wbg___wbindgen_jsval_loose_eq_9dd77d8cd6671811(arg0, arg1) {
+export function __wbg___wbindgen_jsval_loose_eq_5bcc3bed3c69e72b(arg0, arg1) {
     const ret = getObject(arg0) == getObject(arg1);
     return ret;
 }
-export function __wbg___wbindgen_number_get_8ff4255516ccad3e(arg0, arg1) {
+export function __wbg___wbindgen_number_get_34bb9d9dcfa21373(arg0, arg1) {
     const obj = getObject(arg1);
     const ret = typeof(obj) === 'number' ? obj : undefined;
     getDataViewMemory0().setFloat64(arg0 + 8 * 1, isLikeNone(ret) ? 0 : ret, true);
     getDataViewMemory0().setInt32(arg0 + 4 * 0, !isLikeNone(ret), true);
 }
-export function __wbg___wbindgen_string_get_72fb696202c56729(arg0, arg1) {
+export function __wbg___wbindgen_string_get_395e606bd0ee4427(arg0, arg1) {
     const obj = getObject(arg1);
     const ret = typeof(obj) === 'string' ? obj : undefined;
     var ptr1 = isLikeNone(ret) ? 0 : passStringToWasm0(ret, wasm.__wbindgen_export, wasm.__wbindgen_export2);
@@ -402,26 +480,26 @@ export function __wbg___wbindgen_string_get_72fb696202c56729(arg0, arg1) {
     getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
     getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
 }
-export function __wbg___wbindgen_throw_be289d5034ed271b(arg0, arg1) {
+export function __wbg___wbindgen_throw_6ddd609b62940d55(arg0, arg1) {
     throw new Error(getStringFromWasm0(arg0, arg1));
 }
-export function __wbg_call_389efe28435a9388() { return handleError(function (arg0, arg1) {
+export function __wbg_call_e133b57c9155d22c() { return handleError(function (arg0, arg1) {
     const ret = getObject(arg0).call(getObject(arg1));
     return addHeapObject(ret);
 }, arguments); }
-export function __wbg_done_57b39ecd9addfe81(arg0) {
+export function __wbg_done_08ce71ee07e3bd17(arg0) {
     const ret = getObject(arg0).done;
     return ret;
 }
-export function __wbg_get_9b94d73e6221f75c(arg0, arg1) {
-    const ret = getObject(arg0)[arg1 >>> 0];
-    return addHeapObject(ret);
-}
-export function __wbg_get_b3ed3ad4be2bc8ac() { return handleError(function (arg0, arg1) {
+export function __wbg_get_326e41e095fb2575() { return handleError(function (arg0, arg1) {
     const ret = Reflect.get(getObject(arg0), getObject(arg1));
     return addHeapObject(ret);
 }, arguments); }
-export function __wbg_instanceof_ArrayBuffer_c367199e2fa2aa04(arg0) {
+export function __wbg_get_unchecked_329cfe50afab7352(arg0, arg1) {
+    const ret = getObject(arg0)[arg1 >>> 0];
+    return addHeapObject(ret);
+}
+export function __wbg_instanceof_ArrayBuffer_101e2bf31071a9f6(arg0) {
     let result;
     try {
         result = getObject(arg0) instanceof ArrayBuffer;
@@ -431,7 +509,7 @@ export function __wbg_instanceof_ArrayBuffer_c367199e2fa2aa04(arg0) {
     const ret = result;
     return ret;
 }
-export function __wbg_instanceof_Uint8Array_9b9075935c74707c(arg0) {
+export function __wbg_instanceof_Uint8Array_740438561a5b956d(arg0) {
     let result;
     try {
         result = getObject(arg0) instanceof Uint8Array;
@@ -441,60 +519,64 @@ export function __wbg_instanceof_Uint8Array_9b9075935c74707c(arg0) {
     const ret = result;
     return ret;
 }
-export function __wbg_isArray_d314bb98fcf08331(arg0) {
+export function __wbg_isArray_33b91feb269ff46e(arg0) {
     const ret = Array.isArray(getObject(arg0));
     return ret;
 }
-export function __wbg_iterator_6ff6560ca1568e55() {
+export function __wbg_iterator_d8f549ec8fb061b1() {
     const ret = Symbol.iterator;
     return addHeapObject(ret);
 }
-export function __wbg_length_32ed9a279acd054c(arg0) {
+export function __wbg_length_b3416cf66a5452c8(arg0) {
     const ret = getObject(arg0).length;
     return ret;
 }
-export function __wbg_length_35a7bace40f36eac(arg0) {
+export function __wbg_length_ea16607d7b61445b(arg0) {
     const ret = getObject(arg0).length;
     return ret;
 }
-export function __wbg_new_361308b2356cecd0() {
-    const ret = new Object();
-    return addHeapObject(ret);
-}
-export function __wbg_new_3eb36ae241fe6f44() {
-    const ret = new Array();
-    return addHeapObject(ret);
-}
-export function __wbg_new_dca287b076112a51() {
+export function __wbg_new_49d5571bd3f0c4d4() {
     const ret = new Map();
     return addHeapObject(ret);
 }
-export function __wbg_new_dd2b680c8bf6ae29(arg0) {
+export function __wbg_new_5f486cdf45a04d78(arg0) {
     const ret = new Uint8Array(getObject(arg0));
     return addHeapObject(ret);
 }
-export function __wbg_next_3482f54c49e8af19() { return handleError(function (arg0) {
+export function __wbg_new_a70fbab9066b301f() {
+    const ret = new Array();
+    return addHeapObject(ret);
+}
+export function __wbg_new_ab79df5bd7c26067() {
+    const ret = new Object();
+    return addHeapObject(ret);
+}
+export function __wbg_next_11b99ee6237339e3() { return handleError(function (arg0) {
     const ret = getObject(arg0).next();
     return addHeapObject(ret);
 }, arguments); }
-export function __wbg_next_418f80d8f5303233(arg0) {
+export function __wbg_next_e01a967809d1aa68(arg0) {
     const ret = getObject(arg0).next;
     return addHeapObject(ret);
 }
-export function __wbg_prototypesetcall_bdcdcc5842e4d77d(arg0, arg1, arg2) {
+export function __wbg_prototypesetcall_d62e5099504357e6(arg0, arg1, arg2) {
     Uint8Array.prototype.set.call(getArrayU8FromWasm0(arg0, arg1), getObject(arg2));
 }
-export function __wbg_set_1eb0999cf5d27fc8(arg0, arg1, arg2) {
+export function __wbg_set_282384002438957f(arg0, arg1, arg2) {
+    getObject(arg0)[arg1 >>> 0] = takeObject(arg2);
+}
+export function __wbg_set_6be42768c690e380(arg0, arg1, arg2) {
+    getObject(arg0)[takeObject(arg1)] = takeObject(arg2);
+}
+export function __wbg_set_7eaa4f96924fd6b3() { return handleError(function (arg0, arg1, arg2) {
+    const ret = Reflect.set(getObject(arg0), getObject(arg1), getObject(arg2));
+    return ret;
+}, arguments); }
+export function __wbg_set_bf7251625df30a02(arg0, arg1, arg2) {
     const ret = getObject(arg0).set(getObject(arg1), getObject(arg2));
     return addHeapObject(ret);
 }
-export function __wbg_set_3f1d0b984ed272ed(arg0, arg1, arg2) {
-    getObject(arg0)[takeObject(arg1)] = takeObject(arg2);
-}
-export function __wbg_set_f43e577aea94465b(arg0, arg1, arg2) {
-    getObject(arg0)[arg1 >>> 0] = takeObject(arg2);
-}
-export function __wbg_value_0546255b415e96c1(arg0) {
+export function __wbg_value_21fc78aab0322612(arg0) {
     const ret = getObject(arg0).value;
     return addHeapObject(ret);
 }
@@ -503,17 +585,12 @@ export function __wbindgen_cast_0000000000000001(arg0) {
     const ret = arg0;
     return addHeapObject(ret);
 }
-export function __wbindgen_cast_0000000000000002(arg0) {
-    // Cast intrinsic for `I64 -> Externref`.
-    const ret = arg0;
-    return addHeapObject(ret);
-}
-export function __wbindgen_cast_0000000000000003(arg0, arg1) {
+export function __wbindgen_cast_0000000000000002(arg0, arg1) {
     // Cast intrinsic for `Ref(String) -> Externref`.
     const ret = getStringFromWasm0(arg0, arg1);
     return addHeapObject(ret);
 }
-export function __wbindgen_cast_0000000000000004(arg0) {
+export function __wbindgen_cast_0000000000000003(arg0) {
     // Cast intrinsic for `U64 -> Externref`.
     const ret = BigInt.asUintN(64, arg0);
     return addHeapObject(ret);
@@ -525,6 +602,9 @@ export function __wbindgen_object_clone_ref(arg0) {
 export function __wbindgen_object_drop_ref(arg0) {
     takeObject(arg0);
 }
+const WasmNospaceVMFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_wasmnospacevm_free(ptr >>> 0, 1));
 const WasmWhitespaceVMFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_wasmwhitespacevm_free(ptr >>> 0, 1));
@@ -604,7 +684,7 @@ function debugString(val) {
 }
 
 function dropObject(idx) {
-    if (idx < 132) return;
+    if (idx < 1028) return;
     heap[idx] = heap_next;
     heap_next = idx;
 }
@@ -645,7 +725,7 @@ function handleError(f, args) {
     }
 }
 
-let heap = new Array(128).fill(undefined);
+let heap = new Array(1024).fill(undefined);
 heap.push(undefined, null, true, false);
 
 let heap_next = heap.length;

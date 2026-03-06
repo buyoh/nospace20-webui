@@ -5,5 +5,5 @@ import { __wbg_set_wasm } from "./nospace20_bg.js";
 __wbg_set_wasm(wasm);
 
 export {
-    WasmWhitespaceVM, compile, compile_to_mnemonic_string, compile_to_whitespace_string, getOptions, parse, run
+    WasmNospaceVM, WasmWhitespaceVM, compile, getOptions, parse
 } from "./nospace20_bg.js";

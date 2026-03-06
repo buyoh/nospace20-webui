@@ -5,21 +5,13 @@ interface WasmError {
     message: string;
     line?: number;
     column?: number;
+    details?: string;
 }
 
 interface ResultErr {
     success: false;
     errors: WasmError[];
 }
-
-interface RunResultOk {
-    success: true;
-    returnValue: number | null;
-    stdout: string;
-    trace?: Record<string, string>;
-}
-
-type RunResult = RunResultOk | ResultErr;
 
 interface CompileResultOk {
     success: true;
@@ -61,6 +53,53 @@ interface OptionsDefinition {
 }
 
 
+
+/**
+ * NospaceVM の WASM ラッパー
+ *
+ * JS 側ではオペーク型として扱われ、メソッド呼び出しで状態を操作する。
+ * `WasmWhitespaceVM` と同パターンのインターフェースを提供する。
+ */
+export class WasmNospaceVM {
+    free(): void;
+    [Symbol.dispose](): void;
+    /**
+     * 標準出力バッファの内容を取得しクリアする
+     */
+    flushStdout(): string;
+    /**
+     * 戻り値を取得（完了時のみ有効）
+     */
+    getReturnValue(): bigint | undefined;
+    /**
+     * トレース情報を取得
+     *
+     * 戻り値: { [key: string]: number }
+     */
+    getTraced(): any;
+    /**
+     * 実行完了済みか
+     */
+    is_complete(): boolean;
+    /**
+     * nospace ソースコードから VM を構築する
+     *
+     * - `stdin`: 標準入力の内容
+     * - `opt_passes`: 最適化パスの配列（省略可; 例: `["all"]`）
+     * - `ignore_debug`: デバッグ用組み込み関数を無視するか（省略可、デフォルト false）
+     */
+    constructor(source: string, stdin: string, opt_passes?: OptPass[] | null, ignore_debug?: boolean | null);
+    /**
+     * 指定ステップ数だけ実行する
+     *
+     * 戻り値: VmStepResult ({ status: "suspended" | "complete" | "error", error?: string })
+     */
+    step(budget: number): VmStepResult;
+    /**
+     * 総式評価回数
+     */
+    total_steps(): number;
+}
 
 /**
  * Whitespace VM の WASM ラッパー
@@ -120,7 +159,7 @@ export class WasmWhitespaceVM {
      *
      * 戻り値: { [key: string]: number }
      */
-    get_traced(): Record<string, number>;
+    get_traced(): any;
     /**
      * 実行完了済みか
      */
@@ -164,16 +203,6 @@ export class WasmWhitespaceVM {
 export function compile(source: string, target: string, lang_std: string, std_extensions?: StdExtension[] | null, opt_passes?: OptPass[] | null): CompileResult;
 
 /**
- * nospace ソースコードをニーモニックにコンパイル（ヘルパー関数）
- */
-export function compile_to_mnemonic_string(source: string): CompileResult;
-
-/**
- * nospace ソースコードを Whitespace にコンパイル（ヘルパー関数）
- */
-export function compile_to_whitespace_string(source: string): CompileResult;
-
-/**
  * 利用可能なオプションの一覧を返す
  *
  * compile() や WasmWhitespaceVM で指定可能なオプション値を取得できる。
@@ -184,12 +213,3 @@ export function getOptions(): OptionsDefinition;
  * nospace ソースコードの構文チェックのみ行う。
  */
 export function parse(source: string): ParseResult;
-
-/**
- * nospace ソースコードを解析・実行する。
- * CLI の `--mode=run` に相当。
- *
- * - `ignore_debug`: デバッグ用組み込み関数（__assert, __trace 等）を無視する（CLI の `--ignore-debug` 相当）
- * - `opt_passes`: 有効にする最適化パスの配列（例: `["all"]` または `["constant-folding", "dead-code"]`）
- */
-export function run(source: string, stdin: string, debug: boolean, ignore_debug?: boolean | null, opt_passes?: OptPass[] | null): RunResult;
