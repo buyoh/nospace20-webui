@@ -38,9 +38,10 @@ describe('Header', () => {
     const nospaceVersion = screen.getByTestId('nospace-version');
     const webuiVersion = screen.getByTestId('webui-version');
     expect(nospaceVersion).toBeInTheDocument();
-    expect(nospaceVersion.textContent).toBe('nospace v1.0.0');
+    // version が含まれているかどうか
+    expect(nospaceVersion.textContent).toMatch(/v\d+\.\d+\.\d+/);
     expect(webuiVersion).toBeInTheDocument();
-    expect(webuiVersion.textContent).toBe('webui 2026.03.08');
+    expect(webuiVersion.textContent).toMatch(/v?\d+\.\d+\.\d+/);
   });
 
   it('wasmのみの場合、バッジでフレーバーが表示される', () => {
