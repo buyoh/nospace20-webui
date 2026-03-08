@@ -23,12 +23,12 @@ export const Header: React.FC = () => {
         <div className="header-versions">
           {nospaceVersion && (
             <span className="version-badge" data-testid="nospace-version">
-              nospace v{nospaceVersion}
+              wasm: v{nospaceVersion}
             </span>
           )}
           {webuiVersion && (
             <span className="version-badge" data-testid="webui-version">
-              webui {webuiVersion}
+              webui: {webuiVersion}
             </span>
           )}
         </div>
