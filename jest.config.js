@@ -15,7 +15,12 @@ module.exports = {
   'transform': {
     '^.+\\.(ts|tsx)$': ['ts-jest', {
       tsconfig: 'tsconfig.test.json'
-    }]
+    }],
+    // nospace20_bg.js は ESM 形式のため, ts-jest で CJS に変換する
+    '^.+nospace20_bg\\.js$': ['ts-jest', {
+      tsconfig: 'tsconfig.test.json',
+      diagnostics: false,
+    }],
   },
   'testMatch': testMatch,
   'testEnvironment': 'jsdom',
