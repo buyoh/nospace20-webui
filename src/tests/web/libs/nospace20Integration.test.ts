@@ -54,7 +54,9 @@ const STDIN_ECHO_SRC = `func: __main() {
 }`;
 
 /** VM をステップ実行して完了まで待つ */
-function runUntilComplete(vm: InstanceType<typeof WasmNospaceVM> | InstanceType<typeof WasmWhitespaceVM>) {
+function runUntilComplete(
+  vm: InstanceType<typeof WasmNospaceVM> | InstanceType<typeof WasmWhitespaceVM>
+) {
   const MAX_STEPS = 1_000_000;
   let totalSteps = 0;
   for (;;) {

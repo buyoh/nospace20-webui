@@ -31,7 +31,7 @@ const bgJs = require('../../../web/libs/nospace20/nospace20_bg.js') as Record<
 // WASM バイナリを同期読み込みしてインスタンス化
 const wasmPath = join(
   __dirname,
-  '../../../web/libs/nospace20/nospace20_bg.wasm',
+  '../../../web/libs/nospace20/nospace20_bg.wasm'
 );
 const wasmBytes = readFileSync(wasmPath);
 const wasmModule = new WebAssembly.Module(wasmBytes);
@@ -41,7 +41,7 @@ const wasmInstance = new WebAssembly.Instance(wasmModule, {
 });
 // JS グルーコードに WASM エクスポートを注入して初期化完了
 (bgJs.__wbg_set_wasm as (val: WebAssembly.Exports) => void)(
-  wasmInstance.exports,
+  wasmInstance.exports
 );
 
 export const WasmNospaceVM = bgJs.WasmNospaceVM as typeof WasmNospaceVMType;

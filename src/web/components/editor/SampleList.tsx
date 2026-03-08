@@ -35,8 +35,8 @@ export const SampleList: React.FC<SampleListProps> = ({ samples, onLoad }) => {
       <div className="sample-list__footer">
         <a href="https://github.com/buyoh/nospace20/blob/master/docs/spec.md">
           Language Specification
-        </a>
-        {' '}/{' '}
+        </a>{' '}
+        /{' '}
         <a href="https://github.com/buyoh/nospace20/blob/master/docs/tutorial.md">
           Tutorial
         </a>
