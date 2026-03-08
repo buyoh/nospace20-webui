@@ -6,6 +6,18 @@
   flex: 1;
 }
 
+.sample-list__footer {
+  font-size: 0.9rem;
+  a {
+    color: inherit;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
 .sample-list__item {
   display: flex;
   align-items: center;
