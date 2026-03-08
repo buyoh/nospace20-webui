@@ -1,8 +1,8 @@
 /**
- * NospaceVM の WASM ラッパー
+ * WASM wrapper for NospaceVM
  *
- * JS 側ではオペーク型として扱われ、メソッド呼び出しで状態を操作する。
- * `WasmWhitespaceVM` と同パターンのインターフェースを提供する。
+ * Treated as an opaque type on the JS side; manipulate state via method calls.
+ * Provides the same interface pattern as `WasmWhitespaceVM`.
  */
 export class WasmNospaceVM {
     __destroy_into_raw() {
@@ -16,7 +16,7 @@ export class WasmNospaceVM {
         wasm.__wbg_wasmnospacevm_free(ptr, 0);
     }
     /**
-     * 標準出力バッファの内容を取得しクリアする
+     * Get and clear stdout buffer contents
      * @returns {string}
      */
     flushStdout() {
@@ -36,7 +36,7 @@ export class WasmNospaceVM {
         }
     }
     /**
-     * 戻り値を取得（完了時のみ有効）
+     * Get return value (only valid when complete)
      * @returns {bigint | undefined}
      */
     getReturnValue() {
@@ -51,9 +51,9 @@ export class WasmNospaceVM {
         }
     }
     /**
-     * トレース情報を取得
+     * Get trace information
      *
-     * 戻り値: { [key: string]: number }
+     * Returns: { [key: string]: number }
      * @returns {any}
      */
     getTraced() {
@@ -61,7 +61,7 @@ export class WasmNospaceVM {
         return takeObject(ret);
     }
     /**
-     * 実行完了済みか
+     * Whether execution is complete
      * @returns {boolean}
      */
     is_complete() {
@@ -69,11 +69,11 @@ export class WasmNospaceVM {
         return ret !== 0;
     }
     /**
-     * nospace ソースコードから VM を構築する
+     * Construct VM from nospace source code
      *
-     * - `stdin`: 標準入力の内容
-     * - `opt_passes`: 最適化パスの配列（省略可; 例: `["all"]`）
-     * - `ignore_debug`: デバッグ用組み込み関数を無視するか（省略可、デフォルト false）
+     * - `stdin`: Contents of standard input
+     * - `opt_passes`: Array of optimization passes (optional; e.g., `["all"]`)
+     * - `ignore_debug`: Whether to ignore debug built-in functions (optional, defaults to false)
      * @param {string} source
      * @param {string} stdin
      * @param {OptPass[] | null} [opt_passes]
@@ -101,9 +101,9 @@ export class WasmNospaceVM {
         }
     }
     /**
-     * 指定ステップ数だけ実行する
+     * Execute specified number of steps
      *
-     * 戻り値: VmStepResult ({ status: "suspended" | "complete" | "error", error?: string })
+     * Returns: VmStepResult ({ status: "suspended" | "complete" | "error", error?: string })
      * @param {number} budget
      * @returns {VmStepResult}
      */
@@ -112,7 +112,7 @@ export class WasmNospaceVM {
         return takeObject(ret);
     }
     /**
-     * 総式評価回数
+     * Total number of expression evaluations
      * @returns {number}
      */
     total_steps() {
@@ -123,9 +123,9 @@ export class WasmNospaceVM {
 if (Symbol.dispose) WasmNospaceVM.prototype[Symbol.dispose] = WasmNospaceVM.prototype.free;
 
 /**
- * Whitespace VM の WASM ラッパー
+ * WASM wrapper for Whitespace VM
  *
- * JS 側ではオペーク型として扱われ、メソッド呼び出しで状態を操作する。
+ * Treated as an opaque type on the JS side; manipulate state via method calls.
  */
 export class WasmWhitespaceVM {
     static __wrap(ptr) {
@@ -146,7 +146,7 @@ export class WasmWhitespaceVM {
         wasm.__wbg_wasmwhitespacevm_free(ptr, 0);
     }
     /**
-     * コールスタックの深さ
+     * Depth of call stack
      * @returns {number}
      */
     call_stack_depth() {
@@ -154,15 +154,15 @@ export class WasmWhitespaceVM {
         return ret >>> 0;
     }
     /**
-     * stdin のストリーム終端を通知する（interactive モード用）
+     * Notify end of stdin stream (for interactive mode)
      *
-     * 以降、バッファが空の状態で入力命令に到達すると EOF として処理される。
+     * After this, if an input instruction is reached with an empty buffer, it will be treated as EOF.
      */
     closeStdin() {
         wasm.wasmwhitespacevm_closeStdin(this.__wbg_ptr);
     }
     /**
-     * 現在の命令のニーモニック表現を取得（デバッグ用）
+     * Get mnemonic representation of current instruction (for debugging)
      * @returns {string | undefined}
      */
     current_instruction() {
@@ -182,7 +182,7 @@ export class WasmWhitespaceVM {
         }
     }
     /**
-     * 命令列全体のニーモニック表現を取得
+     * Get mnemonic representation of entire instruction sequence
      * @returns {string[]}
      */
     disassemble() {
@@ -190,7 +190,7 @@ export class WasmWhitespaceVM {
         return takeObject(ret);
     }
     /**
-     * 標準出力バッファの内容を取得しクリアする
+     * Get and clear stdout buffer contents
      * @returns {string}
      */
     flush_stdout() {
@@ -210,7 +210,7 @@ export class WasmWhitespaceVM {
         }
     }
     /**
-     * Whitespace ソースコードから直接 VM を構築する
+     * Construct VM directly from Whitespace source code
      * @param {string} ws_source
      * @param {string} stdin
      * @returns {WasmWhitespaceVM}
@@ -235,10 +235,10 @@ export class WasmWhitespaceVM {
         }
     }
     /**
-     * Interactive モードで Whitespace ソースから VM を構築する
+     * Construct VM from Whitespace source in interactive mode
      *
-     * stdin バッファが空の場合、WaitingForInput で一時停止する。
-     * provide_stdin() で後からデータを追加可能。
+     * When stdin buffer is empty, suspends with WaitingForInput.
+     * Can add data later with provide_stdin().
      * @param {string} ws_source
      * @param {string} initial_stdin
      * @returns {WasmWhitespaceVM}
@@ -263,9 +263,9 @@ export class WasmWhitespaceVM {
         }
     }
     /**
-     * ヒープの現在の内容
+     * Current contents of heap
      *
-     * 戻り値: { [address: string]: number }
+     * Returns: { [address: string]: number }
      * @returns {Record<string, number>}
      */
     get_heap() {
@@ -273,9 +273,9 @@ export class WasmWhitespaceVM {
         return takeObject(ret);
     }
     /**
-     * データスタックの現在の内容
+     * Current contents of data stack
      *
-     * 戻り値: number[] (i64 → JS number に変換。53bit 超は精度が落ちる)
+     * Returns: number[] (i64 → JS number conversion. Precision drops for values > 53 bits)
      * @returns {number[]}
      */
     get_stack() {
@@ -283,9 +283,9 @@ export class WasmWhitespaceVM {
         return takeObject(ret);
     }
     /**
-     * トレース情報を取得
+     * Get trace information
      *
-     * 戻り値: { [key: string]: number }
+     * Returns: { [key: string]: number }
      * @returns {any}
      */
     get_traced() {
@@ -293,7 +293,7 @@ export class WasmWhitespaceVM {
         return takeObject(ret);
     }
     /**
-     * 実行完了済みか
+     * Whether execution is complete
      * @returns {boolean}
      */
     is_complete() {
@@ -301,9 +301,9 @@ export class WasmWhitespaceVM {
         return ret !== 0;
     }
     /**
-     * nospace ソースをコンパイルし、Whitespace VM を構築する
+     * Compile nospace source and construct Whitespace VM
      *
-     * - `std_extensions`: 有効にする拡張の配列（例: `["debug", "alloc"]`）
+     * - `std_extensions`: Array of extensions to enable (e.g., `["debug", "alloc"]`)
      * @param {string} nospace_source
      * @param {string} stdin
      * @param {boolean | null} [interactive]
@@ -331,7 +331,7 @@ export class WasmWhitespaceVM {
         }
     }
     /**
-     * 現在のプログラムカウンタ（命令インデックス）
+     * Current program counter (instruction index)
      * @returns {number}
      */
     pc() {
@@ -339,10 +339,10 @@ export class WasmWhitespaceVM {
         return ret >>> 0;
     }
     /**
-     * stdin にデータを追加する（interactive モード用）
+     * Add data to stdin (for interactive mode)
      *
-     * WaitingForInput 状態の際に呼び出し、次の step() で入力を再試行する。
-     * InputNumber の場合、改行（\n）付きで投入する必要がある。
+     * Call when in WaitingForInput state to retry input on next step().
+     * For InputNumber, must provide with newline (\n).
      * @param {string} data
      */
     provideStdin(data) {
@@ -351,9 +351,9 @@ export class WasmWhitespaceVM {
         wasm.wasmwhitespacevm_provideStdin(this.__wbg_ptr, ptr0, len0);
     }
     /**
-     * 指定ステップ数だけ実行する
+     * Execute specified number of steps
      *
-     * 戻り値: { status: "suspended" | "complete" | "error" | "waiting_for_input", error?: string, inputType?: string }
+     * Returns: { status: "suspended" | "complete" | "error" | "waiting_for_input", error?: string, inputType?: string }
      * @param {number} budget
      * @returns {VmStepResult}
      */
@@ -362,7 +362,7 @@ export class WasmWhitespaceVM {
         return takeObject(ret);
     }
     /**
-     * 総実行命令数
+     * Total number of instructions executed
      * @returns {number}
      */
     total_steps() {
@@ -373,11 +373,11 @@ export class WasmWhitespaceVM {
 if (Symbol.dispose) WasmWhitespaceVM.prototype[Symbol.dispose] = WasmWhitespaceVM.prototype.free;
 
 /**
- * nospace ソースコードをコンパイルする。
- * CLI の `--mode=compile` に相当。
+ * Compile nospace source code.
+ * Equivalent to CLI's `--mode=compile`.
  *
- * - `std_extensions`: 有効にする拡張の配列（例: `["debug", "alloc"]`）
- * - `opt_passes`: 有効にする最適化パスの配列（例: `["all"]` または `["constant-folding", "dead-code"]`）
+ * - `std_extensions`: Array of extensions to enable (e.g., `["debug", "alloc"]`)
+ * - `opt_passes`: Array of optimization passes to enable (e.g., `["all"]` or `["constant-folding", "dead-code"]`)
  * @param {string} source
  * @param {string} target
  * @param {string} lang_std
@@ -397,9 +397,9 @@ export function compile(source, target, lang_std, std_extensions, opt_passes) {
 }
 
 /**
- * 利用可能なオプションの一覧を返す
+ * Return a list of available options
  *
- * compile() や WasmWhitespaceVM で指定可能なオプション値を取得できる。
+ * Get option values that can be specified in compile() or WasmWhitespaceVM.
  * @returns {OptionsDefinition}
  */
 export function getOptions() {
@@ -408,7 +408,7 @@ export function getOptions() {
 }
 
 /**
- * nospace ソースコードの構文チェックのみ行う。
+ * Perform only syntax checking on nospace source code.
  * @param {string} source
  * @returns {ParseResult}
  */
