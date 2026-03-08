@@ -22,3 +22,11 @@ export function getApplicationFlavor(): Flavor {
   // Default to 'wasm' in test environment
   return 'wasm';
 }
+
+export function getNospaceVersion(): string | undefined {
+  return '1.0.0';
+}
+
+export function getWebuiVersion(): string | undefined {
+  return '2026.03.08';
+}

@@ -33,6 +33,16 @@ describe('Header', () => {
     expect(screen.getByText('nospace Web IDE')).toBeInTheDocument();
   });
 
+  it('バージョン情報が表示される', () => {
+    renderHeader();
+    const nospaceVersion = screen.getByTestId('nospace-version');
+    const webuiVersion = screen.getByTestId('webui-version');
+    expect(nospaceVersion).toBeInTheDocument();
+    expect(nospaceVersion.textContent).toBe('nospace v1.0.0');
+    expect(webuiVersion).toBeInTheDocument();
+    expect(webuiVersion.textContent).toBe('webui 2026.03.08');
+  });
+
   it('wasmのみの場合、バッジでフレーバーが表示される', () => {
     renderHeader();
     const badge = screen.getByTestId('flavor-badge');

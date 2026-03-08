@@ -27,7 +27,11 @@ export function setApplicationFlavor(value: Flavor): void {
  * moduleNameMapper によりモックに差し替えられるため、パースエラーは発生しない。
  */
 function readWebEnvVars(): ExpectedEnvVars {
-  return { VITE_APPLICATION_FLAVOR: import.meta.env.VITE_APPLICATION_FLAVOR };
+  return {
+    VITE_APPLICATION_FLAVOR: import.meta.env.VITE_APPLICATION_FLAVOR,
+    VITE_NOSPACE_VERSION: import.meta.env.VITE_NOSPACE_VERSION,
+    VITE_WEBUI_VERSION: import.meta.env.VITE_WEBUI_VERSION,
+  };
 }
 
 /** 環境変数をパースしてアプリケーション実行フレーバーを返す */
@@ -46,4 +50,20 @@ export function parseApplicationFlavor(env: ExpectedEnvVars): Flavor {
 export function getApplicationFlavor(): Flavor {
   if (applicationFlavorOverride !== null) return applicationFlavorOverride;
   return parseApplicationFlavor(readWebEnvVars());
+}
+
+/**
+ * nospace コンパイラのバージョンを返す
+ * @returns nospace のバージョン (semver) または undefined
+ */
+export function getNospaceVersion(): string | undefined {
+  return readWebEnvVars().VITE_NOSPACE_VERSION;
+}
+
+/**
+ * nospace-webui のバージョンを返す
+ * @returns webui のバージョン (日付形式) または undefined
+ */
+export function getWebuiVersion(): string | undefined {
+  return readWebEnvVars().VITE_WEBUI_VERSION;
 }

@@ -20,5 +20,9 @@ export interface ExpectedEnvVars {
   NOSPACE_MAX_PROCESSES?: string;
   /** (app)テストファイルディレクトリのパス */
   NOSPACE_TEST_DIR?: string;
+  /** (web) nospace コンパイラのバージョン (semver) */
+  VITE_NOSPACE_VERSION?: string;
+  /** (web) nospace-webui のバージョン (日付: YYYY.MM.DD) */
+  VITE_WEBUI_VERSION?: string;
 }
 // 修正後、.env.example も更新すること
