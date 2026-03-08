@@ -3,23 +3,19 @@
 // bundler 形式の nospace20.js を動的 import し、WASM の遅延ロードを提供する。
 
 import type {
+  WasmNospaceVM as WasmNospaceVMType,
   WasmWhitespaceVM as WasmWhitespaceVMType,
   compile as compileType,
-  compile_to_mnemonic_string as compileToMnemonicType,
-  compile_to_whitespace_string as compileToWsType,
   getOptions as getOptionsType,
   parse as parseType,
-  run as runType,
 } from './nospace20';
 
 type Nospace20Module = {
+  WasmNospaceVM: typeof WasmNospaceVMType;
   WasmWhitespaceVM: typeof WasmWhitespaceVMType;
   compile: typeof compileType;
-  compile_to_mnemonic_string: typeof compileToMnemonicType;
-  compile_to_whitespace_string: typeof compileToWsType;
   getOptions: typeof getOptionsType;
   parse: typeof parseType;
-  run: typeof runType;
 };
 
 /**

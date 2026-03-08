@@ -6,7 +6,7 @@ import type {
 
 /** コンパイルオプション */
 export const compileOptionsAtom = atom<CompileOptions>({
-  language: 'ws',
+  language: 'standard',
   target: 'ws',
   stdExtensions: ['alloc'],
   optPasses: ['all'],

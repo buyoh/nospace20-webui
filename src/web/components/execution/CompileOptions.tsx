@@ -56,8 +56,6 @@ const OPT_PASS_LABELS: Record<string, string> = {
 /** WASM getOptions() が返す値を UI 用の OptionItem 配列に変換するフォールバック付きヘルパー */
 const FALLBACK_LANGUAGE_OPTIONS: OptionItem<LanguageSubset>[] = [
   { value: 'standard', label: 'Standard' },
-  { value: 'min', label: 'Minimal' },
-  { value: 'ws', label: 'Whitespace' },
 ];
 
 const FALLBACK_TARGET_OPTIONS: OptionItem<CompileTarget>[] = [
