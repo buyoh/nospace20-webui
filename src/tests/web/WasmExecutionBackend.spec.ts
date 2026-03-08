@@ -23,6 +23,8 @@ let fakeNospaceVMConstructorShouldThrow: any;
 let fakeNospaceVMStepResult: any; // NospaceVM.step() の返り値
 let fakeNospaceVMTotalSteps = 0; // NospaceVM.total_steps() の返り値
 let fakeNospaceVMStdout = ''; // NospaceVM.flushStdout() の返り値
+let fakeTracedData: any = {}; // WhitespaceVM の get_traced() 返り値
+let fakeNospaceTracedData: any = {}; // NospaceVM の getTraced() 返り値
 
 /** フェイク Nospace20Loader (jest.mock() を使わない DI 実装) */
 const fakeLoader: Nospace20Loader = {
@@ -53,7 +55,7 @@ const fakeLoader: Nospace20Loader = {
         return '';
       }
       get_traced() {
-        return {};
+        return fakeTracedData;
       }
       free() {}
     },
@@ -76,7 +78,7 @@ const fakeLoader: Nospace20Loader = {
         return out;
       }
       getTraced() {
-        return {};
+        return fakeNospaceTracedData;
       }
       is_complete() {
         return false;
@@ -113,6 +115,8 @@ describe('WasmExecutionBackend', () => {
     fakeNospaceVMStepResult = undefined;
     fakeNospaceVMTotalSteps = 0;
     fakeNospaceVMStdout = '';
+    fakeTracedData = {};
+    fakeNospaceTracedData = {};
     outputEntries = [];
 
     backend = new WasmExecutionBackend(fakeLoader);
@@ -793,6 +797,86 @@ describe('WasmExecutionBackend', () => {
       );
       expect(completionMsg).toBeDefined();
       expect(completionMsg!.data).toContain('42 steps');
+    });
+  });
+
+  describe('run - debug trace output', () => {
+    describe('WasmWhitespaceVM', () => {
+      const baseOptions: RunOptions = {
+        language: 'standard',
+        debug: true,
+        ignoreDebug: false,
+        inputMode: 'batch',
+      };
+
+      it('debug: true かつ traced が空でない場合、[Trace] JSON が stderr に出力される', async () => {
+        fakeTracedData = { foo: 3, bar: 1 };
+        backend.run('code', baseOptions);
+        await flushAsync();
+
+        const traceEntry = outputEntries
+          .filter((e) => e.type === 'stderr')
+          .find((e) => e.data.startsWith('[Trace]'));
+        expect(traceEntry).toBeDefined();
+        expect(traceEntry!.data).toBe('[Trace] {"foo":3,"bar":1}\n');
+      });
+
+      it('debug: true かつ traced が空 ({}) の場合、trace は出力されない', async () => {
+        fakeTracedData = {};
+        backend.run('code', baseOptions);
+        await flushAsync();
+
+        const traceEntry = outputEntries
+          .filter((e) => e.type === 'stderr')
+          .find((e) => e.data.startsWith('[Trace]'));
+        expect(traceEntry).toBeUndefined();
+      });
+
+      it('debug: false の場合、traced が空でなくても trace は出力されない', async () => {
+        fakeTracedData = { foo: 3 };
+        const options: RunOptions = { ...baseOptions, debug: false };
+        backend.run('code', options);
+        await flushAsync();
+
+        const traceEntry = outputEntries
+          .filter((e) => e.type === 'stderr')
+          .find((e) => e.data.startsWith('[Trace]'));
+        expect(traceEntry).toBeUndefined();
+      });
+    });
+
+    describe('WasmNospaceVM (direct: true)', () => {
+      const baseOptions: RunOptions = {
+        language: 'standard',
+        debug: true,
+        ignoreDebug: false,
+        inputMode: 'batch',
+        direct: true,
+      };
+
+      it('debug: true かつ traced が空でない場合、[Trace] JSON が stderr に出力される', async () => {
+        fakeNospaceTracedData = { x: 5 };
+        backend.run('code', baseOptions);
+        await flushAsync();
+
+        const traceEntry = outputEntries
+          .filter((e) => e.type === 'stderr')
+          .find((e) => e.data.startsWith('[Trace]'));
+        expect(traceEntry).toBeDefined();
+        expect(traceEntry!.data).toBe('[Trace] {"x":5}\n');
+      });
+
+      it('debug: false の場合、traced が空でなくても trace は出力されない', async () => {
+        fakeNospaceTracedData = { x: 5 };
+        const options: RunOptions = { ...baseOptions, debug: false };
+        backend.run('code', options);
+        await flushAsync();
+
+        const traceEntry = outputEntries
+          .filter((e) => e.type === 'stderr')
+          .find((e) => e.data.startsWith('[Trace]'));
+        expect(traceEntry).toBeUndefined();
+      });
     });
   });
 });
