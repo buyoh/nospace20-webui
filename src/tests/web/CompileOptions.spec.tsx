@@ -76,8 +76,8 @@ describe('CompileOptions', () => {
     const languageSelect = screen.getByLabelText(
       /Language:/i
     ) as HTMLSelectElement;
-    fireEvent.change(languageSelect, { target: { value: 'min' } });
-    expect(languageSelect.value).toBe('min');
+    fireEvent.change(languageSelect, { target: { value: 'standard' } });
+    expect(languageSelect.value).toBe('standard');
   });
 
   it('Target を変更できる', () => {
@@ -128,6 +128,7 @@ describe('CompileOptions', () => {
         language: 'standard',
         target: 'ws',
         stdExtensions: ['debug'],
+        optPasses: [],
       });
 
       render(
