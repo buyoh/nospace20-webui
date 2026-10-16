@@ -2,6 +2,7 @@
 
 ## タスク一覧
 
+- [review-2026-10-16-fixes/](review-2026-10-16-fixes/) コードレビュー指摘 03/05/06/08/09 の修正設計（requestId 導入・backend 状態管理・再接続・リソース上限・テストエディタ堅牢化）
 - [code-review-2026-10-16/](code-review-2026-10-16/) コードベース全体レビュー（サーバ停止バグ・DoS 耐性・テスト API 公開・クライアント競合状態 等 14 件）
 - [expected-result-editor/](expected-result-editor/) Expected Result 構造化エディタ（テストケースの期待結果を UI フォームで編集）
 - [test-review-phase3-4.md](test-review-phase3-4.md) テストコード レビュー・改善計画（フェーズ3-4）
