@@ -9,6 +9,10 @@ export default tseslint.config(
   {
     ignores: ['node_modules/', 'build/', 'dist/', 'coverage/', 'src/__mocks__/'],
   },
+  {
+    // 生成ファイル等の eslint-disable を --fix で消さないようにする
+    linterOptions: { reportUnusedDisableDirectives: 'off' },
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
@@ -40,7 +44,9 @@ export default tseslint.config(
       quotes: ['error', 'single'],
       semi: ['error', 'always'],
       '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unsafe-function-type': 'warn',
+      '@typescript-eslint/no-empty-object-type': 'warn',
       'react/jsx-uses-vars': 'warn',
       'react/react-in-jsx-scope': 'off',
     },

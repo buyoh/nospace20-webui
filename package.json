@@ -10,8 +10,8 @@
     "build-server": "tsc --project tsconfig.server.json",
     "test": "jest --coverage",
     "test-update": "jest --updateSnapshot",
-    "lint": "prettier --check 'src/**/*.ts' 'src/**/*.tsx' && eslint src/**/*.ts src/**/*.tsx",
-    "lint-fix": "prettier --write 'src/**/*.ts' 'src/**/*.tsx'"
+    "lint": "prettier --check 'src/**/*.{ts,tsx}' && eslint 'src/**/*.{ts,tsx}'",
+    "lint-fix": "prettier --write 'src/**/*.{ts,tsx}'"
   },
   "engines": {
     "node": ">=20.0.0"
