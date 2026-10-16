@@ -186,7 +186,7 @@ describe('useNospaceExecution', () => {
         return factoryResults[factoryCalls++];
       };
 
-      const { rerender } = renderHook(() => useNospaceExecution(factoryFn), {
+      renderHook(() => useNospaceExecution(factoryFn), {
         wrapper,
       });
 

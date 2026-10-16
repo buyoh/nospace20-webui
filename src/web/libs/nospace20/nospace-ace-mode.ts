@@ -130,11 +130,11 @@ ace.define(
           },
           {
             token: 'keyword.operator.arithmetic.nospace',
-            regex: /[+\-*\/%]/,
+            regex: /[+\-*/%]/,
           },
           {
             token: 'keyword.operator.assignment.compound.nospace',
-            regex: /\+=|\-=|\*=|\/=|%=/,
+            regex: /\+=|-=|\*=|\/=|%=/,
           },
           {
             token: 'keyword.operator.assignment.nospace',

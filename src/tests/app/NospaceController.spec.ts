@@ -8,14 +8,14 @@ import type { RunOptions, CompileOptions } from '../../interfaces/NospaceTypes';
 // Fake Socket implementation
 class FakeSocket {
   id: string;
-  private eventHandlers: Map<string, Function> = new Map();
+  private eventHandlers: Map<string, (...args: any[]) => any> = new Map();
   emittedEvents: Array<{ event: string; payload: any }> = [];
 
   constructor(id: string = 'test-socket-id') {
     this.id = id;
   }
 
-  on(event: string, handler: Function): void {
+  on(event: string, handler: (...args: any[]) => any): void {
     this.eventHandlers.set(event, handler);
   }
 
@@ -269,7 +269,6 @@ describe('NospaceController', () => {
       expect(calls).toHaveLength(1);
 
       // Get the session that was created
-      const sessionId = calls[0].callbacks;
       // Can't easily verify sendStdin was called here without refactoring
       // This is a limitation of the test design
     });

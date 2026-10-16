@@ -32,7 +32,7 @@ export function parseCheckResult(json: string): ParsedCheckResult | null {
       schema: obj as CheckResultSchema,
       rawJson: json,
     };
-  } catch (_error) {
+  } catch {
     // JSON 構文エラー
     return null;
   }

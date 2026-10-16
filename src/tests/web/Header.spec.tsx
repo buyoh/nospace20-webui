@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Provider, createStore } from 'jotai';
 import { Header } from '../../web/components/layout/Header';
-import { flavorAtom, availableFlavorsAtom } from '../../web/stores/flavorAtom';
+import { flavorAtom } from '../../web/stores/flavorAtom';
 import { setApplicationFlavor } from '../../web/libs/env';
 import '@testing-library/jest-dom';
 

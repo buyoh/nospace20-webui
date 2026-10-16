@@ -2,7 +2,7 @@ import React from 'react';
 import './styles/TextInput.scss';
 
 /** TextInput コンポーネントの Props */
-interface TextInputProps extends React.InputHTMLAttributes<HTMLInputElement> {}
+type TextInputProps = React.InputHTMLAttributes<HTMLInputElement>;
 
 /**
  * 共通テキスト入力コンポーネント。

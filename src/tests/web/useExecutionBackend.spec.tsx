@@ -138,7 +138,7 @@ describe('useExecutionBackend', () => {
   // ─── 初期化 ───────────────────────────────────────────────────────
 
   it('マウント後にバックエンドを生成・初期化する', async () => {
-    const { store, wrapper } = createTestWrapper();
+    const { wrapper } = createTestWrapper();
 
     renderHook(() => useExecutionBackend('wasm', backendFactory), { wrapper });
 
@@ -148,7 +148,7 @@ describe('useExecutionBackend', () => {
   });
 
   it('バックエンド準備完了後 backendRef が設定される', async () => {
-    const { store, wrapper } = createTestWrapper();
+    const { wrapper } = createTestWrapper();
 
     const { result } = renderHook(
       () => useExecutionBackend('wasm', backendFactory),
@@ -312,7 +312,7 @@ describe('useExecutionBackend', () => {
   // ─── アンマウント ────────────────────────────────────────────────
 
   it('アンマウント時にバックエンドを dispose する', async () => {
-    const { store, wrapper } = createTestWrapper();
+    const { wrapper } = createTestWrapper();
 
     const { unmount } = renderHook(
       () => useExecutionBackend('wasm', backendFactory),
@@ -330,7 +330,7 @@ describe('useExecutionBackend', () => {
   // ─── Flavor 変更 ──────────────────────────────────────────────────
 
   it('Flavor が変更されると古いバックエンドを dispose して新しいバックエンドを生成する', async () => {
-    const { store, wrapper } = createTestWrapper();
+    const { wrapper } = createTestWrapper();
 
     const secondBackend = new FakeExecutionBackend();
     let callCount = 0;

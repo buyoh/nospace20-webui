@@ -1,12 +1,6 @@
 import { Socket } from 'socket.io';
 import { NospaceExecutionService } from '../Services/NospaceExecutionService';
-import type {
-  RunOptions,
-  CompileOptions,
-  NospaceClientToServerEvents,
-} from '../../interfaces/NospaceTypes';
-
-type EmitFunction = Socket['emit'];
+import type { RunOptions, CompileOptions } from '../../interfaces/NospaceTypes';
 
 /** Socket.IO 接続ごとの Nospace 実行リクエストを処理するコントローラー */
 export class NospaceController {
@@ -125,7 +119,7 @@ export class NospaceController {
     // compile() 後に 'compiling' を emit すると順序が逆転し、UI が "コンパイル中" のまま
     // 固着するバグがあった。sessionId は compile() 後に確定するため、
     // 仮セッション変数を用意し emit 順序を保証する。
-    let sessionId: string;
+    let sessionId = '';
 
     // Create new compile session
     const session = this.executionService.compile(code, options, {

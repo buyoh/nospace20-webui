@@ -2,7 +2,7 @@ import React from 'react';
 import './styles/Select.scss';
 
 /** Select コンポーネントの Props */
-interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {}
+type SelectProps = React.SelectHTMLAttributes<HTMLSelectElement>;
 
 /**
  * 共通 select コンポーネント。

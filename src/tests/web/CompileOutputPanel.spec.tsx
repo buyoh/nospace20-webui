@@ -134,6 +134,7 @@ describe('CompileOutputPanel', () => {
 
     it('onRunCompiled 未指定時は ws ターゲットでも Run ボタンが表示されない', () => {
       // onRunCompiled を省略（Compile タブでは Run ボタン不要）
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { onRunCompiled: _, ...propsWithoutRunCompiled } = defaultProps;
       render(
         <CompileOutputPanel

@@ -1,10 +1,6 @@
 // Unit test for ServerExecutionBackend
 
 import { ServerExecutionBackend } from '../../web/services/ServerExecutionBackend';
-import type {
-  ExecutionStatus,
-  OutputEntry,
-} from '../../interfaces/NospaceTypes';
 import type { Socket } from 'socket.io-client';
 import type {
   NospaceClientToServerEvents,
@@ -19,13 +15,13 @@ type AppSocket = Socket<
 /** テスト用の Fake Socket を作成 */
 function createFakeSocket(): {
   socket: AppSocket;
-  listeners: Record<string, Function>;
+  listeners: Record<string, (...args: any[]) => any>;
 } {
-  const listeners: Record<string, Function> = {};
+  const listeners: Record<string, (...args: any[]) => any> = {};
   const socket = {
     id: 'mock-socket-id',
     connected: false,
-    on: (event: string, handler: Function) => {
+    on: (event: string, handler: (...args: any[]) => any) => {
       listeners[event] = handler;
     },
     emit: jest.fn(),
@@ -38,7 +34,7 @@ function createFakeSocket(): {
 async function connectBackend(
   backend: ServerExecutionBackend,
   socket: AppSocket,
-  listeners: Record<string, Function>
+  listeners: Record<string, (...args: any[]) => any>
 ): Promise<void> {
   const initPromise = backend.init();
   (socket as any).connected = true;
@@ -49,7 +45,7 @@ async function connectBackend(
 describe('ServerExecutionBackend', () => {
   let backend: ServerExecutionBackend;
   let fakeSocket: AppSocket;
-  let listeners: Record<string, Function>;
+  let listeners: Record<string, (...args: any[]) => any>;
 
   beforeEach(() => {
     const fake = createFakeSocket();

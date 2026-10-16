@@ -21,7 +21,7 @@ class FakeTestFileService {
     return this.getTreeResult;
   }
 
-  async getTestCase(path: string): Promise<TestCaseResponse> {
+  async getTestCase(_path: string): Promise<TestCaseResponse> {
     if (this.shouldThrow) throw this.shouldThrow;
     if (this.getTestCaseResult === null) {
       throw new Error('getTestCaseResult not set');

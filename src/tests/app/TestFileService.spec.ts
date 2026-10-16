@@ -104,7 +104,7 @@ class FakeTestFileSystem implements TestFileSystem {
     return this.files.has(path) || this.dirs.has(path);
   }
 
-  readFileSync(path: string, encoding: string): string {
+  readFileSync(path: string, _encoding: string): string {
     const content = this.files.get(path);
     if (content === undefined) {
       throw new Error(`ENOENT: no such file or directory, open '${path}'`);
@@ -130,7 +130,7 @@ class FakeTestFileSystem implements TestFileSystem {
     }
   }
 
-  readdirSync(path: string, options: { withFileTypes: true }): Dirent[] {
+  readdirSync(path: string, _options: { withFileTypes: true }): Dirent[] {
     const entries: Dirent[] = [];
     const prefix = path === '.' ? '' : path + '/';
 

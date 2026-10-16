@@ -7,7 +7,6 @@ import {
 import type { RunOptions, CompileOptions } from '../../interfaces/NospaceTypes';
 import { ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
-import { Readable, Writable } from 'stream';
 
 // Fake ChildProcess for testing
 class FakeChildProcess extends EventEmitter {
@@ -26,7 +25,7 @@ class FakeChildProcess extends EventEmitter {
     this.stderr = new EventEmitter();
   }
 
-  kill(signal?: NodeJS.Signals | number): boolean {
+  kill(_signal?: NodeJS.Signals | number): boolean {
     if (!this.killed) {
       this.killed = true;
       // Simulate process termination

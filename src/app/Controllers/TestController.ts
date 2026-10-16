@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import { TestFileService } from '../Services/TestFileService';
 import type {
   TestTreeResponse,
-  TestCaseResponse,
   TestCaseUpdateRequest,
   TestCaseUpdateResponse,
   TestCaseCreateRequest,

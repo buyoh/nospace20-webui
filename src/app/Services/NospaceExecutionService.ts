@@ -305,7 +305,9 @@ export class NospaceExecutionService {
       // Cleanup temp file
       try {
         this.fs.unlinkSync(tempFilePath);
-      } catch {}
+      } catch {
+        // 一時ファイルの削除失敗は無視する
+      }
 
       // Create error session
       const errorSession: NospaceSession = {

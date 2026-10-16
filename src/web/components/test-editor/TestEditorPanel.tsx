@@ -40,7 +40,6 @@ export const TestEditorPanel: React.FC = () => {
     isSaving,
     isCreateMode,
     loadTestCase,
-    updateSource,
     updateCheck,
     save,
     create,
@@ -72,7 +71,7 @@ export const TestEditorPanel: React.FC = () => {
     check: string;
   }) => {
     try {
-      const path = await create(params);
+      await create(params);
       // Reload tree and select new test
       await loadTree();
       // TODO: select the newly created test

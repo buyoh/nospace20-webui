@@ -2,7 +2,7 @@ import React from 'react';
 import './styles/Textarea.scss';
 
 /** Textarea コンポーネントの Props */
-interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
+type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement>;
 
 /**
  * 共通 textarea コンポーネント。

@@ -14,7 +14,7 @@ function getAvailableFlavors(): readonly Flavor[] {
 }
 
 /** List of available flavors (computed on first access) */
-export const availableFlavorsAtom = atom<readonly Flavor[]>((get) => {
+export const availableFlavorsAtom = atom<readonly Flavor[]>(() => {
   // Compute on first access to allow env setup in tests
   return getAvailableFlavors();
 });
