@@ -48,3 +48,6 @@ pnpm-debug.log*
 /.local/
 /tmp/
 
+# Agents
+.agents/
+skills-lock.json
