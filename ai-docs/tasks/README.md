@@ -2,6 +2,7 @@
 
 ## タスク一覧
 
+- [code-review-2026-10-16/](code-review-2026-10-16/) コードベース全体レビュー（サーバ停止バグ・DoS 耐性・テスト API 公開・クライアント競合状態 等 14 件）
 - [expected-result-editor/](expected-result-editor/) Expected Result 構造化エディタ（テストケースの期待結果を UI フォームで編集）
 - [test-review-phase3-4.md](test-review-phase3-4.md) テストコード レビュー・改善計画（フェーズ3-4）
 - [wasm-flavor/](wasm-flavor/) WASM Flavor 設計（Phase 9〜11）
