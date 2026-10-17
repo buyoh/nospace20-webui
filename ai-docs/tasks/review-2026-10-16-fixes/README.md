@@ -5,6 +5,13 @@
 作成日: 2026-10-16
 ステータス: 設計完了（未実装）
 
+## 前提（公開範囲）
+
+外部公開するのはフロントエンド + WASM 実行環境（静的配布）のみ。node サーバを経由する native 実行環境は外部公開しない（AGENTS.md）。
+
+- サーバ側の修正は**クラッシュ・操作不能の防止**を目的とし、悪意ある利用者への対策（DoS 対策・認証・公平性）は行わない
+- クライアント側は外部公開されるため、任意のプログラムでブラウザタブがクラッシュしないことを保証する
+
 ## 背景・動機
 
 - 実行系はサーバ・クライアント双方で「異常系・非同期イベント順序」への耐性が低く、操作不能状態（Run/Stop が押せない）やサーバ資源の枯渇が起こりうる
@@ -17,7 +24,7 @@
 | [01-session-request-id.md](01-session-request-id.md) | [08](../code-review-2026-10-16/08-session-id-mismatch.md) | requestId による実行リクエストとイベントの対応付け、セッション登録の保護 | medium |
 | [02-backend-lifecycle-state.md](02-backend-lifecycle-state.md) | [06](../code-review-2026-10-16/06-backend-init-race-and-failure.md) | backend 初期化の競合解消、初期化状態の UI 表示と再試行 | high |
 | [03-socket-reconnect.md](03-socket-reconnect.md) | [05](../code-review-2026-10-16/05-socket-reconnect-handling.md) | Socket 再接続時のリスナー重複解消、切断時の状態復帰 | high |
-| [04-resource-limits.md](04-resource-limits.md) | [03](../code-review-2026-10-16/03-resource-limits-dos.md) | 同時実行数上限、出力量上限（サーバ・クライアント） | high |
+| [04-resource-limits.md](04-resource-limits.md) | [03](../code-review-2026-10-16/03-resource-limits-dos.md) | 同時実行数上限、出力の背圧制御（サーバ）、出力保持数の上限（クライアント） | high |
 | [05-test-editor-robustness.md](05-test-editor-robustness.md) | [09](../code-review-2026-10-16/09-test-editor-error-handling.md) | テストエディタのエラー通知・競合・状態同期・check 削除契約 | medium |
 
 ドキュメント番号は**実装順**を表す（元指摘の番号とは異なる）。
@@ -65,6 +72,5 @@ Run / Compile ボタンの有効条件は `backendState.kind === 'ready' && !isR
 
 ## 対象外（将来タスク）
 
-- IP 単位の接続数・実行頻度制限（`io.use` ミドルウェア）
-- コンテナ / cgroup によるメモリ・CPU 制限（デプロイ側）
+- サーバ側のセキュリティ保護（IP 単位の制限・認証・レート制限）は、native 実行環境を外部公開しない前提のため**不要**（将来タスクにもしない）
 - Socket.IO payload 全体のスキーマ検証（元指摘 01 の解決策 3）
