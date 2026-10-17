@@ -314,4 +314,53 @@ describe('TestController', () => {
       ]);
     });
   });
+
+  describe('入力形式エラーの応答', () => {
+    it('更新時の形式エラー（型・パスの深さ）は 400 で原因を返す', async () => {
+      const service = new FakeTestFileService();
+      service.shouldThrow = new Error('Invalid path: too many levels (max 8)');
+      const controller = new TestController(service as any);
+      const res = createFakeResponse();
+
+      await controller.handleUpdateTestCase(
+        createFakeRequest({ 0: 'a/b' }, { source: 's' }),
+        res
+      );
+
+      expect(res.statusCalls).toEqual([400]);
+      expect(res.jsonCalls).toEqual([
+        { error: 'Invalid path: too many levels (max 8)' },
+      ]);
+    });
+
+    it('作成時の形式エラーは 400 を返す', async () => {
+      const service = new FakeTestFileService();
+      service.shouldThrow = new Error(
+        'Invalid request: source must be a string'
+      );
+      const controller = new TestController(service as any);
+      const res = createFakeResponse();
+
+      await controller.handleCreateTestCase(
+        createFakeRequest({}, { path: 'a/b', source: 's' }),
+        res
+      );
+
+      expect(res.statusCalls).toEqual([400]);
+    });
+
+    it('シンボリックリンクによる testDir 外への脱出は 400 を返す', async () => {
+      const service = new FakeTestFileService();
+      service.shouldThrow = new Error('Path is outside test directory');
+      const controller = new TestController(service as any);
+      const res = createFakeResponse();
+
+      await controller.handleGetTestCase(
+        createFakeRequest({ 0: 'link/x' }),
+        res
+      );
+
+      expect(res.statusCalls).toEqual([400]);
+    });
+  });
 });

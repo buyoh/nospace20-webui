@@ -2,6 +2,12 @@
  * テストファイル管理機能の型定義
  */
 
+/** テストケースのパスとして許可する深さ（ディレクトリ + ファイル名の要素数） */
+export const MAX_TEST_PATH_DEPTH = 8;
+
+/** テストケースのファイル名（拡張子なし）として許可する形式 */
+export const TEST_FILE_NAME_PATTERN = /^[A-Za-z0-9_-]+$/;
+
 /** テストツリーのノード型 */
 export type TestTreeNodeType = 'directory' | 'test';
 

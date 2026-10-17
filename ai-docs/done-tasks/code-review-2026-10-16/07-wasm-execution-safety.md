@@ -38,4 +38,22 @@
 | 2 | 1 step あたりの経過時間を測り budget を動的調整（目安 16ms） | `WasmExecutionBackend` のみ |
 | 3 | WASM 実行を Web Worker へ移し、kill を `worker.terminate()` で確実に行う（根本対策） | 大: loader, backend, vite 設定, テスト |
 | 4 | vm をループのローカル変数で保持し finally でローカルを free。dispose で callback を null 化 | `WasmExecutionBackend` 内部のみ |
-| 5 | ID 生成器をコンストラクタで DI（既定は連番）。テストのグローバル差し替えを削除 | `WasmExecutionBackend`, テスト |
+| 5 | ~~ID 生成器をコンストラクタで DI（既定は連番）。テストのグローバル差し替えを削除~~ | `WasmExecutionBackend`, テスト |
+
+### 追加補足
+
+- `createDefaultRequestIdGenerator` が `src/web/services/ServerExecutionBackend.ts` で定義されている。これを lib に移動し、`WasmExecutionBackend` でも同じものを使用する。
+- `crypto.randomUUID` が使えるなら使う。
+
+## 対応状況（2026-10-17）
+
+**完了**（解決策 2・3 を除く）。解決策 5（ID 生成器のコンストラクタ DI）は対象外。
+
+| 解決策 | 状態 | 内容 |
+|---|---|---|
+| 1 | 完了 | `src/web/libs/executionLimits.ts` を新設。`run()` の冒頭で stepBudget を 100〜1,000,000、maxTotalSteps を 1,000〜10,000,000,000 に収める（UI の min/max と同じ範囲）。NaN・未指定・数値以外は既定値 |
+| 2 / 3 | **見送り** | 動的な budget 調整・Web Worker 化。範囲制限（1）で 1 回の step の最大時間を抑える。巨大な入力のコンパイルが UI を固める問題は残る |
+| 4 | 完了 | VM をループのローカル変数で保持して finally で解放（二重解放も防止）。`dispose()` で callback を null 化。さらに、`run()` で置き換えられた旧実行の `killed` 通知が、新しい実行の状態を上書きしないようにした |
+| 5（追加補足） | 完了 | `createDefaultRequestIdGenerator` を `src/web/libs/requestId.ts` に移し、`ServerExecutionBackend` と `WasmExecutionBackend` で共用。`crypto.randomUUID` が使えるなら使い、使えない環境（HTTP 配信）では時刻・連番・乱数にフォールバックする |
+
+- テスト: `executionLimits.spec`・`requestId.spec`・`WasmExecutionBackendLifecycle.spec`（新規）

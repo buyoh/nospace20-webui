@@ -52,3 +52,16 @@ TypeScript の型は実行時に保証されない。`NospaceController.ts:16-33
 
 推奨: 1 または 2 で根本修正 + 3 + 4（多層防御）。
 テスト: 同期 `onExit` を呼ぶフェイクサービスでの Controller テスト、不正 payload のテストを追加。
+
+## 対応状況（2026-10-17）
+
+**完了**。(a) は先行タスク（[review-2026-10-16-fixes/01](../../done-tasks/review-2026-10-16-fixes/01-session-request-id.md)）で解消済み。(b) を本タスクで対応した。
+
+| 解決策 | 状態 | 内容 |
+|---|---|---|
+| 1 / 2 | 完了（先行タスク） | コールバックに sessionId・status を渡し、戻り値に依存させない。`sessions.set` を通知より前に行う |
+| 3 | 完了 | `RequestValidator`（`src/app/Controllers/RequestValidator.ts`）を新設。`language` / `target` / `inputMode` は許可リスト、`stdExtensions` / `optPasses` は名前の形式（先頭が英数字・アンダースコア、最大 32 文字、最大 16 件）で検証し、検証済みの値だけを詰め替えて渡す。不正な要求は、プロセスを起動せず requestId 付きのエラーで拒否する |
+| 4 | 完了 | 全ハンドラの try/catch（先行タスク）に加え、`MainServer` に `uncaughtException` / `unhandledRejection` のログ出力を追加（他の利用者の実行を巻き込んで停止しないための安全網） |
+
+- 拡張名を固定の許可リストにしなかった理由: 利用可能な拡張・最適化パスの名前は nospace20 の版に依存する。固定リストは版の更新で陳腐化するため、CLI 引数として渡しても「オプション」と解釈されない形式に限定し、未知の名前は CLI のエラーに任せる。
+- テスト: `RequestValidator.spec`（新規）、`NospaceController.spec`（不正 payload・許可外の値・想定外フィールドの除去）

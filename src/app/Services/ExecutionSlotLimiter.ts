@@ -22,7 +22,9 @@ export class ExecutionSlotLimiter {
 
 /** 同時実行数の上限に達していて新しいプロセスを開始できないことを表すエラー */
 export class ExecutionLimitError extends Error {
-  constructor(message = 'Too many running processes') {
+  constructor(
+    message = 'Server is busy: too many running processes. Please retry later.'
+  ) {
     super(message);
     this.name = 'ExecutionLimitError';
   }

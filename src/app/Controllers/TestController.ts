@@ -48,9 +48,13 @@ export class TestController {
         res.status(404).json({ error: error.message });
       } else if (
         error.message?.includes('traversal') ||
-        error.message?.includes('Absolute paths')
+        error.message?.includes('Absolute paths') ||
+        error.message?.includes('outside test directory')
       ) {
         res.status(400).json({ error: 'Invalid path' });
+      } else if (error.message?.startsWith('Invalid ')) {
+        // 入力の形式エラー（型・パスの深さなど）。原因を呼び出し元に伝える
+        res.status(400).json({ error: error.message });
       } else {
         console.error('Error in handleGetTestCase:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -84,9 +88,13 @@ export class TestController {
         res.status(404).json({ error: error.message });
       } else if (
         error.message?.includes('traversal') ||
-        error.message?.includes('Absolute paths')
+        error.message?.includes('Absolute paths') ||
+        error.message?.includes('outside test directory')
       ) {
         res.status(400).json({ error: 'Invalid path' });
+      } else if (error.message?.startsWith('Invalid ')) {
+        // 入力の形式エラー（型・パスの深さなど）。原因を呼び出し元に伝える
+        res.status(400).json({ error: error.message });
       } else {
         console.error('Error in handleUpdateTestCase:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -114,9 +122,13 @@ export class TestController {
         res.status(409).json({ error: error.message });
       } else if (
         error.message?.includes('traversal') ||
-        error.message?.includes('Absolute paths')
+        error.message?.includes('Absolute paths') ||
+        error.message?.includes('outside test directory')
       ) {
         res.status(400).json({ error: 'Invalid path' });
+      } else if (error.message?.startsWith('Invalid ')) {
+        // 入力の形式エラー（型・パスの深さなど）。原因を呼び出し元に伝える
+        res.status(400).json({ error: error.message });
       } else {
         console.error('Error in handleCreateTestCase:', error);
         res.status(500).json({ error: 'Internal server error' });

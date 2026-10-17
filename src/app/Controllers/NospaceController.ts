@@ -9,43 +9,26 @@ import {
 import { ExecutionLimitError } from '../Services/ExecutionSlotLimiter';
 import { SocketSessionRegistry } from './SocketSessionRegistry';
 import { SocketFlowControl } from '../Web/SocketFlowControl';
-import type { RunOptions, CompileOptions } from '../../interfaces/NospaceTypes';
-
-/** requestId として受け付ける最大文字数 */
-const MAX_REQUEST_ID_LENGTH = 64;
+import { RequestValidator, readRequestId } from './RequestValidator';
 
 /** Socket から出力の混雑状況を取得する OutputFlowControl を生成する関数 */
 export type FlowControlFactory = (socket: Socket) => OutputFlowControl;
-
-/** payload から requestId を取り出す。不正な場合は null */
-function readRequestId(payload: unknown): string | null {
-  const requestId = (payload as { requestId?: unknown } | null | undefined)
-    ?.requestId;
-  if (
-    typeof requestId === 'string' &&
-    requestId.length > 0 &&
-    requestId.length <= MAX_REQUEST_ID_LENGTH
-  ) {
-    return requestId;
-  }
-  return null;
-}
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
 
 /** Socket.IO 接続ごとの Nospace 実行リクエストを処理するコントローラー */
 export class NospaceController {
   private executionService: NospaceExecutionService;
   private registry = new SocketSessionRegistry();
 
+  /**
+   * @param executionService 実行サービス（設定を持つため、呼び出し側が組み立てて渡す）
+   * @param flowControlFactory 出力の混雑状況を判定する OutputFlowControl の生成関数
+   */
   constructor(
-    executionService?: NospaceExecutionService,
+    executionService: NospaceExecutionService,
     private readonly flowControlFactory: FlowControlFactory = (socket) =>
       new SocketFlowControl(socket)
   ) {
-    this.executionService = executionService ?? new NospaceExecutionService();
+    this.executionService = executionService;
   }
 
   handleConnection(socket: Socket): void {
@@ -191,11 +174,8 @@ export class NospaceController {
       session = start();
     } catch (error) {
       if (error instanceof ExecutionLimitError) {
-        this.emitRequestError(
-          socket,
-          requestId,
-          'Server is busy: too many running processes. Please retry later.\n'
-        );
+        // 上限到達（busy）と終了中（shutting down）で、サービスが理由を持つ
+        this.emitRequestError(socket, requestId, `${error.message}\n`);
         return null;
       }
       throw error;
@@ -205,18 +185,13 @@ export class NospaceController {
   }
 
   private handleRun(socket: Socket, payload: unknown): void {
-    const requestId = readRequestId(payload);
-    if (!requestId) return;
-    const { code, options, stdinData } = payload as {
-      code: unknown;
-      options: unknown;
-      stdinData?: unknown;
-    };
-    if (typeof code !== 'string' || !isObject(options)) {
-      this.emitRequestError(socket, requestId, 'Invalid run request.\n');
+    // payload は信頼できない入力のため、RequestValidator で検証・正規化してから使う
+    const parsed = RequestValidator.parseRun(payload);
+    if (!parsed.ok) {
+      this.rejectInvalidRequest(socket, parsed);
       return;
     }
-    const runOptions = options as unknown as RunOptions;
+    const { requestId, code, options, stdinData } = parsed.value;
 
     const session = this.startSession(
       socket,
@@ -224,35 +199,34 @@ export class NospaceController {
       () =>
         this.executionService.run(
           code,
-          runOptions,
+          options,
           this.createCallbacks(socket, requestId),
           this.flowControlFactory(socket)
         ),
       'running'
     );
 
-    // If batch mode, send stdin data
+    // batch モードでは入力を渡し終えたら stdin を閉じる。閉じないと、入力を最後まで読む
+    // プログラムは EOF を受け取れず、タイムアウトまで待ち続ける
     if (
       session &&
       session.status === 'running' &&
-      runOptions.inputMode === 'batch' &&
-      typeof stdinData === 'string'
+      options.inputMode === 'batch'
     ) {
-      session.sendStdin(stdinData);
-      // Note: We don't explicitly close stdin here as the process
-      // should handle EOF when stdin stream ends
+      if (stdinData !== undefined) {
+        session.sendStdin(stdinData);
+      }
+      session.closeStdin();
     }
   }
 
   private handleCompile(socket: Socket, payload: unknown): void {
-    const requestId = readRequestId(payload);
-    if (!requestId) return;
-    const { code, options } = payload as { code: unknown; options: unknown };
-    if (typeof code !== 'string' || !isObject(options)) {
-      this.emitRequestError(socket, requestId, 'Invalid compile request.\n');
+    const parsed = RequestValidator.parseCompile(payload);
+    if (!parsed.ok) {
+      this.rejectInvalidRequest(socket, parsed);
       return;
     }
-    const compileOptions = options as unknown as CompileOptions;
+    const { requestId, code, options } = parsed.value;
 
     this.startSession(
       socket,
@@ -260,7 +234,7 @@ export class NospaceController {
       () =>
         this.executionService.compile(
           code,
-          compileOptions,
+          options,
           this.createCallbacks(socket, requestId),
           this.flowControlFactory(socket)
         ),
@@ -268,10 +242,20 @@ export class NospaceController {
     );
   }
 
+  /** 検証に失敗した要求を拒否する。通知先（requestId）が分かる場合のみ、エラーを返す */
+  private rejectInvalidRequest(
+    socket: Socket,
+    failure: { requestId: string | null; message: string }
+  ): void {
+    if (failure.requestId) {
+      this.emitRequestError(socket, failure.requestId, `${failure.message}\n`);
+    }
+  }
+
   private handleStdinInput(socket: Socket, payload: unknown): void {
-    if (!isObject(payload)) return;
-    const { sessionId, data } = payload;
-    if (typeof sessionId !== 'string' || typeof data !== 'string') return;
+    const parsed = RequestValidator.parseStdin(payload);
+    if (!parsed.ok) return;
+    const { sessionId, data } = parsed.value;
     if (!this.registry.isOwner(socket.id, sessionId)) return;
 
     const session = this.executionService.getSession(sessionId);
@@ -283,9 +267,9 @@ export class NospaceController {
   }
 
   private handleKill(socket: Socket, payload: unknown): void {
-    if (!isObject(payload)) return;
-    const { sessionId } = payload;
-    if (typeof sessionId !== 'string') return;
+    const parsed = RequestValidator.parseKill(payload);
+    if (!parsed.ok) return;
+    const { sessionId } = parsed.value;
     const entry = this.registry.get(socket.id);
     if (!entry || entry.sessionId !== sessionId) return;
 

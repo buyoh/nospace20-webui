@@ -11,17 +11,9 @@
 
 ## 設計・方針
 
-### 1. 子プロセスの終了処理（優先度: 高）
+### 1. 子プロセスの終了処理
 
-[code-review-2026-10-16/02](code-review-2026-10-16/02-child-process-lifecycle.md) の (b)〜(e) が未対応。特に (c) は、同時実行数の上限（`NOSPACE_MAX_PROCESSES`）を導入したことで影響が大きくなった。
-
-- **SIGKILL フォールバックが発火しない**（`NospaceExecutionService.ts` の `kill()`）
-  - `process.kill('SIGTERM')` が成功すると `process.killed` は true になるため、2 秒後の `!this.process.killed` は常に偽
-  - SIGTERM を無視するプロセスは `close` せず `finalize()` も呼ばれず、実行枠が戻らない
-  - 方針: `finalized` / `exitCode === null && signalCode === null` で判定し、フォールバックのタイマーを保持して `cleanup()` で解除する
-- (b) stdin の EPIPE（`process.stdin.on('error')` 未登録）
-- (d) batch モードで stdin を閉じない
-- (e) SIGINT / SIGTERM 時の全セッション kill と一時ファイルの後始末
+**完了**（[done-tasks/code-review-2026-10-16/02](../done-tasks/code-review-2026-10-16/02-child-process-lifecycle.md) で対応: SIGKILL フォールバック、stdin の EPIPE と close、`killAll` による終了時の後始末）。
 
 ### 2. 再実行時のスロット占有
 
@@ -39,14 +31,34 @@
 - `SocketFlowControl`: `highWaterPackets` の境界（`>=`）と `conn` 未定義時の挙動を、フェイクの conn で検証する
 - `TestEditorErrorBanner` / `useDiscardChangesGuard` の単体テスト（現状は hook 経由のみ）
 
+### 5. テストファイル管理 API（優先度: 低。テスト環境のツールのため）
+
+[done-tasks/code-review-2026-10-16/04](../done-tasks/code-review-2026-10-16/04-test-api-exposed.md) の実装レビューでの指摘。
+
+- サーバー側が `TEST_FILE_NAME_PATTERN`（`[A-Za-z0-9_-]+`）を強制していない（UI のみ）。API を直接呼ぶと `.` 始まりや `foo.check` のような名前を作れる。方針: 最終要素をサーバー側でも検証する
+- `createTestCase` の存在確認と書き込みの間の TOCTOU（同時 POST で後勝ちの上書き）。方針: 一時ファイルを `linkSync`（EEXIST で失敗）で配置する
+- `TestController` のエラー分類が `error.message` の文字列一致。方針: `ValidationError` / `NotFoundError` を定義して `instanceof` で判定する（[code-review-2026-10-16/12](code-review-2026-10-16/12-design-srp-di.md) と共通）
+- `fs.promises` 化（同期 fs が event loop を止める）
+
+### 6. サーバー起動・終了のテスト
+
+`Express.ts`（`setupExpressServer`）と `MainServer.ts` に対応するテストが無い。対象: `listen` の EADDRINUSE が reject になること、`vite` + `production` の拒否、`NOSPACE_TEST_DIR=''` でテスト API を登録しないこと、`shutdown()` の順序。`setupExpressServer` が `Http.createServer` を直接呼んでいるため、サーバー生成のファクトリを引数で受け取れるようにする必要がある。
+
+### 7. 見送った項目（必要になったら対応）
+
+- [02](../done-tasks/code-review-2026-10-16/02-child-process-lifecycle.md) 解決策 6: `existsSync` → `accessSync(X_OK)`（EACCES は `error` イベントで安全に処理されるため）
+- [07](../done-tasks/code-review-2026-10-16/07-wasm-execution-safety.md) 解決策 2・3: step ごとの経過時間による budget 調整、Web Worker 化。巨大なソースのコンパイルが UI を固める問題が残る
+- [10](../done-tasks/code-review-2026-10-16/10-config-and-env.md) (c): 子プロセスの環境変数の絞り込み
+- [11](../done-tasks/code-review-2026-10-16/11-ci-and-dependencies.md): 外部アクションのコミット SHA 固定（現在はタグ）、CI への型チェック追加（既存のテストコードと ace のモード定義に型エラーがあり、先に解消が必要）
+
 ## タスクステップ・チェックリスト
 
-1. [ ] 1: 子プロセスの終了処理（SIGKILL フォールバックを最優先）
-2. [ ] 2: 再実行時のスロット占有
-3. [ ] 3: テストエディタ（作成フォームの dirty、読み込み中表示）
-4. [ ] 4: テスト追加
+1. [ ] 2: 再実行時のスロット占有
+2. [ ] 3: テストエディタ（作成フォームの dirty、読み込み中表示）
+3. [ ] 4: テスト追加
+4. [ ] 5: テストファイル管理 API
+5. [ ] 6: サーバー起動・終了のテスト
 
-## 残存するコードレビュー指摘（今回の対象外）
+## 残存するコードレビュー指摘
 
-[code-review-2026-10-16](code-review-2026-10-16/README.md) の 01（payload の全面的なスキーマ検証）、04、07、10〜14。
-ただし 04（テストファイル書き込み API の公開）は、native 実行環境を外部公開しない前提（AGENTS.md）のため、重要度の見直しが必要。
+[code-review-2026-10-16](code-review-2026-10-16/README.md) の 12・13・14。

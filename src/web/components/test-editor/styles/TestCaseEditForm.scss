@@ -89,4 +89,14 @@
     display: flex;
     gap: 8px;
   }
+
+  .form-hint {
+    margin-top: 4px;
+    font-size: 0.8rem;
+    color: colors.$text-muted;
+
+    &--error {
+      color: colors.$error-text;
+    }
+  }
 }

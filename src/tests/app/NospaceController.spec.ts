@@ -47,6 +47,7 @@ class FakeNospaceSession implements NospaceSession {
   exitCode: number | null;
   private stdinData: string[] = [];
   private killCalled = false;
+  private stdinClosed = false;
 
   constructor(
     sessionId: string = 'test-session-id',
@@ -65,6 +66,14 @@ class FakeNospaceSession implements NospaceSession {
 
   sendStdin(data: string): void {
     this.stdinData.push(data);
+  }
+
+  closeStdin(): void {
+    this.stdinClosed = true;
+  }
+
+  wasStdinClosed(): boolean {
+    return this.stdinClosed;
   }
 
   // Test helpers
@@ -213,7 +222,7 @@ describe('NospaceController', () => {
     it('should call executionService.run with correct arguments', () => {
       const code = 'test code';
       const options: RunOptions = {
-        language: 'nospace20',
+        language: 'standard',
         inputMode: 'interactive',
         debug: false,
         ignoreDebug: false,
@@ -228,13 +237,18 @@ describe('NospaceController', () => {
       const calls = executionService.getRunCalls();
       expect(calls).toHaveLength(1);
       expect(calls[0].code).toBe(code);
-      expect(calls[0].options).toEqual(options);
+      // 検証・正規化された options が渡される（未指定のリストは空配列になる）
+      expect(calls[0].options).toEqual({
+        ...options,
+        stdExtensions: [],
+        optPasses: [],
+      });
     });
 
     it('should emit running status after creating session', () => {
       const code = 'test code';
       const options: RunOptions = {
-        language: 'nospace20',
+        language: 'standard',
         inputMode: 'interactive',
         debug: false,
         ignoreDebug: false,
@@ -257,7 +271,7 @@ describe('NospaceController', () => {
         requestId: 'req-1',
         code: 'first',
         options: {
-          language: 'nospace20',
+          language: 'standard',
           inputMode: 'interactive',
           debug: false,
           ignoreDebug: false,
@@ -273,7 +287,7 @@ describe('NospaceController', () => {
         requestId: 'req-1',
         code: 'second',
         options: {
-          language: 'nospace20',
+          language: 'standard',
           inputMode: 'interactive',
           debug: false,
           ignoreDebug: false,
@@ -287,10 +301,55 @@ describe('NospaceController', () => {
       expect(removedIds).toContain(firstSessionId);
     });
 
+    it('BUG: batch モードでは stdin を書き込んだ後に閉じる（EOF を待つプログラムがタイムアウトまで待たない）', () => {
+      socket.trigger('nospace_run', {
+        requestId: 'req-b',
+        code: 'c',
+        options: {
+          language: 'standard',
+          inputMode: 'batch',
+          debug: false,
+          ignoreDebug: false,
+        },
+        stdinData: 'input data',
+      });
+
+      const session = executionService.getSession(
+        executionService.getSessionIds()[0]
+      ) as FakeNospaceSession;
+      expect(session.getStdinData()).toEqual(['input data']);
+      expect(session.wasStdinClosed()).toBe(true);
+    });
+
+    it('batch モードで stdinData が無くても stdin を閉じる', () => {
+      socket.trigger('nospace_run', {
+        requestId: 'req-b',
+        code: 'c',
+        options: {
+          language: 'standard',
+          inputMode: 'batch',
+          debug: false,
+          ignoreDebug: false,
+        },
+      });
+
+      const session = executionService.getSession(
+        executionService.getSessionIds()[0]
+      ) as FakeNospaceSession;
+      expect(session.getStdinData()).toEqual([]);
+      expect(session.wasStdinClosed()).toBe(true);
+    });
+
+    it('interactive モードでは stdin を閉じない', () => {
+      const session = startRun();
+
+      expect(session.wasStdinClosed()).toBe(false);
+    });
+
     it('should send stdin data in batch mode', () => {
       const code = 'test code';
       const options: RunOptions = {
-        language: 'nospace20',
+        language: 'standard',
         inputMode: 'batch',
         debug: false,
         ignoreDebug: false,
@@ -322,7 +381,7 @@ describe('NospaceController', () => {
       requestId,
       code: 'test',
       options: {
-        language: 'nospace20',
+        language: 'standard',
         inputMode: 'interactive',
         debug: false,
         ignoreDebug: false,
@@ -451,7 +510,7 @@ describe('NospaceController', () => {
         requestId: 'req-1',
         code: 'test',
         options: {
-          language: 'nospace20',
+          language: 'standard',
           inputMode: 'interactive',
           debug: false,
           ignoreDebug: false,
@@ -496,7 +555,7 @@ describe('NospaceController', () => {
         requestId: 'req-1',
         code: 'test',
         options: {
-          language: 'nospace20',
+          language: 'standard',
           inputMode: 'interactive',
           debug: false,
           ignoreDebug: false,
@@ -541,7 +600,11 @@ describe('NospaceController', () => {
       const calls = executionService.getCompileCalls();
       expect(calls).toHaveLength(1);
       expect(calls[0].code).toBe(code);
-      expect(calls[0].options).toEqual(options);
+      expect(calls[0].options).toEqual({
+        ...options,
+        stdExtensions: [],
+        optPasses: [],
+      });
     });
 
     it('compile の初回ステータスが compiling である', () => {
@@ -710,6 +773,22 @@ describe('NospaceController', () => {
       expect(statuses.map((e) => e.status)).toEqual(['error', 'error']);
     });
 
+    it('終了処理中の拒否は、サービスが持つ理由をそのまま通知する', () => {
+      executionService.throwOnStart = new ExecutionLimitError(
+        'Server is shutting down.'
+      );
+
+      socket.trigger('nospace_run', {
+        requestId: 'req-s',
+        code: 'c',
+        options: runOptions,
+      });
+
+      expect(socket.getEmittedEvents('nospace_stderr')[0].data).toContain(
+        'shutting down'
+      );
+    });
+
     it('requestId が無い・不正な run/compile は無視される', () => {
       socket.trigger('nospace_run', { code: 'c', options: runOptions });
       socket.trigger('nospace_run', {
@@ -788,6 +867,78 @@ describe('NospaceController', () => {
       });
 
       expect(executionService.getRunCalls()[0].flowControl).toBeDefined();
+    });
+  });
+
+  describe('payload の検証', () => {
+    beforeEach(() => {
+      controller.handleConnection(socket as any);
+    });
+
+    const validOptions = {
+      language: 'standard',
+      inputMode: 'interactive',
+      debug: false,
+      ignoreDebug: false,
+    };
+
+    /** 不正な run を送り、プロセスが起動されず requestId 付きのエラーが返ることを確認する */
+    function expectRejected(options: unknown) {
+      socket.trigger('nospace_run', { requestId: 'req-v', code: 'c', options });
+
+      expect(executionService.getRunCalls()).toHaveLength(0);
+      const statuses = socket.getEmittedEvents('nospace_execution_status');
+      expect(statuses).toHaveLength(1);
+      expect(statuses[0]).toMatchObject({
+        requestId: 'req-v',
+        status: 'error',
+      });
+      expect(socket.getEmittedEvents('nospace_stderr')[0].data).toContain(
+        'Invalid run request'
+      );
+    }
+
+    it('許可されない language の run は起動せず拒否する', () => {
+      expectRejected({ ...validOptions, language: 'nospace20' });
+    });
+
+    it('許可されない inputMode の run は起動せず拒否する', () => {
+      expectRejected({ ...validOptions, inputMode: 'remote' });
+    });
+
+    it('BUG: stdExtensions が文字列だと 1 文字ずつ --std-ext に展開されていた。リストでなければ拒否する', () => {
+      expectRejected({ ...validOptions, stdExtensions: 'alloc' });
+    });
+
+    it('CLI のオプションとして解釈されうる拡張名（先頭が -）は拒否する', () => {
+      expectRejected({ ...validOptions, stdExtensions: ['--debug'] });
+    });
+
+    it('許可されない compile target は起動せず拒否する', () => {
+      socket.trigger('nospace_compile', {
+        requestId: 'req-v',
+        code: 'c',
+        options: { language: 'standard', target: 'exe' },
+      });
+
+      expect(executionService.getCompileCalls()).toHaveLength(0);
+      expect(
+        socket.getEmittedEvents('nospace_execution_status')[0]
+      ).toMatchObject({ requestId: 'req-v', status: 'error' });
+    });
+
+    it('想定外のフィールドは取り除いて渡す', () => {
+      socket.trigger('nospace_run', {
+        requestId: 'req-v',
+        code: 'c',
+        options: { ...validOptions, stdExtensions: ['alloc'], evil: 'x' },
+      });
+
+      expect(executionService.getRunCalls()[0].options).toEqual({
+        ...validOptions,
+        stdExtensions: ['alloc'],
+        optPasses: [],
+      });
     });
   });
 });

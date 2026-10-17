@@ -5,15 +5,30 @@ import type {
   TestCaseCreateRequest,
 } from '../../interfaces/TestTypes';
 
+/** fetch の型（テスト時に差し替えるため DI できるようにする） */
+export type FetchFn = (input: string, init?: RequestInit) => Promise<Response>;
+
+/**
+ * テストケースのパスを URL に埋め込める形にする。
+ * `#` `?` `%` などを含む名前で URL が壊れないよう、要素ごとにエンコードする（`/` は区切りとして残す）。
+ */
+export function encodeTestPath(path: string): string {
+  return path.split('/').map(encodeURIComponent).join('/');
+}
+
 /**
  * テスト管理APIのクライアント
  */
 export class TestApiClient {
+  constructor(
+    private readonly fetchFn: FetchFn = (input, init) => fetch(input, init)
+  ) {}
+
   /**
    * テストツリーを取得
    */
   async fetchTree(): Promise<TestTreeResponse> {
-    const response = await fetch('/api/tests', {
+    const response = await this.fetchFn('/api/tests', {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -34,7 +49,7 @@ export class TestApiClient {
     path: string,
     signal?: AbortSignal
   ): Promise<TestCaseResponse> {
-    const response = await fetch(`/api/tests/${path}`, {
+    const response = await this.fetchFn(`/api/tests/${encodeTestPath(path)}`, {
       signal,
       method: 'GET',
       headers: {
@@ -56,7 +71,7 @@ export class TestApiClient {
     path: string,
     data: TestCaseUpdateRequest
   ): Promise<void> {
-    const response = await fetch(`/api/tests/${path}`, {
+    const response = await this.fetchFn(`/api/tests/${encodeTestPath(path)}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -73,7 +88,7 @@ export class TestApiClient {
    * テストケースを作成
    */
   async createTestCase(data: TestCaseCreateRequest): Promise<void> {
-    const response = await fetch('/api/tests', {
+    const response = await this.fetchFn('/api/tests', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

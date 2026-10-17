@@ -1,6 +1,7 @@
 import {
   TestFileService,
   TestFileSystem,
+  MAX_PATH_DEPTH,
 } from '../../app/Services/TestFileService';
 import type { Dirent, Stats } from 'fs';
 
@@ -101,11 +102,12 @@ class FakeTestFileSystem implements TestFileSystem {
   }
 
   existsSync(path: string): boolean {
-    return this.files.has(path) || this.dirs.has(path);
+    const real = this.realpathSync(path);
+    return this.files.has(real) || this.dirs.has(real);
   }
 
   readFileSync(path: string, _encoding: string): string {
-    const content = this.files.get(path);
+    const content = this.files.get(this.realpathSync(path));
     if (content === undefined) {
       throw new Error(`ENOENT: no such file or directory, open '${path}'`);
     }
@@ -113,7 +115,15 @@ class FakeTestFileSystem implements TestFileSystem {
   }
 
   writeFileSync(path: string, data: string): void {
-    this.files.set(path, data);
+    if (this.failWriteFor && path.includes(this.failWriteFor)) {
+      throw new Error('ENOSPC: no space left on device');
+    }
+    this.files.set(this.realpathSync(path), data);
+  }
+
+  /** テスト用: 保存されているファイルのパス一覧 */
+  listFiles(): string[] {
+    return Array.from(this.files.keys());
   }
 
   unlinkSync(path: string): void {
@@ -156,6 +166,35 @@ class FakeTestFileSystem implements TestFileSystem {
     }
 
     return entries;
+  }
+
+  renameSync(from: string, to: string): void {
+    const content = this.files.get(from);
+    if (content === undefined) {
+      throw new Error(`ENOENT: no such file or directory, rename '${from}'`);
+    }
+    this.files.delete(from);
+    this.files.set(to, content);
+  }
+
+  /** シンボリックリンクの対応表。link パスの実パスを target に解決する */
+  private links = new Map<string, string>();
+
+  addSymlink(linkPath: string, targetPath: string): void {
+    this.links.set(linkPath, targetPath);
+    this.dirs.add(linkPath);
+  }
+
+  /** 書き込みを失敗させたいパスの接尾辞 */
+  failWriteFor: string | null = null;
+
+  realpathSync(path: string): string {
+    for (const [link, target] of this.links) {
+      if (path === link || path.startsWith(link + '/')) {
+        return target + path.slice(link.length);
+      }
+    }
+    return path;
   }
 
   statSync(path: string): Stats {
@@ -448,6 +487,180 @@ describe('TestFileService', () => {
       await expect(service.getTestCase('/etc/passwd')).rejects.toThrow(
         'Absolute paths are not allowed'
       );
+    });
+  });
+
+  describe('入力の検証（書き込み前）', () => {
+    it('BUG: source が文字列でない場合は、何も書き込まずにエラーにする', async () => {
+      const fs = new FakeTestFileSystem();
+      fs.addFile('/test/passes/test1.ns', 'old source');
+      const service = new TestFileService('/test', fs);
+
+      await expect(
+        service.updateTestCase('passes/test1', { source: 123 as any })
+      ).rejects.toThrow('Invalid request: source must be a string');
+
+      expect(await service.getTestCase('passes/test1')).toMatchObject({
+        source: 'old source',
+      });
+    });
+
+    it('BUG: check が文字列でない場合は、.ns も更新せずにエラーにする（中途半端に更新された状態を残さない）', async () => {
+      const fs = new FakeTestFileSystem();
+      fs.addFile('/test/passes/test1.ns', 'old source');
+      const service = new TestFileService('/test', fs);
+
+      await expect(
+        service.updateTestCase('passes/test1', {
+          source: 'new source',
+          check: { x: 1 } as any,
+        })
+      ).rejects.toThrow('Invalid request: check must be a string');
+
+      expect(fs.readFileSync('/test/passes/test1.ns', 'utf-8')).toBe(
+        'old source'
+      );
+    });
+
+    it('作成時も source / check の型を検証する', async () => {
+      const fs = new FakeTestFileSystem();
+      const service = new TestFileService('/test', fs);
+
+      await expect(
+        service.createTestCase({ path: 'a/b', source: null as any })
+      ).rejects.toThrow('Invalid request');
+      await expect(
+        service.createTestCase({ path: 'a/b', source: 's', check: 5 as any })
+      ).rejects.toThrow('Invalid request');
+      expect(fs.listFiles()).toEqual([]);
+    });
+  });
+
+  describe('原子的な更新', () => {
+    it('BUG: 書き込みが失敗しても既存ファイルは壊れず、一時ファイルも残らない', async () => {
+      const fs = new FakeTestFileSystem();
+      fs.addFile('/test/passes/test1.ns', 'old source');
+      const service = new TestFileService('/test', fs);
+      fs.failWriteFor = '.tmp-';
+
+      await expect(
+        service.updateTestCase('passes/test1', { source: 'new source' })
+      ).rejects.toThrow('ENOSPC');
+
+      expect(fs.readFileSync('/test/passes/test1.ns', 'utf-8')).toBe(
+        'old source'
+      );
+      expect(fs.listFiles().filter((f) => f.includes('.tmp-'))).toEqual([]);
+    });
+
+    it('成功時は一時ファイルが rename で置き換わり、残らない', async () => {
+      const fs = new FakeTestFileSystem();
+      fs.addFile('/test/passes/test1.ns', 'old source');
+      const service = new TestFileService('/test', fs);
+
+      await service.updateTestCase('passes/test1', {
+        source: 'new source',
+        check: '{"a":1}',
+      });
+
+      expect(fs.readFileSync('/test/passes/test1.ns', 'utf-8')).toBe(
+        'new source'
+      );
+      expect(fs.readFileSync('/test/passes/test1.check.json', 'utf-8')).toBe(
+        '{"a":1}'
+      );
+      expect(fs.listFiles().filter((f) => f.includes('.tmp-'))).toEqual([]);
+    });
+  });
+
+  describe('パスの深さと要素', () => {
+    const deep = (levels: number) =>
+      Array.from({ length: levels }, (_, i) => `d${i}`).join('/');
+
+    it('許可される最大の深さまでは作成できる', async () => {
+      const fs = new FakeTestFileSystem();
+      const service = new TestFileService('/test', fs);
+
+      await expect(
+        service.createTestCase({ path: deep(MAX_PATH_DEPTH), source: 's' })
+      ).resolves.toBeUndefined();
+    });
+
+    it('深さの上限を超えるパスは作成を拒否し、ディレクトリを作らない', async () => {
+      const fs = new FakeTestFileSystem();
+      const service = new TestFileService('/test', fs);
+
+      await expect(
+        service.createTestCase({ path: deep(MAX_PATH_DEPTH + 1), source: 's' })
+      ).rejects.toThrow('Invalid path: too many levels');
+      expect(fs.listFiles()).toEqual([]);
+    });
+
+    it('`a..b` のような `..` を含む正当な名前は拒否しない', async () => {
+      const fs = new FakeTestFileSystem();
+      const service = new TestFileService('/test', fs);
+
+      await expect(
+        service.createTestCase({ path: 'passes/a..b', source: 's' })
+      ).resolves.toBeUndefined();
+    });
+
+    it('`..` で始まるだけの名前（`..x`）は拒否しない', async () => {
+      const fs = new FakeTestFileSystem();
+      const service = new TestFileService('/test', fs);
+
+      await expect(
+        service.createTestCase({ path: '..x/a', source: 's' })
+      ).resolves.toBeUndefined();
+    });
+
+    it.each(['passes//x', 'passes/./x', 'passes/x\\y', ''])(
+      '空・不正な要素を含むパス（%j）は拒否する',
+      async (path) => {
+        const fs = new FakeTestFileSystem();
+        const service = new TestFileService('/test', fs);
+
+        await expect(service.getTestCase(path)).rejects.toThrow('Invalid path');
+      }
+    );
+  });
+
+  describe('シンボリックリンク経由の脱出', () => {
+    it('BUG: testDir 内のシンボリックリンクが外を指していても、読み取りを拒否する', async () => {
+      const fs = new FakeTestFileSystem();
+      fs.addFile('/outside/secret.ns', 'secret');
+      fs.addSymlink('/test/link', '/outside');
+      const service = new TestFileService('/test', fs);
+
+      await expect(service.getTestCase('link/secret')).rejects.toThrow(
+        'outside test directory'
+      );
+    });
+
+    it('シンボリックリンク経由で外へ作成・更新することを拒否する', async () => {
+      const fs = new FakeTestFileSystem();
+      fs.addFile('/outside/x.ns', 'old');
+      fs.addSymlink('/test/link', '/outside');
+      const service = new TestFileService('/test', fs);
+
+      await expect(
+        service.createTestCase({ path: 'link/new', source: 's' })
+      ).rejects.toThrow('outside test directory');
+      await expect(
+        service.updateTestCase('link/x', { source: 'hacked' })
+      ).rejects.toThrow('outside test directory');
+      expect(fs.readFileSync('/outside/x.ns', 'utf-8')).toBe('old');
+    });
+
+    it('testDir 内を指すシンボリックリンクは許可する', async () => {
+      const fs = new FakeTestFileSystem();
+      fs.addFile('/test/real/t.ns', 'ok');
+      fs.addSymlink('/test/alias', '/test/real');
+      const service = new TestFileService('/test', fs);
+
+      await expect(service.getTestCase('alias/t')).resolves.toMatchObject({
+        source: 'ok',
+      });
     });
   });
 });

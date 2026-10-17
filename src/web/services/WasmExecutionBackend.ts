@@ -16,8 +16,8 @@ import {
   isNospaceErrorResult,
 } from '../libs/formatNospaceErrors';
 
-const DEFAULT_STEP_BUDGET = 10000;
-const DEFAULT_MAX_TOTAL_STEPS = 100_000_000;
+import { clampMaxTotalSteps, clampStepBudget } from '../libs/executionLimits';
+import { createDefaultRequestIdGenerator } from '../libs/requestId';
 
 /**
  * ステップ実行ループ用 VM アダプタ。
@@ -75,8 +75,18 @@ export class WasmExecutionBackend implements ExecutionBackend {
   readonly flavor = 'wasm' as const;
 
   private readonly loader: Nospace20Loader;
+  /** 実行中の VM（dispose で解放するための参照）。ループ内では常にローカル変数の VM を使う */
   private vm: any | null = null;
+  /** 解放済みの VM（二重解放の防止） */
+  private freedVms = new WeakSet<object>();
   private abortController: AbortController | null = null;
+  /**
+   * 現在の実行の signal。中断された実行は、これと一致する（= 置き換えられていない）場合のみ
+   * killed を通知する。run() で置き換えられた旧実行の killed が、新しい実行の状態を上書きしないため。
+   * （外部からの kill() 直後に run() した場合も、旧実行は置き換えられた扱いになる）
+   */
+  private activeSignal: AbortSignal | null = null;
+  private readonly generateSessionId = createDefaultRequestIdGenerator();
   private outputCallback: ((entry: OutputEntry) => void) | null = null;
   private statusCallback:
     | ((
@@ -113,15 +123,17 @@ export class WasmExecutionBackend implements ExecutionBackend {
   }
 
   run(code: string, options: RunOptions, stdinData?: string): void {
-    // Kill any existing execution
+    // Kill any existing execution.
     this.kill();
 
-    const sessionId = crypto.randomUUID();
+    const sessionId = this.generateSessionId();
     this.abortController = new AbortController();
     const signal = this.abortController.signal;
+    // 以降、旧実行の signal は active ではなくなり、旧実行の killed は通知されない
+    this.activeSignal = signal;
 
-    const stepBudget = options.stepBudget ?? DEFAULT_STEP_BUDGET;
-    const maxTotalSteps = options.maxTotalSteps ?? DEFAULT_MAX_TOTAL_STEPS;
+    const stepBudget = clampStepBudget(options.stepBudget);
+    const maxTotalSteps = clampMaxTotalSteps(options.maxTotalSteps);
 
     // Start async execution loop
     this.runAsync(
@@ -145,34 +157,40 @@ export class WasmExecutionBackend implements ExecutionBackend {
     maxTotalSteps: number
   ): Promise<void> {
     const nospace20 = this.loader.getNospace20();
+    // BUG FIX: 以前はループ終了時に `this.vm?.free()` としていたため、run() で新しい実行に
+    // 置き換えられた場合、旧ループの finally が「その時点の this.vm（新しい VM）」を解放し、
+    // 新ループの次の step() が解放済みの VM に触れていた。
+    // 解決策として、このループが作った VM をローカル変数で保持し、finally ではそれだけを解放する。
+    let vm: any = null;
 
     try {
       let adapter: VmAdapter;
 
       if (options.language === 'ws') {
         // Whitespace ソースを直接実行
-        this.vm = nospace20.WasmWhitespaceVM.fromWhitespace(code, stdinData);
-        adapter = adaptWhitespaceVm(this.vm);
+        vm = nospace20.WasmWhitespaceVM.fromWhitespace(code, stdinData);
+        adapter = adaptWhitespaceVm(vm);
       } else if (options.direct) {
         // WasmNospaceVM で nospace ソースを直接インタプリタ実行
-        this.vm = new nospace20.WasmNospaceVM(
+        vm = new nospace20.WasmNospaceVM(
           code,
           stdinData,
           options.optPasses?.length ? (options.optPasses as any) : null,
           options.ignoreDebug ?? null
         );
-        adapter = adaptNospaceVm(this.vm);
+        adapter = adaptNospaceVm(vm);
       } else {
         // nospace → Whitespace コンパイル → WS VM 実行
         const stdExtensions = options.stdExtensions;
-        this.vm = new nospace20.WasmWhitespaceVM(
+        vm = new nospace20.WasmWhitespaceVM(
           code,
           stdinData,
           null,
           stdExtensions?.length ? (stdExtensions as any) : null
         );
-        adapter = adaptWhitespaceVm(this.vm);
+        adapter = adaptWhitespaceVm(vm);
       }
+      this.vm = vm;
 
       this.statusCallback?.('running', sessionId);
       this.outputCallback?.({
@@ -193,9 +211,16 @@ export class WasmExecutionBackend implements ExecutionBackend {
       this.handleWasmError(e);
       this.statusCallback?.('error', sessionId);
     } finally {
-      this.vm?.free();
-      this.vm = null;
+      if (this.vm === vm) this.vm = null;
+      this.releaseVm(vm);
     }
+  }
+
+  /** VM を一度だけ解放する（dispose とループ終了の両方から呼ばれても二重解放しない） */
+  private releaseVm(vm: any | null): void {
+    if (!vm || this.freedVms.has(vm)) return;
+    this.freedVms.add(vm);
+    vm.free();
   }
 
   /** VM アダプタを使ったステップ実行ループ */
@@ -272,8 +297,8 @@ export class WasmExecutionBackend implements ExecutionBackend {
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
     }
 
-    // If aborted
-    if (signal.aborted) {
+    // If aborted（新しい run() に置き換えられた場合は、新しい実行の状態を上書きしないよう通知しない）
+    if (signal.aborted && this.activeSignal === signal) {
       this.statusCallback?.('killed', sessionId);
       this.outputCallback?.({
         type: 'system',
@@ -284,7 +309,7 @@ export class WasmExecutionBackend implements ExecutionBackend {
   }
 
   compile(code: string, options: CompileOptions): void {
-    const sessionId = crypto.randomUUID();
+    const sessionId = this.generateSessionId();
 
     (async () => {
       const nospace20 = this.loader.getNospace20();
@@ -375,8 +400,13 @@ export class WasmExecutionBackend implements ExecutionBackend {
 
   dispose(): void {
     this.kill();
-    this.vm?.free();
+    const vm = this.vm;
     this.vm = null;
+    this.releaseVm(vm);
+    // 中断されたループの killed 通知などが、破棄後の backend から UI へ流れ込まないようにする
+    this.outputCallback = null;
+    this.statusCallback = null;
+    this.compileErrorsCallback = null;
   }
 
   onOutput(callback: (entry: OutputEntry) => void): void {

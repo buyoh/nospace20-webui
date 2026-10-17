@@ -1,6 +1,10 @@
+# NOTE: このワークフローは無効化されている（.github/workflows/ に置くと有効になる）。
+# 有効化する場合の注意:
+# - 外部アクションは可能ならコミット SHA で固定すること（ここではタグで固定している）
+# - push イベントのみ。pull_request では自動コミット・push しない
 name: fmt
 
-on: [push, pull_request]
+on: [push]
 
 jobs:
   build:
@@ -9,6 +13,7 @@ jobs:
         node: [22]
 
     runs-on: ubuntu-24.04
+    # 自動コミットのために書き込み権限が必要なのはこのジョブのみ
     permissions:
       contents: write
     
@@ -27,9 +32,10 @@ jobs:
       run: |
         git submodule init
         git submodule update
+    # 書き込み権限付きのトークンの下で、依存パッケージの lifecycle スクリプトを実行しない
     - name: install packages
       run: |
-        npm ci
+        npm ci --ignore-scripts
     - name: lint javascript
       run: |
         npm run lint-fix
@@ -40,6 +46,7 @@ jobs:
         git add .
         git commit -m 'lint-fix by Github Actions'
         fi
-    - uses: ad-m/github-push-action@master
+    # master ではなくタグで固定する
+    - uses: ad-m/github-push-action@v0.8.0
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}

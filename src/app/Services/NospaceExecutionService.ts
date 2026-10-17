@@ -2,7 +2,6 @@ import { spawn, ChildProcess } from 'child_process';
 import { writeFileSync, unlinkSync, existsSync, mkdirSync } from 'fs';
 import { randomUUID } from 'crypto';
 import { join } from 'path';
-import Config from '../Config';
 import {
   ExecutionSlotLimiter,
   ExecutionLimitError,
@@ -47,9 +46,6 @@ const defaultProcessSpawner: ProcessSpawner = {
   spawn,
 };
 
-/** デフォルトのExecutionConfig実装 */
-const defaultExecutionConfig: ExecutionConfig = Config;
-
 /** Nospace セッションの実行状態 */
 export type SessionStatus = 'running' | 'finished' | 'error' | 'killed';
 
@@ -58,8 +54,12 @@ export interface NospaceSession {
   readonly sessionId: string;
   readonly status: SessionStatus;
   readonly exitCode: number | null;
+  /** プロセスが終了し、後始末（実行枠・一時ファイルの解放と onExit 通知）が完了したら解決する */
+  readonly closed?: Promise<void>;
   kill(): void;
   sendStdin(data: string): void;
+  /** 標準入力を閉じる（EOF を伝える）。batch モードで入力を渡し終えたときに呼ぶ */
+  closeStdin(): void;
 }
 
 /**
@@ -99,6 +99,12 @@ class NospaceSessionImpl implements NospaceSession {
   private finalized = false;
   private paused = false;
   private unsubscribeDrain: (() => void) | null = null;
+  private killRequested = false;
+  private killFallbackHandle: NodeJS.Timeout | null = null;
+  private resolveClosed!: () => void;
+  readonly closed: Promise<void> = new Promise<void>((resolve) => {
+    this.resolveClosed = resolve;
+  });
 
   constructor(
     public readonly sessionId: string,
@@ -129,6 +135,15 @@ class NospaceSessionImpl implements NospaceSession {
       this.pauseIfCongested();
     });
 
+    // BUG FIX: stdin の 'error' にリスナーがなく、すぐ終了するプロセスへ大きな入力を書き込むと
+    // EPIPE が未処理の 'error' となりサーバプロセスが停止していた。
+    // 書き込み先が既に閉じていること自体は異常ではないため、EPIPE は無視し、それ以外は記録する。
+    process.stdin?.on('error', (err: NodeJS.ErrnoException) => {
+      if (err.code !== 'EPIPE') {
+        console.error(`stdin error (session ${this.sessionId}):`, err);
+      }
+    });
+
     // 送信待ちが捌けたら出力の読み取りを再開する
     this.unsubscribeDrain =
       flowControl?.onDrain(() => this.resumeIfPossible()) ?? null;
@@ -153,7 +168,7 @@ class NospaceSessionImpl implements NospaceSession {
 
     // Setup timeout
     this.timeoutHandle = setTimeout(() => {
-      if (this.process && !this.process.killed) {
+      if (!this.finalized) {
         this.callbacks.onStderr(
           this.sessionId,
           `\nProcess timeout (${this.config.nospaceTimeout / 1000}s). Killing...\n`
@@ -171,25 +186,43 @@ class NospaceSessionImpl implements NospaceSession {
     return this._exitCode;
   }
 
+  /**
+   * プロセスを終了させる。SIGTERM を送り、一定時間内に終了しなければ SIGKILL を送る。
+   *
+   * BUG FIX: 以前は `process.killed` で終了済みかを判定していた。ChildProcess.killed は
+   * 「シグナルの送信に成功した」ことを表し、プロセスの終了を意味しない。SIGTERM の送信直後に
+   * true になるため、2 秒後の `!process.killed` は常に偽で SIGKILL が送られず、SIGTERM を
+   * 無視するプロセスが残り続けて実行枠も戻らなかった。また終了済みのセッションに kill() を
+   * 呼ぶと status が 'killed' に書き換わっていた。
+   * 解決策として、終了済みかは finalize() の完了（finalized）で判定し、
+   * フォールバックのタイマーは cleanup() で解除する。
+   */
   kill(): void {
-    if (this.process && !this.process.killed) {
-      this._status = 'killed';
-      // 一時停止中のままだと残りの出力が読まれず 'close' が来ないため、読み取りを再開する
-      this.resumeStreams();
-      this.process.kill('SIGTERM');
+    if (this.finalized || this.killRequested || !this.process) return;
+    this.killRequested = true;
+    this._status = 'killed';
+    // 一時停止中のままだと残りの出力が読まれず 'close' が来ないため、読み取りを再開する
+    this.resumeStreams();
+    this.process.kill('SIGTERM');
 
-      // Fallback to SIGKILL after 2 seconds
-      setTimeout(() => {
-        if (this.process && !this.process.killed) {
-          this.process.kill('SIGKILL');
-        }
-      }, 2000);
-    }
+    // Fallback to SIGKILL after 2 seconds
+    this.killFallbackHandle = setTimeout(() => {
+      this.killFallbackHandle = null;
+      if (!this.finalized) {
+        this.process?.kill('SIGKILL');
+      }
+    }, 2000);
   }
 
   sendStdin(data: string): void {
     if (this.process && this.process.stdin && !this.process.stdin.destroyed) {
       this.process.stdin.write(data);
+    }
+  }
+
+  closeStdin(): void {
+    if (this.process && this.process.stdin && !this.process.stdin.destroyed) {
+      this.process.stdin.end();
     }
   }
 
@@ -208,6 +241,7 @@ class NospaceSessionImpl implements NospaceSession {
     this.cleanup();
     this.releaseSlot();
     this.callbacks.onExit(this.sessionId, this._status, code);
+    this.resolveClosed();
   }
 
   /**
@@ -242,6 +276,10 @@ class NospaceSessionImpl implements NospaceSession {
       clearTimeout(this.timeoutHandle);
       this.timeoutHandle = null;
     }
+    if (this.killFallbackHandle) {
+      clearTimeout(this.killFallbackHandle);
+      this.killFallbackHandle = null;
+    }
     this.unsubscribeDrain?.();
     this.unsubscribeDrain = null;
 
@@ -259,6 +297,12 @@ class NospaceSessionImpl implements NospaceSession {
 /** Nospace CLI の実行セッションを管理するサービス */
 export class NospaceExecutionService {
   private sessions = new Map<string, NospaceSession>();
+  /**
+   * 終了（後始末の完了）までの実プロセスのセッション。
+   * removeSession で sessions から外されても、プロセスが終了するまでは killAll の待機対象にする。
+   */
+  private liveSessions = new Set<NospaceSession>();
+  private shuttingDown = false;
   private readonly limiter: ExecutionSlotLimiter;
 
   /** CLI がサポートするコンパイルターゲットのセット（WASM 専用の ex-ws を除く） */
@@ -269,7 +313,7 @@ export class NospaceExecutionService {
   ]);
 
   constructor(
-    private readonly config: ExecutionConfig = defaultExecutionConfig,
+    private readonly config: ExecutionConfig,
     private readonly fs: FileSystem = defaultFileSystem,
     private readonly spawner: ProcessSpawner = defaultProcessSpawner,
     limiter?: ExecutionSlotLimiter
@@ -354,6 +398,33 @@ export class NospaceExecutionService {
   }
 
   /**
+   * 実行中の全セッションを終了させ、終了（後始末の完了）を待つ。サーバ終了時に呼ぶ。
+   * 終了しないセッションがあっても timeoutMs で待つのをやめる。
+   */
+  async killAll(timeoutMs = 3000): Promise<void> {
+    // 以後の起動を拒否する（待機中に届いた run が、終了処理の対象から漏れて孤児になるのを防ぐ）
+    this.shuttingDown = true;
+    // BUG FIX: Controller は kill 直後に removeSession するため、sessions だけを走査すると、
+    // SIGTERM を無視して終了待ちのプロセスを見逃し、SIGKILL のフォールバック前にサーバが終了して
+    // 孤児になっていた。プロセスが終了するまで保持する liveSessions も対象にする。
+    const sessions = Array.from(
+      new Set([...this.sessions.values(), ...this.liveSessions])
+    );
+    for (const session of sessions) {
+      session.kill();
+    }
+    let timer: NodeJS.Timeout | undefined;
+    const timeout = new Promise<void>((resolve) => {
+      timer = setTimeout(resolve, timeoutMs);
+    });
+    await Promise.race([
+      Promise.all(sessions.map((s) => s.closed ?? Promise.resolve())),
+      timeout,
+    ]);
+    clearTimeout(timer);
+  }
+
+  /**
    * Remove session from registry
    */
   removeSession(sessionId: string): void {
@@ -379,6 +450,7 @@ export class NospaceExecutionService {
       exitCode: 1,
       kill: () => {},
       sendStdin: () => {},
+      closeStdin: () => {},
     };
     this.sessions.set(sessionId, errorSession);
     callbacks.onStderr(sessionId, message);
@@ -396,6 +468,10 @@ export class NospaceExecutionService {
     callbacks: SessionCallbacks,
     flowControl?: OutputFlowControl
   ): NospaceSession {
+    // サーバ終了中に新しいプロセスを起動すると、終了処理の対象から漏れて孤児になる
+    if (this.shuttingDown) {
+      throw new ExecutionLimitError('Server is shutting down.');
+    }
     const releaseSlot = this.limiter.tryAcquire();
     if (!releaseSlot) {
       throw new ExecutionLimitError();
@@ -469,6 +545,8 @@ export class NospaceExecutionService {
     );
 
     this.sessions.set(sessionId, session);
+    this.liveSessions.add(session);
+    void session.closed.then(() => this.liveSessions.delete(session));
 
     return session;
   }

@@ -49,3 +49,19 @@ SIGTERM 直後に true となるため 2 秒後の `!this.process.killed` は常
 | 4 | `NospaceSession` に `closeStdin()` を追加し、batch モードで書き込み後に `stdin.end()` | Session IF、`NospaceController`、テスト |
 | 5 | `ExecutionService.killAll()` を追加し、SIGINT/SIGTERM で全セッション kill → `httpServer.close()` → exit | `MainServer.ts`, `NospaceExecutionService` |
 | 6 | 補助策: `existsSync` を `fs.accessSync(path, X_OK)` に変更 | `NospaceExecutionService` |
+
+## 対応状況（2026-10-17）
+
+**完了**（解決策 6 を除く）。(a) は先行タスク（[review-2026-10-16-fixes/04](../../done-tasks/review-2026-10-16-fixes/04-resource-limits.md)）で解消済み。
+
+| 解決策 | 状態 | 内容 |
+|---|---|---|
+| 1 | 完了（先行タスク） | `error` イベントでも冪等な `finalize()` を呼ぶ |
+| 2 | 完了 | stdin の `error` にリスナーを登録。EPIPE は無視し、それ以外はログに記録する |
+| 3 | 完了 | 終了済みかを `finalized` で判定（`process.killed` は使わない）。SIGKILL フォールバックのタイマーを保持して `cleanup()` で解除。終了済みセッションへの `kill()` は status を書き換えない。kill の重複呼び出しはシグナルを 1 回だけ送る |
+| 4 | 完了 | `NospaceSession.closeStdin()` を追加し、batch モードで入力を書き込んだ後（入力が無い場合も）に stdin を閉じる |
+| 5 | 完了 | `NospaceExecutionService.killAll()`（全セッションを終了させ、終了を待つ。上限 3 秒）を追加。`setupExpressServer` が返す `shutdown()` から呼び、`MainServer` が SIGINT / SIGTERM で `shutdown()` → 終了する |
+| 6 | **見送り** | `existsSync` → `accessSync(X_OK)`。補助策であり、実行権限エラー（EACCES）は `error` イベントの処理で安全に扱えるため |
+
+- テスト: `NospaceExecutionService.spec`（SIGKILL フォールバック・終了済みへの kill・EPIPE・closeStdin・killAll）、`NospaceController.spec`（batch で stdin を閉じる）
+- 残: 同一クライアントが Stop せずに再実行すると旧プロセスの close までスロットが占有される問題は [review-2026-10-16-followup](../../tasks/review-2026-10-16-followup.md) に記載

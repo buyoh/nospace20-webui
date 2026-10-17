@@ -2,8 +2,8 @@
 
 ## タスク一覧
 
-- [review-2026-10-16-followup.md](review-2026-10-16-followup.md) コードレビュー 2026-10-16 修正の積み残し（子プロセスの終了処理・スロット占有・テストエディタ・テスト追加）
-- [code-review-2026-10-16/](code-review-2026-10-16/) コードベース全体レビューの未対応指摘（01・02 は一部完了、04・07・10〜14 は未対応）
+- [review-2026-10-16-followup.md](review-2026-10-16-followup.md) コードレビュー 2026-10-16 修正の積み残し（再実行時のスロット占有・テストエディタ・テスト追加・テスト管理 API・サーバー起動/終了のテスト・見送り項目）
+- [code-review-2026-10-16/](code-review-2026-10-16/) コードベース全体レビューの未対応指摘（12・13・14。01〜11 は対応済み）
 - [expected-result-editor/](expected-result-editor/) Expected Result 構造化エディタ（テストケースの期待結果を UI フォームで編集）
 - [test-review-phase3-4.md](test-review-phase3-4.md) テストコード レビュー・改善計画（フェーズ3-4）
 - [wasm-flavor/](wasm-flavor/) WASM Flavor 設計（Phase 9〜11）
@@ -26,6 +26,8 @@
 - [operation-mode-tabs/](operation-mode-tabs/) オペレーションモード タブ再構成（Compile / Run / Run(Direct) / TestEditor）
 
 ## 完了済みタスク
+
+- [code-review-2026-10-16/](../done-tasks/code-review-2026-10-16/) コードレビュー指摘 01〜11 の対応記録（サーバ停止・子プロセス終了処理・テスト管理 API・WASM 実行の安全性・設定の fail fast・CI/依存 ほか）
 
 - [review-2026-10-16-fixes/](../done-tasks/review-2026-10-16-fixes/) コードレビュー指摘 03/05/06/08/09 の修正（requestId 導入・backend 状態管理・再接続・リソース上限・テストエディタ堅牢化）
 

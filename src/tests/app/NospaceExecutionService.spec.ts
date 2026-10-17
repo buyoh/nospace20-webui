@@ -27,9 +27,18 @@ class FakeChildProcess extends EventEmitter {
     this.stderr = new FakeReadable();
   }
 
-  kill(_signal?: NodeJS.Signals | number): boolean {
-    if (!this.killed) {
-      this.killed = true;
+  /** true の間、SIGTERM を無視して終了しない（SIGKILL では終了する） */
+  public ignoreSigterm = false;
+  /** kill() に渡されたシグナルの記録 */
+  public signals: Array<NodeJS.Signals | number | undefined> = [];
+
+  kill(signal?: NodeJS.Signals | number): boolean {
+    this.signals.push(signal);
+    // 実際の Node と同様、シグナルの送信に成功した時点で killed は true になる（終了を意味しない）
+    const firstKill = !this.killed;
+    this.killed = true;
+    const terminates = signal === 'SIGKILL' || !this.ignoreSigterm;
+    if (terminates && (firstKill || signal === 'SIGKILL')) {
       // Simulate process termination
       setTimeout(() => {
         this.exitCode = null;
@@ -65,6 +74,11 @@ class FakeReadable extends EventEmitter {
 class FakeWritable extends EventEmitter {
   public destroyed = false;
   public writtenData: string[] = [];
+  public ended = false;
+
+  end(): void {
+    this.ended = true;
+  }
 
   write(data: string): boolean {
     this.writtenData.push(data);
@@ -1019,6 +1033,176 @@ describe('NospaceExecutionService', () => {
       session.kill();
 
       expect(fakeProcess.stdout.resumeCount).toBe(1);
+    });
+  });
+
+  describe('終了処理（kill・stdin・killAll）', () => {
+    const runOptions: RunOptions = {
+      language: 'standard',
+      debug: false,
+      ignoreDebug: false,
+      inputMode: 'batch',
+    };
+    const noop = {
+      onStdout: () => {},
+      onStderr: () => {},
+      onExit: () => {},
+    };
+
+    beforeEach(() => {
+      files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('BUG: SIGTERM を無視するプロセスには、2 秒後に SIGKILL を送る（killed が true でも発火する）', () => {
+      jest.useFakeTimers();
+      fakeProcess.ignoreSigterm = true;
+      const session = service.run('a', runOptions, noop);
+
+      session.kill();
+      expect(fakeProcess.signals).toEqual(['SIGTERM']);
+      jest.advanceTimersByTime(2000);
+
+      expect(fakeProcess.signals).toEqual(['SIGTERM', 'SIGKILL']);
+    });
+
+    it('SIGTERM で終了したら SIGKILL は送らず、フォールバックのタイマーも残さない', () => {
+      jest.useFakeTimers();
+      const session = service.run('a', runOptions, noop);
+
+      session.kill();
+      jest.advanceTimersByTime(20); // fake は 10ms 後に close する
+      jest.advanceTimersByTime(5000);
+
+      expect(fakeProcess.signals).toEqual(['SIGTERM']);
+    });
+
+    it('kill を複数回呼んでもシグナルは 1 回だけ送る', () => {
+      jest.useFakeTimers();
+      const session = service.run('a', runOptions, noop);
+
+      session.kill();
+      session.kill();
+
+      expect(fakeProcess.signals).toEqual(['SIGTERM']);
+    });
+
+    it('BUG: 終了済みのセッションに kill しても status を書き換えない', () => {
+      const session = service.run('a', runOptions, noop);
+      fakeProcess.emit('close', 0);
+      expect(session.status).toBe('finished');
+
+      session.kill();
+
+      expect(session.status).toBe('finished');
+      expect(fakeProcess.signals).toEqual([]);
+    });
+
+    it('BUG: stdin の EPIPE（既に終了したプロセスへの書き込み）で例外を出さない', () => {
+      service.run('a', runOptions, noop);
+      const epipe = Object.assign(new Error('write EPIPE'), { code: 'EPIPE' });
+
+      // リスナーが無いと EventEmitter は例外を投げる（実環境では未処理 error でプロセス停止）
+      expect(() => fakeProcess.stdin.emit('error', epipe)).not.toThrow();
+    });
+
+    it('EPIPE 以外の stdin エラーも例外にはしない', () => {
+      service.run('a', runOptions, noop);
+      const other = Object.assign(new Error('boom'), { code: 'EIO' });
+      const original = console.error;
+      console.error = () => {};
+      try {
+        expect(() => fakeProcess.stdin.emit('error', other)).not.toThrow();
+      } finally {
+        console.error = original;
+      }
+    });
+
+    it('closeStdin で標準入力を閉じる', () => {
+      const session = service.run('a', runOptions, noop);
+
+      session.closeStdin();
+
+      expect(fakeProcess.stdin.ended).toBe(true);
+    });
+
+    it('killAll は実行中の全セッションを終了させ、終了を待つ', async () => {
+      const exits: string[] = [];
+      service.run('a', runOptions, {
+        ...noop,
+        onExit: (_id, status) => exits.push(status),
+      });
+
+      await service.killAll();
+
+      expect(fakeProcess.signals).toEqual(['SIGTERM']);
+      expect(exits).toEqual(['killed']);
+    });
+
+    it('killAll は終了しないセッションがあっても timeout で戻る（SIGKILL へのフォールバックで終了する）', async () => {
+      jest.useFakeTimers();
+      fakeProcess.ignoreSigterm = true;
+      const exits: string[] = [];
+      service.run('a', runOptions, {
+        ...noop,
+        onExit: (_id, status) => exits.push(status),
+      });
+
+      const done = service.killAll(3000);
+      await jest.advanceTimersByTimeAsync(2100);
+      await done;
+
+      expect(fakeProcess.signals).toEqual(['SIGTERM', 'SIGKILL']);
+      expect(exits).toEqual(['killed']);
+    });
+
+    it('killAll は SIGKILL でも終了しない場合、timeout で戻る', async () => {
+      jest.useFakeTimers();
+      fakeProcess.ignoreSigterm = true;
+      fakeProcess.kill = () => true; // 何のシグナルでも終了しないプロセス
+      service.run('a', runOptions, noop);
+
+      const done = service.killAll(500);
+      await jest.advanceTimersByTimeAsync(600);
+
+      await expect(done).resolves.toBeUndefined();
+    });
+
+    it('セッションが無ければ killAll は即座に完了する', async () => {
+      await expect(service.killAll()).resolves.toBeUndefined();
+    });
+
+    it('BUG: removeSession 済みでも、終了待ちのプロセスは killAll の待機対象になる（SIGKILL 前にサーバが終了して孤児になるのを防ぐ）', async () => {
+      jest.useFakeTimers();
+      fakeProcess.ignoreSigterm = true;
+      const exits: string[] = [];
+      const session = service.run('a', runOptions, {
+        ...noop,
+        onExit: (_id, status) => exits.push(status),
+      });
+      // Controller は kill の直後に removeSession する
+      session.kill();
+      service.removeSession(session.sessionId);
+
+      const done = service.killAll(3000);
+      await jest.advanceTimersByTimeAsync(2100);
+      await done;
+
+      expect(fakeProcess.signals).toEqual(['SIGTERM', 'SIGKILL']);
+      expect(exits).toEqual(['killed']);
+    });
+
+    it('BUG: killAll の開始後は新しい実行を拒否する（終了処理の対象から漏れて孤児になるのを防ぐ）', async () => {
+      const done = service.killAll();
+
+      expect(() => service.run('b', runOptions, noop)).toThrow(
+        ExecutionLimitError
+      );
+      expect(() => service.run('b', runOptions, noop)).toThrow('shutting down');
+      await done;
     });
   });
 });

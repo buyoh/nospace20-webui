@@ -18,23 +18,12 @@ import {
   tryParseNospaceErrors,
 } from '../libs/formatNospaceErrors';
 import type { NospaceErrorEntry } from '../libs/formatNospaceErrors';
+import {
+  createDefaultRequestIdGenerator,
+  type RequestIdGenerator,
+} from '../libs/requestId';
 
 const defaultSocketFactory: SocketFactory = () => io();
-
-/** 実行要求の識別子を生成する関数 */
-export type RequestIdGenerator = () => string;
-
-/**
- * 既定の requestId 生成器。
- * crypto.randomUUID は HTTPS / localhost 以外（secure context 外）では使えないため依存しない。
- */
-function createDefaultRequestIdGenerator(): RequestIdGenerator {
-  let counter = 0;
-  return () =>
-    `${Date.now().toString(36)}-${(counter++).toString(36)}-${Math.random()
-      .toString(36)
-      .slice(2, 8)}`;
-}
 
 /** 終端のステータス（以降、その要求のイベントは無視する） */
 const TERMINAL_STATUSES: ReadonlySet<string> = new Set([

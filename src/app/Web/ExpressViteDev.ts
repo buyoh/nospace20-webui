@@ -1,14 +1,14 @@
 import Express from 'express';
 import Fs from 'fs';
 import Path from 'path';
-import Config from '../Config';
 
+/**
+ * Vite の開発サーバをミドルウェアとして結び付ける。開発専用。
+ * 本番での起動を防ぐ判定は、設定を持つ呼び出し側（setupExpressServer）が行う。
+ */
 export async function bindViteDevToExpress(
   express: Express.Express
 ): Promise<void> {
-  if (!Config.develop) {
-    throw new Error('bindViteDevToExpress: Config.develop is not true');
-  }
   // Dynamic import because it is not used in production
   const Vite = await import('vite');
 

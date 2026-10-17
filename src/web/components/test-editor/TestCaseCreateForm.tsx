@@ -3,6 +3,10 @@ import { CheckResultEditor } from './CheckResultEditor';
 import { Button } from '../common/Button';
 import { Select } from '../common/Select';
 import { TextInput } from '../common/TextInput';
+import {
+  MAX_TEST_PATH_DEPTH,
+  TEST_FILE_NAME_PATTERN,
+} from '../../../interfaces/TestTypes';
 import './styles/TestCaseCreateForm.scss';
 
 /** TestCaseCreateForm のプロパティ */
@@ -42,7 +46,13 @@ export const TestCaseCreateForm: React.FC<TestCaseCreateFormProps> = ({
     }
   };
 
-  const isValid = category && fileName && source && checkValid;
+  // サーバーが受け付ける形式（英数字・アンダースコア・ハイフン）と深さの上限を、送信前に確認する
+  const fileNameValid =
+    fileName === '' || TEST_FILE_NAME_PATTERN.test(fileName);
+  const depth = (category ? category.split('/').length : 0) + 1;
+  const depthValid = depth <= MAX_TEST_PATH_DEPTH;
+  const isValid =
+    category && fileName && fileNameValid && depthValid && source && checkValid;
 
   return (
     <div className="test-case-create-form">
@@ -73,6 +83,16 @@ export const TestCaseCreateForm: React.FC<TestCaseCreateFormProps> = ({
             placeholder="e.g., test_001"
             disabled={isSaving}
           />
+          {!fileNameValid && (
+            <div className="form-hint form-hint--error" role="alert">
+              Use only letters, digits, &quot;_&quot; and &quot;-&quot;
+            </div>
+          )}
+          {!depthValid && (
+            <div className="form-hint form-hint--error" role="alert">
+              The path is too deep (max {MAX_TEST_PATH_DEPTH} levels)
+            </div>
+          )}
         </div>
         <div className="form-section">
           <label>Expected Result (.check.json)</label>
