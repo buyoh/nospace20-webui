@@ -8,6 +8,7 @@ import { ExecutionOptions } from '../components/execution/ExecutionOptions';
 import { CompileOptions } from '../components/execution/CompileOptions';
 import { CompileOutputPanel } from '../components/execution/CompileOutputPanel';
 import { ExecutionControls } from '../components/execution/ExecutionControls';
+import { BackendStatusBar } from '../components/execution/BackendStatusBar';
 import { OutputPanel } from '../components/execution/OutputPanel';
 import { InputPanel } from '../components/execution/InputPanel';
 import { SampleList } from '../components/editor/SampleList';
@@ -75,10 +76,20 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({
     handleClearOutput,
     compileOutput,
     compileStatus,
+    backendState,
+    retryBackend,
   } = useNospaceExecution(backendFactory);
 
   const isWasm = flavor === 'wasm';
   const isWebSocket = flavor === 'websocket';
+
+  const backendReady = backendState.kind === 'ready';
+
+  // flavor が変わると backend が作り直されるため、旧 backend のコンパイルを待っていた自動実行を破棄する
+  // （残ると、次の ws コンパイル成功時に意図しない自動実行が起きる）
+  useEffect(() => {
+    pendingAutoRunRef.current = null;
+  }, [flavor]);
 
   // コンパイル成功後はパネルを折りたたむ、エラー時は展開する
   useEffect(() => {
@@ -138,6 +149,14 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({
   const canRunCompiled =
     compileOutput !== null && compileOutput.target === 'ws';
 
+  const statusBar = (
+    <BackendStatusBar
+      state={backendState}
+      flavor={flavor}
+      onRetry={retryBackend}
+    />
+  );
+
   return (
     <div className="execution-container">
       {/* モード切り替えタブ */}
@@ -184,8 +203,10 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({
         <>
           {/* Compile タブ: コンパイルのみ */}
           <CompileOptionsImpl />
+          {statusBar}
           <ExecutionControls
             isRunning={isRunning}
+            disabled={!backendReady}
             onCompile={handleCompile}
             onKill={handleKill}
             compileStatus={compileStatus}
@@ -202,8 +223,10 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({
         <>
           {/* Run タブ: コンパイル済みコードの実行 */}
           <ExecutionOptionsImpl />
+          {statusBar}
           <ExecutionControls
             isRunning={isRunning}
+            disabled={!backendReady}
             onCompileAndRun={handleCompileAndRun}
             onRun={handleRunCompiled}
             runDisabled={!canRunCompiled}
@@ -222,8 +245,10 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({
         <>
           {/* Run(Direct) タブ: 従来の Execution モード相当 */}
           <ExecutionOptionsImpl />
+          {statusBar}
           <ExecutionControls
             isRunning={isRunning}
+            disabled={!backendReady}
             onRun={handleRunWithInput}
             onKill={handleKill}
           />

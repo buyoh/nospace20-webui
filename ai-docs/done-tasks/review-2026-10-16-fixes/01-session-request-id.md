@@ -3,7 +3,7 @@
 旧セッションのイベントが新しい実行に混入する問題を、クライアント生成の requestId で解消し、サーバ側のセッション登録を保護する。
 
 作成日: 2026-10-16
-ステータス: 設計完了（未実装）
+ステータス: 完了
 元指摘: [08-session-id-mismatch.md](../code-review-2026-10-16/08-session-id-mismatch.md)
 
 ## 設計・方針
@@ -105,19 +105,19 @@ nospace_execution_status: (payload: {
 
 ## タスクステップ・チェックリスト
 
-1. [ ] interfaces: payload 型に `requestId` を追加
-2. [ ] サーバ
-   1. [ ] `SessionCallbacks` を `sessionId` / `status` 引数付きに変更し、`sessions.set` をコールバック前に移動
-   2. [ ] `SocketSessionRegistry` を新設し、Controller から利用
-   3. [ ] onExit の条件付き削除、kill/stdin の所有者確認
-   4. [ ] 全 emit に `requestId` を付与、`requestId` の検証
-   5. [ ] 終了済みセッションに対する登録・初期ステータス emit の抑止
-   6. [ ] 一時ファイル書き込み失敗をエラーセッション化、Controller の try/catch と `emitRequestError`
-3. [ ] クライアント
-   1. [ ] `ServerExecutionBackend` に requestId フィルタと終端ステータス管理を実装（ID 生成器 DI）
-   2. [ ] `pendingKill` / `pendingStdin` の実装
-   3. [ ] `useNospaceExecution` に楽観的ステータス更新と同期例外時の復帰を追加
-4. [ ] テスト（下記）
+1. [x] interfaces: payload 型に `requestId` を追加
+2. [x] サーバ
+   1. [x] `SessionCallbacks` を `sessionId` / `status` 引数付きに変更し、`sessions.set` をコールバック前に移動
+   2. [x] `SocketSessionRegistry` を新設し、Controller から利用
+   3. [x] onExit の条件付き削除、kill/stdin の所有者確認
+   4. [x] 全 emit に `requestId` を付与、`requestId` の検証
+   5. [x] 終了済みセッションに対する登録・初期ステータス emit の抑止
+   6. [x] 一時ファイル書き込み失敗をエラーセッション化、Controller の try/catch と `emitRequestError`
+3. [x] クライアント
+   1. [x] `ServerExecutionBackend` に requestId フィルタと終端ステータス管理を実装（ID 生成器 DI）
+   2. [x] `pendingKill` / `pendingStdin` の実装
+   3. [x] `useNospaceExecution` に楽観的ステータス更新と同期例外時の復帰を追加
+4. [x] テスト（下記）
 
 ### テスト
 

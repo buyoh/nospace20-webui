@@ -9,6 +9,14 @@ import type {
 import type { NospaceErrorEntry } from '../libs/formatNospaceErrors';
 
 /**
+ * サーバとの接続状態。
+ * - connected: 再接続が完了した
+ * - reconnecting: 切断され、自動再接続を試みている
+ * - lost: サーバ側から意図的に切断され、自動再接続は行われない（再生成が必要）
+ */
+export type ConnectionState = 'connected' | 'reconnecting' | 'lost';
+
+/**
  * Execution backend abstract interface.
  * Provides a common API for WebSocket flavor and WASM flavor.
  */
@@ -71,6 +79,11 @@ export interface ExecutionBackend {
    * WebSocket flavor は未対応のため no-op で実装する。
    */
   onCompileErrors(callback: (errors: NospaceErrorEntry[]) => void): void;
+  /**
+   * サーバとの接続状態の変化を通知するコールバックを設定する。
+   * サーバ接続を持たない backend（WASM）は実装しない。
+   */
+  onConnectionChange?(callback: (state: ConnectionState) => void): void;
 }
 
 /**

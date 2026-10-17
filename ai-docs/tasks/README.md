@@ -2,8 +2,8 @@
 
 ## タスク一覧
 
-- [review-2026-10-16-fixes/](review-2026-10-16-fixes/) コードレビュー指摘 03/05/06/08/09 の修正設計（requestId 導入・backend 状態管理・再接続・リソース上限・テストエディタ堅牢化）
-- [code-review-2026-10-16/](code-review-2026-10-16/) コードベース全体レビュー（サーバ停止バグ・DoS 耐性・テスト API 公開・クライアント競合状態 等 14 件）
+- [review-2026-10-16-followup.md](review-2026-10-16-followup.md) コードレビュー 2026-10-16 修正の積み残し（子プロセスの終了処理・スロット占有・テストエディタ・テスト追加）
+- [code-review-2026-10-16/](code-review-2026-10-16/) コードベース全体レビューの未対応指摘（01・02 は一部完了、04・07・10〜14 は未対応）
 - [expected-result-editor/](expected-result-editor/) Expected Result 構造化エディタ（テストケースの期待結果を UI フォームで編集）
 - [test-review-phase3-4.md](test-review-phase3-4.md) テストコード レビュー・改善計画（フェーズ3-4）
 - [wasm-flavor/](wasm-flavor/) WASM Flavor 設計（Phase 9〜11）
@@ -26,6 +26,8 @@
 - [operation-mode-tabs/](operation-mode-tabs/) オペレーションモード タブ再構成（Compile / Run / Run(Direct) / TestEditor）
 
 ## 完了済みタスク
+
+- [review-2026-10-16-fixes/](../done-tasks/review-2026-10-16-fixes/) コードレビュー指摘 03/05/06/08/09 の修正（requestId 導入・backend 状態管理・再接続・リソース上限・テストエディタ堅牢化）
 
 - [wasm-nospace-interpreter/](../done-tasks/wasm-nospace-interpreter/) WASM NospaceVM インタプリタ実行機能（Run(Direct) モード対応）
 - [nospace-webui/](../done-tasks/nospace-webui/) nospace Web UI の設計・実装タスク（全実装済み）

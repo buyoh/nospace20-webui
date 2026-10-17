@@ -30,8 +30,12 @@ export class TestApiClient {
   /**
    * テストケースの詳細を取得
    */
-  async fetchTestCase(path: string): Promise<TestCaseResponse> {
+  async fetchTestCase(
+    path: string,
+    signal?: AbortSignal
+  ): Promise<TestCaseResponse> {
     const response = await fetch(`/api/tests/${path}`, {
+      signal,
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

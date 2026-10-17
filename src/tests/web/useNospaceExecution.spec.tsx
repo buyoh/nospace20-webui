@@ -15,6 +15,7 @@ import {
   currentSessionIdAtom,
   outputEntriesAtom,
   exitCodeAtom,
+  backendStateAtom,
 } from '../../web/stores/executionAtom';
 import { compileOutputAtom } from '../../web/stores/compileOutputAtom';
 import { flavorAtom } from '../../web/stores/flavorAtom';
@@ -59,11 +60,16 @@ class FakeExecutionBackend implements ExecutionBackend {
     return this.isReadyValue;
   }
 
+  /** 設定すると run() / compile() がこのエラーを同期的に投げる（未接続時の再現用） */
+  throwOnStart: Error | null = null;
+
   run(code: string, options: any, stdinData?: string): void {
+    if (this.throwOnStart) throw this.throwOnStart;
     this.runCalls.push([code, options, stdinData]);
   }
 
   compile(code: string, options: any): void {
+    if (this.throwOnStart) throw this.throwOnStart;
     this.compileCalls.push([code, options]);
   }
 
@@ -775,6 +781,107 @@ describe('useNospaceExecution', () => {
       });
 
       expect(result.current.compileOutput).toBeNull();
+    });
+  });
+
+  describe('バックエンド状態と開始時の挙動', () => {
+    it('backendState が ready でない間は run / compile を実行しない', async () => {
+      const { store, wrapper } = createTestWrapper();
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
+        wrapper,
+      });
+      await waitFor(() => expect(fakeBackend.isReadyValue).toBe(true));
+      await waitFor(() =>
+        expect(store.get(backendStateAtom)).toEqual({ kind: 'ready' })
+      );
+
+      act(() => {
+        store.set(backendStateAtom, { kind: 'disconnected' });
+      });
+      act(() => {
+        result.current.handleRun();
+        result.current.handleCompile();
+      });
+
+      expect(fakeBackend.runCalls).toHaveLength(0);
+      expect(fakeBackend.compileCalls).toHaveLength(0);
+    });
+
+    it('実行開始の直後に楽観的に running になり、Run を連打しても 1 回しか実行されない', async () => {
+      const { store, wrapper } = createTestWrapper();
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
+        wrapper,
+      });
+      await waitFor(() =>
+        expect(store.get(backendStateAtom)).toEqual({ kind: 'ready' })
+      );
+
+      act(() => {
+        result.current.handleRun();
+      });
+      // backend からはまだ running が通知されていない（サーバ flavor を想定）
+      expect(store.get(executionStatusAtom)).toBe('running');
+      expect(result.current.isRunning).toBe(true);
+
+      act(() => {
+        result.current.handleRun();
+      });
+
+      expect(fakeBackend.runCalls).toHaveLength(1);
+    });
+
+    it('コンパイル開始の直後に楽観的に compiling になる', async () => {
+      const { store, wrapper } = createTestWrapper();
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
+        wrapper,
+      });
+      await waitFor(() =>
+        expect(store.get(backendStateAtom)).toEqual({ kind: 'ready' })
+      );
+
+      act(() => {
+        result.current.handleCompile();
+      });
+
+      expect(store.get(executionStatusAtom)).toBe('compiling');
+    });
+
+    it('BUG: backend.run が同期的に例外を投げたら running のまま固着せず error に戻り、理由を表示する', async () => {
+      const { store, wrapper } = createTestWrapper();
+      fakeBackend.throwOnStart = new Error('Socket not connected');
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
+        wrapper,
+      });
+      await waitFor(() =>
+        expect(store.get(backendStateAtom)).toEqual({ kind: 'ready' })
+      );
+
+      act(() => {
+        result.current.handleRun();
+      });
+
+      expect(store.get(executionStatusAtom)).toBe('error');
+      expect(result.current.isRunning).toBe(false);
+      const messages = store.get(outputEntriesAtom).map((e) => e.data);
+      expect(messages.join('')).toContain('Socket not connected');
+    });
+
+    it('BUG: backend.compile が同期的に例外を投げたら compiling のまま固着せず、compileStatus が error になる', async () => {
+      const { store, wrapper } = createTestWrapper();
+      fakeBackend.throwOnStart = new Error('Socket not connected');
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
+        wrapper,
+      });
+      await waitFor(() =>
+        expect(store.get(backendStateAtom)).toEqual({ kind: 'ready' })
+      );
+
+      act(() => {
+        result.current.handleCompile();
+      });
+
+      expect(store.get(executionStatusAtom)).toBe('error');
+      expect(result.current.compileStatus).toBe('error');
     });
   });
 });

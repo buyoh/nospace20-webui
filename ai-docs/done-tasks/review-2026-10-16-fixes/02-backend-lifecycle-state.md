@@ -3,7 +3,7 @@
 flavor 切替時の初期化競合を解消し、初期化中・失敗・切断の状態を UI に表示して再試行可能にする。
 
 作成日: 2026-10-16
-ステータス: 設計完了（未実装）
+ステータス: 完了
 元指摘: [06-backend-init-race-and-failure.md](../code-review-2026-10-16/06-backend-init-race-and-failure.md)
 
 ## 設計・方針
@@ -133,13 +133,13 @@ export const isNospace20WasmInitialized = () => defaultLoader.isInitialized();
 
 ## タスクステップ・チェックリスト
 
-1. [ ] `backendStateAtom` / `BackendState` 型を追加
-2. [ ] `useExecutionBackend` を上記設計に書き換え、`retry` を返す
-3. [ ] `useNospaceExecution` に `backendState` / `retryBackend` を追加し、各ハンドラのガードを更新
-4. [ ] loader をファクトリ化し、失敗時リセット
-5. [ ] `ExecutionContainer` で flavor 変更時に `pendingAutoRunRef` をクリア
-6. [ ] `BackendStatusBar` 追加、`ExecutionControls` に `disabled` 追加、`ExecutionContainer` で配線
-7. [ ] テスト（loader のテストは新規 `src/tests/web/libs/nospace20Loader.spec.ts`）
+1. [x] `backendStateAtom` / `BackendState` 型を追加
+2. [x] `useExecutionBackend` を上記設計に書き換え、`retry` を返す
+3. [x] `useNospaceExecution` に `backendState` / `retryBackend` を追加し、各ハンドラのガードを更新
+4. [x] loader をファクトリ化し、失敗時リセット
+5. [x] `ExecutionContainer` で flavor 変更時に `pendingAutoRunRef` をクリア
+6. [x] `BackendStatusBar` 追加、`ExecutionControls` に `disabled` 追加、`ExecutionContainer` で配線
+7. [x] テスト（loader のテストは新規 `src/tests/web/libs/nospace20Loader.spec.ts`）
 
 ### テスト
 

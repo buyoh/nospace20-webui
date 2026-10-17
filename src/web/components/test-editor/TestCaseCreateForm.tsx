@@ -34,6 +34,7 @@ export const TestCaseCreateForm: React.FC<TestCaseCreateFormProps> = ({
   const [category, setCategory] = useState(categories[0] || '');
   const [fileName, setFileName] = useState('');
   const [check, setCheck] = useState('');
+  const [checkValid, setCheckValid] = useState(true);
 
   const handleSubmit = () => {
     if (category && fileName && source) {
@@ -41,7 +42,7 @@ export const TestCaseCreateForm: React.FC<TestCaseCreateFormProps> = ({
     }
   };
 
-  const isValid = category && fileName && source;
+  const isValid = category && fileName && source && checkValid;
 
   return (
     <div className="test-case-create-form">
@@ -78,6 +79,7 @@ export const TestCaseCreateForm: React.FC<TestCaseCreateFormProps> = ({
           <CheckResultEditor
             value={check}
             onChange={setCheck}
+            onValidityChange={setCheckValid}
             disabled={isSaving}
           />
         </div>

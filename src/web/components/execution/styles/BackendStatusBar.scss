@@ -1,0 +1,14 @@
+@use '../../../styles/colors';
+
+.backend-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+  font-size: 0.85rem;
+  color: colors.$text-muted;
+
+  &--error {
+    color: colors.$error-text;
+  }
+}

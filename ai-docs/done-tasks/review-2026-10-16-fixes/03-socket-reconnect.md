@@ -3,7 +3,7 @@
 再接続ごとにリスナーが重複登録される問題を解消し、切断時に実行状態を安全に復帰させる。
 
 作成日: 2026-10-16
-ステータス: 設計完了（未実装）
+ステータス: 完了
 元指摘: [05-socket-reconnect-handling.md](../code-review-2026-10-16/05-socket-reconnect-handling.md)
 依存: [02](02-backend-lifecycle-state.md)（`backendStateAtom`）、[01](01-session-request-id.md)（requestId による終端管理）
 
@@ -82,11 +82,11 @@ if (prevStatusRef.current === 'compiling') {
 
 ## タスクステップ・チェックリスト
 
-1. [ ] `NospaceSocketClient`: リスナー一度だけ登録、`onDisconnect` / `onReconnect`、初回失敗時 close、`close()` で全リスナー解除、未接続時の emit 拒否
-2. [ ] `ExecutionBackend.onConnectionChange` を追加
-3. [ ] `ServerExecutionBackend`: 切断時の終端処理とシステムメッセージ、接続状態通知
-4. [ ] `useExecutionBackend`: 接続状態を `backendStateAtom` に反映、compileStatus 判定の修正
-5. [ ] テスト
+1. [x] `NospaceSocketClient`: リスナー一度だけ登録、`onDisconnect` / `onReconnect`、初回失敗時 close、`close()` で全リスナー解除、未接続時の emit 拒否
+2. [x] `ExecutionBackend.onConnectionChange` を追加
+3. [x] `ServerExecutionBackend`: 切断時の終端処理とシステムメッセージ、接続状態通知
+4. [x] `useExecutionBackend`: 接続状態を `backendStateAtom` に反映、compileStatus 判定の修正
+5. [x] テスト
 
 ### テスト
 

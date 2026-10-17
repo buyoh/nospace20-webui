@@ -8,6 +8,7 @@ import { useTestEditor } from '../../hooks/useTestEditor';
 import { useTestTree } from '../../hooks/useTestTree';
 import { TestCaseEditForm } from './TestCaseEditForm';
 import { TestCaseCreateForm } from './TestCaseCreateForm';
+import { TestEditorErrorBanner } from './TestEditorErrorBanner';
 import type { TestTreeNode } from '../../../interfaces/TestTypes';
 import './styles/TestEditorPanel.scss';
 
@@ -39,28 +40,30 @@ export const TestEditorPanel: React.FC = () => {
     isDirty,
     isSaving,
     isCreateMode,
+    error,
     loadTestCase,
     updateCheck,
     save,
     create,
     cancelCreate,
+    clearError,
   } = useTestEditor();
   const { loadTree } = useTestTree();
 
-  // Load test case when selection changes
+  // Load test case when selection changes.
+  // 選択が素早く切り替わったとき、古い読み込みの結果が反映されないよう cleanup で中断する
   useEffect(() => {
-    if (selectedPath && !isCreateMode) {
-      loadTestCase(selectedPath);
-    }
+    if (!selectedPath || isCreateMode) return;
+    const controller = new AbortController();
+    void loadTestCase(selectedPath, controller.signal);
+    return () => controller.abort();
   }, [selectedPath, isCreateMode]);
 
   const handleSave = async () => {
-    try {
-      await save();
+    // 失敗時は useTestEditor がエラーを表示用 atom に設定する
+    if (await save()) {
       // Reload tree to reflect hasCheck changes
       await loadTree();
-    } catch (err) {
-      console.error('Save failed:', err);
     }
   };
 
@@ -70,44 +73,53 @@ export const TestEditorPanel: React.FC = () => {
     source: string;
     check: string;
   }) => {
-    try {
-      await create(params);
-      // Reload tree and select new test
+    // 成功時は作成したテストが選択され、読み込まれる
+    if (await create(params)) {
+      // Reload tree to reflect the new test
       await loadTree();
-      // TODO: select the newly created test
-    } catch (err) {
-      console.error('Create failed:', err);
     }
   };
+
+  const errorBanner = error ? (
+    <TestEditorErrorBanner message={error} onDismiss={clearError} />
+  ) : null;
 
   if (isCreateMode) {
     const categories = extractCategories(tree);
     return (
-      <TestCaseCreateForm
-        categories={categories}
-        source={testCase?.source || ''}
-        onSubmit={handleCreate}
-        onCancel={cancelCreate}
-        isSaving={isSaving}
-      />
+      <>
+        {errorBanner}
+        <TestCaseCreateForm
+          categories={categories}
+          source={testCase?.source || ''}
+          onSubmit={handleCreate}
+          onCancel={cancelCreate}
+          isSaving={isSaving}
+        />
+      </>
     );
   }
 
   if (!testCase) {
     return (
       <div className="test-editor-panel">
+        {errorBanner}
         <div className="test-editor-empty">Select a test case to edit</div>
       </div>
     );
   }
 
   return (
-    <TestCaseEditForm
-      testCase={testCase}
-      isDirty={isDirty}
-      isSaving={isSaving}
-      onCheckChange={updateCheck}
-      onSave={handleSave}
-    />
+    <>
+      {errorBanner}
+      <TestCaseEditForm
+        key={testCase.path}
+        testCase={testCase}
+        isDirty={isDirty}
+        isSaving={isSaving}
+        onCheckChange={updateCheck}
+        onSave={handleSave}
+      />
+    </>
   );
 };

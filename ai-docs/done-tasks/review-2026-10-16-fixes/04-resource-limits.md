@@ -4,7 +4,7 @@
 
 作成日: 2026-10-16
 更新日: 2026-10-17（公開範囲の前提を反映。クライアント単位上限・サーバ出力量上限を廃止し、背圧方式に変更）
-ステータス: 設計完了（未実装）
+ステータス: 完了
 元指摘: [03-resource-limits-dos.md](../code-review-2026-10-16/03-resource-limits-dos.md)
 依存: [01](01-session-request-id.md)（requestId、`emitRequestError`、`SessionCallbacks` の新シグネチャ）
 
@@ -142,13 +142,13 @@ export function appendOutputEntry(prev: OutputEntry[], entry: OutputEntry, limit
 
 ## タスクステップ・チェックリスト
 
-1. [ ] サーバ: `ExecutionConfig` に `nospaceMaxProcesses` を追加
-2. [ ] サーバ: `ExecutionSlotLimiter`, `ExecutionLimitError` 新設、Service への組み込み
-3. [ ] サーバ: `NospaceSessionImpl` の `finalize()` 一本化（`close` / `error`）、スロット解放
-4. [ ] サーバ: Controller の拒否応答（`handleRun` / `handleCompile` の両方）
-5. [ ] サーバ: `OutputFlowControl` / `SocketFlowControl` 新設、Session の pause / resume、`setEncoding('utf8')`
-6. [ ] クライアント: `appendOutputEntry` 新設、`useExecutionBackend` / `InputPanel` で使用
-7. [ ] テスト
+1. [x] サーバ: `ExecutionConfig` に `nospaceMaxProcesses` を追加
+2. [x] サーバ: `ExecutionSlotLimiter`, `ExecutionLimitError` 新設、Service への組み込み
+3. [x] サーバ: `NospaceSessionImpl` の `finalize()` 一本化（`close` / `error`）、スロット解放
+4. [x] サーバ: Controller の拒否応答（`handleRun` / `handleCompile` の両方）
+5. [x] サーバ: `OutputFlowControl` / `SocketFlowControl` 新設、Session の pause / resume、`setEncoding('utf8')`
+6. [x] クライアント: `appendOutputEntry` 新設、`useExecutionBackend` / `InputPanel` で使用
+7. [x] テスト
 
 ### テスト
 

@@ -8,7 +8,10 @@ import {
 import {
   executionStatusAtom,
   outputEntriesAtom,
+  backendStateAtom,
+  type BackendState,
 } from '../stores/executionAtom';
+import { appendOutputEntry } from '../libs/outputBuffer';
 import {
   compileOutputAtom,
   compileStatusAtom,
@@ -48,6 +51,10 @@ export interface UseNospaceExecutionResult {
   compileOutput: CompileOutput | null;
   /** 直前のコンパイル結果ステータス */
   compileStatus: CompileStatus;
+  /** 実行バックエンドの状態（初期化中・準備完了・切断・失敗） */
+  backendState: BackendState;
+  /** バックエンドの再生成・再初期化を行う（初期化失敗時の再試行用） */
+  retryBackend: () => void;
 }
 
 /** デフォルトの BackendFactory（動的インポートを使用） */
@@ -72,6 +79,8 @@ export function useNospaceExecution(
   const executionOptions = useAtomValue(executionOptionsAtom);
   const compileOptions = useAtomValue(compileOptionsAtom);
   const executionStatus = useAtomValue(executionStatusAtom);
+  const setExecutionStatus = useSetAtom(executionStatusAtom);
+  const backendState = useAtomValue(backendStateAtom);
   const setOutputEntries = useSetAtom(outputEntriesAtom);
   const setExecutionOptions = useSetAtom(executionOptionsAtom);
   const compileOutput = useAtomValue(compileOutputAtom);
@@ -81,11 +90,38 @@ export function useNospaceExecution(
   const setCompileStatus = useSetAtom(compileStatusAtom);
 
   // バックエンドのライフサイクル管理とイベント配線は useExecutionBackend に委譲
-  const { backendRef, compileTargetRef, compileHadErrorRef, prevStatusRef } =
-    useExecutionBackend(flavor, backendFactory);
+  const {
+    backendRef,
+    compileTargetRef,
+    compileHadErrorRef,
+    prevStatusRef,
+    retry: retryBackend,
+  } = useExecutionBackend(flavor, backendFactory);
 
   const isRunning =
     executionStatus === 'running' || executionStatus === 'compiling';
+  const backendReady = backendState.kind === 'ready';
+
+  /**
+   * 実行・コンパイルの開始に失敗した（未接続などで backend が同期的に例外を投げた）ときに、
+   * 楽観的に設定した running / compiling のまま固着しないよう error に戻して理由を表示する。
+   */
+  const handleStartFailure = useCallback(
+    (err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err);
+      compileTargetRef.current = null;
+      prevStatusRef.current = null;
+      setExecutionStatus('error');
+      setOutputEntries((prev) =>
+        appendOutputEntry(prev, {
+          type: 'system',
+          data: `\n[Failed to start: ${message}]\n`,
+          timestamp: Date.now(),
+        })
+      );
+    },
+    [setExecutionStatus, setOutputEntries]
+  );
 
   // Flavor 切り替え時にオプションを自動リセット
   useEffect(() => {
@@ -102,10 +138,11 @@ export function useNospaceExecution(
   const handleRun = useCallback(
     (stdinData?: string, runOptions?: { direct?: boolean }) => {
       const backend = backendRef.current;
-      if (!backend || !backend.isReady() || isRunning) {
+      if (!backend || !backend.isReady() || !backendReady || isRunning) {
         console.warn('[useNospaceExecution] handleRun blocked:', {
           backendExists: !!backend,
           backendReady: backend?.isReady() ?? false,
+          backendState: backendState.kind,
           isRunning,
         });
         return;
@@ -114,35 +151,46 @@ export function useNospaceExecution(
       setOutputEntries([]);
       setCompileErrors([]);
 
-      backend.run(
-        sourceCode,
-        {
-          language: compileOptions.language,
-          debug: executionOptions.debug,
-          ignoreDebug: executionOptions.ignoreDebug,
-          inputMode: executionOptions.inputMode,
-          stepBudget: executionOptions.stepBudget,
-          maxTotalSteps: executionOptions.maxTotalSteps,
-          optPasses: executionOptions.optPasses,
-          stdExtensions: compileOptions.stdExtensions,
-          direct: runOptions?.direct,
-        },
-        stdinData
-      );
+      // サーバ flavor では running の通知が非同期に届く。それまで Run を連打できないよう、
+      // 開始前に楽観的に running にする
+      setExecutionStatus('running');
+      try {
+        backend.run(
+          sourceCode,
+          {
+            language: compileOptions.language,
+            debug: executionOptions.debug,
+            ignoreDebug: executionOptions.ignoreDebug,
+            inputMode: executionOptions.inputMode,
+            stepBudget: executionOptions.stepBudget,
+            maxTotalSteps: executionOptions.maxTotalSteps,
+            optPasses: executionOptions.optPasses,
+            stdExtensions: compileOptions.stdExtensions,
+            direct: runOptions?.direct,
+          },
+          stdinData
+        );
+      } catch (err) {
+        handleStartFailure(err);
+      }
     },
     [
       sourceCode,
       executionOptions,
       compileOptions,
       isRunning,
+      backendReady,
+      backendState,
       setOutputEntries,
       setCompileErrors,
+      setExecutionStatus,
+      handleStartFailure,
     ]
   );
 
   const handleCompile = useCallback(() => {
     const backend = backendRef.current;
-    if (!backend || !backend.isReady() || isRunning) return;
+    if (!backend || !backend.isReady() || !backendReady || isRunning) return;
 
     compileTargetRef.current = compileOptions.target;
     compileHadErrorRef.current = false;
@@ -151,39 +199,60 @@ export function useNospaceExecution(
     setCompileErrors([]);
     setCompileStatus(null);
     setOutputEntries([]);
-    backend.compile(sourceCode, compileOptions);
+    setExecutionStatus('compiling');
+    try {
+      backend.compile(sourceCode, compileOptions);
+    } catch (err) {
+      setCompileStatus('error');
+      handleStartFailure(err);
+    }
   }, [
     sourceCode,
     compileOptions,
     isRunning,
+    backendReady,
     setOutputEntries,
     setCompileOutput,
     setCompileErrors,
     setCompileStatus,
+    setExecutionStatus,
+    handleStartFailure,
   ]);
 
   /** コンパイル済みコードを実行する（Whitespace ターゲット時のみ） */
   const handleRunCompileOutput = useCallback(
     (compiledCode: string, stdinData?: string) => {
       const backend = backendRef.current;
-      if (!backend || !backend.isReady() || isRunning) return;
+      if (!backend || !backend.isReady() || !backendReady || isRunning) return;
 
       compileTargetRef.current = null;
       setOutputEntries([]);
-      backend.run(
-        compiledCode,
-        {
-          language: 'ws',
-          debug: executionOptions.debug,
-          ignoreDebug: false,
-          inputMode: 'batch',
-          stepBudget: executionOptions.stepBudget,
-          maxTotalSteps: executionOptions.maxTotalSteps,
-        },
-        stdinData
-      );
+      setExecutionStatus('running');
+      try {
+        backend.run(
+          compiledCode,
+          {
+            language: 'ws',
+            debug: executionOptions.debug,
+            ignoreDebug: false,
+            inputMode: 'batch',
+            stepBudget: executionOptions.stepBudget,
+            maxTotalSteps: executionOptions.maxTotalSteps,
+          },
+          stdinData
+        );
+      } catch (err) {
+        handleStartFailure(err);
+      }
     },
-    [executionOptions, isRunning, setOutputEntries]
+    [
+      executionOptions,
+      isRunning,
+      backendReady,
+      setOutputEntries,
+      setExecutionStatus,
+      handleStartFailure,
+    ]
   );
 
   const handleKill = useCallback(() => {
@@ -208,5 +277,7 @@ export function useNospaceExecution(
     handleClearOutput,
     compileOutput,
     compileStatus,
+    backendState,
+    retryBackend,
   };
 }

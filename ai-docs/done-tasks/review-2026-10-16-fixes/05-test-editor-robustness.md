@@ -3,7 +3,7 @@
 テストケースの読み込み・保存失敗を通知し、選択切替時の競合と編集内容の喪失を防ぎ、check.json エディタの状態同期を修正する。
 
 作成日: 2026-10-16
-ステータス: 設計完了（未実装）
+ステータス: 完了
 元指摘: [09-test-editor-error-handling.md](../code-review-2026-10-16/09-test-editor-error-handling.md)
 
 ## 設計・方針
@@ -95,13 +95,13 @@
 
 ## タスクステップ・チェックリスト
 
-1. [ ] a: `testEditorErrorAtom`、`useTestEditor` のエラー処理変更、`TestEditorErrorBanner`
-2. [ ] b: `TestApiClient` の signal 対応、`loadTestCase` / effect の中断処理
-3. [ ] c: `useDiscardChangesGuard` と `selectTest` / `startCreate` / `cancelCreate` への適用、作成成功後の状態リセットと新パス選択
-4. [ ] d: `useCheckResultEditor` の初期化方式変更、`TestCaseEditForm` に key
-5. [ ] e: `isJsonValid` / `onValidityChange`、Save / Create ボタンの無効化
-6. [ ] f: 空 check の扱いと `save` の契約修正
-7. [ ] テスト
+1. [x] a: `testEditorErrorAtom`、`useTestEditor` のエラー処理変更、`TestEditorErrorBanner`
+2. [x] b: `TestApiClient` の signal 対応、`loadTestCase` / effect の中断処理
+3. [x] c: `useDiscardChangesGuard` と `selectTest` / `startCreate` / `cancelCreate` への適用、作成成功後の状態リセットと新パス選択
+4. [x] d: `useCheckResultEditor` の初期化方式変更、`TestCaseEditForm` に key
+5. [x] e: `isJsonValid` / `onValidityChange`、Save / Create ボタンの無効化
+6. [x] f: 空 check の扱いと `save` の契約修正
+7. [x] テスト
 
 ### テスト
 

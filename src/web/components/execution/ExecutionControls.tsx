@@ -17,6 +17,8 @@ interface ExecutionControlsProps {
   onCompileAndRun?: () => void;
   /** 直前のコンパイル結果ステータス（Run/Stop ボタンの横に表示） */
   compileStatus?: CompileStatus;
+  /** 実行バックエンドが未準備（初期化中・失敗・切断）のとき true。Compile/Run 系ボタンを無効化する */
+  disabled?: boolean;
 }
 
 export const ExecutionControls: React.FC<ExecutionControlsProps> = ({
@@ -27,6 +29,7 @@ export const ExecutionControls: React.FC<ExecutionControlsProps> = ({
   onCompile,
   onCompileAndRun,
   compileStatus,
+  disabled = false,
 }) => {
   return (
     <div className="execution-controls">
@@ -34,7 +37,7 @@ export const ExecutionControls: React.FC<ExecutionControlsProps> = ({
         <Button
           variant="accent"
           onClick={onCompile}
-          disabled={isRunning}
+          disabled={isRunning || disabled}
           className="btn-compile"
         >
           Compile
@@ -44,7 +47,7 @@ export const ExecutionControls: React.FC<ExecutionControlsProps> = ({
         <Button
           variant="accent"
           onClick={onCompileAndRun}
-          disabled={isRunning}
+          disabled={isRunning || disabled}
           className="btn-compile-and-run"
         >
           Compile/Run
@@ -54,7 +57,7 @@ export const ExecutionControls: React.FC<ExecutionControlsProps> = ({
         <Button
           variant="primary"
           onClick={onRun}
-          disabled={isRunning || runDisabled}
+          disabled={isRunning || runDisabled || disabled}
           className="btn-run"
         >
           Run

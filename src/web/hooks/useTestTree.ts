@@ -4,17 +4,28 @@ import {
   selectedTestPathAtom,
   testTreeLoadingAtom,
   testTreeErrorAtom,
+  testEditorCreateModeAtom,
 } from '../stores/testEditorAtom';
 import { TestApiClient, testApiClient } from '../services/TestApiClient';
+import {
+  useDiscardChangesGuard,
+  defaultConfirm,
+  type ConfirmFn,
+} from './useDiscardChangesGuard';
 
 /**
  * テストツリーの管理
  */
-export function useTestTree(client: TestApiClient = testApiClient) {
+export function useTestTree(
+  client: TestApiClient = testApiClient,
+  confirm: ConfirmFn = defaultConfirm
+) {
   const [tree, setTree] = useAtom(testTreeAtom);
   const [selectedPath, setSelectedPath] = useAtom(selectedTestPathAtom);
   const [isLoading, setIsLoading] = useAtom(testTreeLoadingAtom);
   const [error, setError] = useAtom(testTreeErrorAtom);
+  const [isCreateMode, setIsCreateMode] = useAtom(testEditorCreateModeAtom);
+  const canDiscard = useDiscardChangesGuard(confirm);
 
   /**
    * テストツリーをサーバーから取得してatomに反映
@@ -33,9 +44,13 @@ export function useTestTree(client: TestApiClient = testApiClient) {
   };
 
   /**
-   * テストケースを選択
+   * テストケースを選択する。未保存の変更がある場合は破棄を確認し、拒否されたら選択を変えない。
+   * 作成モード中に選択した場合は、作成モードを終了して選択したテストを読み込む。
    */
   const selectTest = (path: string) => {
+    if (path === selectedPath && !isCreateMode) return;
+    if (!canDiscard()) return;
+    setIsCreateMode(false);
     setSelectedPath(path);
   };
 

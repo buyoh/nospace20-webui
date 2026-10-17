@@ -4,6 +4,8 @@ import {
   ProcessSpawner,
   ExecutionConfig,
 } from '../../app/Services/NospaceExecutionService';
+import { ExecutionLimitError } from '../../app/Services/ExecutionSlotLimiter';
+import type { OutputFlowControl } from '../../app/Services/NospaceExecutionService';
 import type { RunOptions, CompileOptions } from '../../interfaces/NospaceTypes';
 import { ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
@@ -11,8 +13,8 @@ import { EventEmitter } from 'events';
 // Fake ChildProcess for testing
 class FakeChildProcess extends EventEmitter {
   public stdin: FakeWritable;
-  public stdout: EventEmitter;
-  public stderr: EventEmitter;
+  public stdout: FakeReadable;
+  public stderr: FakeReadable;
   public killed = false;
   public exitCode: number | null = null;
   public pid: number;
@@ -21,8 +23,8 @@ class FakeChildProcess extends EventEmitter {
     super();
     this.pid = pid;
     this.stdin = new FakeWritable();
-    this.stdout = new EventEmitter();
-    this.stderr = new EventEmitter();
+    this.stdout = new FakeReadable();
+    this.stderr = new FakeReadable();
   }
 
   kill(_signal?: NodeJS.Signals | number): boolean {
@@ -35,6 +37,28 @@ class FakeChildProcess extends EventEmitter {
       }, 10);
     }
     return true;
+  }
+}
+
+/** setEncoding / pause / resume の呼び出しを記録するフェイクの読み取りストリーム */
+class FakeReadable extends EventEmitter {
+  public encoding: string | null = null;
+  public pauseCount = 0;
+  public resumeCount = 0;
+
+  setEncoding(encoding: string): this {
+    this.encoding = encoding;
+    return this;
+  }
+
+  pause(): this {
+    this.pauseCount += 1;
+    return this;
+  }
+
+  resume(): this {
+    this.resumeCount += 1;
+    return this;
   }
 }
 
@@ -89,6 +113,7 @@ describe('NospaceExecutionService', () => {
     fakeConfig = {
       nospaceBinPath: '/fake/path/to/wsc',
       nospaceTimeout: 5000,
+      nospaceMaxProcesses: 5,
     };
 
     service = new NospaceExecutionService(fakeConfig, fakeFs, fakeSpawner);
@@ -155,9 +180,10 @@ describe('NospaceExecutionService', () => {
       expect(session.status).toBe('error');
       expect(session.exitCode).toBe(1);
       expect(onStderr).toHaveBeenCalledWith(
+        expect.any(String),
         expect.stringContaining('nospace20 binary not found')
       );
-      expect(onExit).toHaveBeenCalledWith(1);
+      expect(onExit).toHaveBeenCalledWith(expect.any(String), 'error', 1);
     });
 
     it('一時ファイルにコードが書き込まれる', () => {
@@ -187,7 +213,7 @@ describe('NospaceExecutionService', () => {
       session.kill();
     });
 
-    it('writeFileSyncが失敗した場合、例外がthrowされonStderr/onExitが呼ばれる', () => {
+    it('BUG: writeFileSyncが失敗しても例外を投げず、エラーセッションを返しonStderr/onExitが呼ばれる', () => {
       const code = 'print "test"';
       const options: RunOptions = {
         language: 'standard',
@@ -206,18 +232,21 @@ describe('NospaceExecutionService', () => {
         throw new Error('Disk full');
       };
 
-      expect(() => {
-        service.run(code, options, {
-          onStdout: jest.fn(),
-          onStderr,
-          onExit,
-        });
-      }).toThrow('Disk full');
+      // socket.io のハンドラ内で例外が漏れるとサーバが停止するため、throw せずエラーセッションとして返す
+      const session = service.run(code, options, {
+        onStdout: jest.fn(),
+        onStderr,
+        onExit,
+      });
+
+      expect(session.status).toBe('error');
+      expect(service.getSession(session.sessionId)).toBe(session);
 
       expect(onStderr).toHaveBeenCalledWith(
+        expect.any(String),
         expect.stringContaining('Failed to write temporary file')
       );
-      expect(onExit).toHaveBeenCalledWith(1);
+      expect(onExit).toHaveBeenCalledWith(expect.any(String), 'error', 1);
     });
 
     it('コマンド引数が正しく構築される (standard, no debug)', () => {
@@ -322,7 +351,7 @@ describe('NospaceExecutionService', () => {
 
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
 
-      const onExit = jest.fn((code) => {
+      const onExit = jest.fn((_sessionId, _status, code) => {
         expect(code).toBe(0);
         expect(session.status).toBe('finished');
         expect(session.exitCode).toBe(0);
@@ -359,7 +388,7 @@ describe('NospaceExecutionService', () => {
 
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
 
-      const onExit = jest.fn((code) => {
+      const onExit = jest.fn((_sessionId, _status, code) => {
         expect(code).toBe(1);
         expect(session.status).toBe('error');
         expect(session.exitCode).toBe(1);
@@ -392,7 +421,7 @@ describe('NospaceExecutionService', () => {
       const session = service.run(code, options, {
         onStdout: jest.fn(),
         onStderr: jest.fn(),
-        onExit: jest.fn((code) => {
+        onExit: jest.fn((_sessionId, _status, code) => {
           expect(code).toBeNull();
           expect(session.status).toBe('killed');
           done();
@@ -459,6 +488,7 @@ describe('NospaceExecutionService', () => {
 
       // Check that timeout message was sent
       expect(onStderr).toHaveBeenCalledWith(
+        expect.any(String),
         expect.stringContaining('Process timeout')
       );
 
@@ -488,11 +518,14 @@ describe('NospaceExecutionService', () => {
 
       // Simulate stdout
       fakeProcess.stdout.emit('data', Buffer.from('output line\n'));
-      expect(onStdout).toHaveBeenCalledWith('output line\n');
+      expect(onStdout).toHaveBeenCalledWith(
+        expect.any(String),
+        'output line\n'
+      );
 
       // Simulate stderr
       fakeProcess.stderr.emit('data', Buffer.from('error line\n'));
-      expect(onStderr).toHaveBeenCalledWith('error line\n');
+      expect(onStderr).toHaveBeenCalledWith(expect.any(String), 'error line\n');
     });
   });
 
@@ -576,7 +609,10 @@ describe('NospaceExecutionService', () => {
       });
 
       fakeProcess.stdout.emit('data', Buffer.from('compiled output\n'));
-      expect(onStdout).toHaveBeenCalledWith('compiled output\n');
+      expect(onStdout).toHaveBeenCalledWith(
+        expect.any(String),
+        'compiled output\n'
+      );
     });
 
     it('compile でコンパイルエラー時に stderr を通知する', () => {
@@ -591,13 +627,16 @@ describe('NospaceExecutionService', () => {
       });
 
       fakeProcess.stderr.emit('data', Buffer.from('error: undefined\n'));
-      expect(onStderr).toHaveBeenCalledWith('error: undefined\n');
+      expect(onStderr).toHaveBeenCalledWith(
+        expect.any(String),
+        'error: undefined\n'
+      );
     });
 
     it('compile でプロセス終了時にコールバックを呼び出す', (done) => {
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
 
-      const onExit = jest.fn((code) => {
+      const onExit = jest.fn((_sessionId, _status, code) => {
         expect(code).toBe(0);
         done();
       });
@@ -627,9 +666,10 @@ describe('NospaceExecutionService', () => {
 
       expect(session.status).toBe('error');
       expect(onStderr).toHaveBeenCalledWith(
+        expect.any(String),
         expect.stringContaining('Unsupported compile target')
       );
-      expect(onExit).toHaveBeenCalledWith(1);
+      expect(onExit).toHaveBeenCalledWith(expect.any(String), 'error', 1);
       // spawn は呼ばれない
       expect(spawnCalls).toHaveLength(0);
     });
@@ -649,9 +689,10 @@ describe('NospaceExecutionService', () => {
 
       expect(session.status).toBe('error');
       expect(onStderr).toHaveBeenCalledWith(
+        expect.any(String),
         expect.stringContaining('nospace20 binary not found')
       );
-      expect(onExit).toHaveBeenCalledWith(1);
+      expect(onExit).toHaveBeenCalledWith(expect.any(String), 'error', 1);
     });
 
     it('compile で stdExtensions が --std-ext フラグとして渡される', () => {
@@ -781,6 +822,203 @@ describe('NospaceExecutionService', () => {
       expect(retrieved).toBeUndefined();
 
       session.kill();
+    });
+  });
+
+  describe('実行枠・終了処理・背圧', () => {
+    const runOptions: RunOptions = {
+      language: 'standard',
+      debug: false,
+      ignoreDebug: false,
+      inputMode: 'batch',
+    };
+
+    /** コールバックの呼び出しを記録する */
+    function recorder() {
+      const calls: string[] = [];
+      return {
+        calls,
+        callbacks: {
+          onStdout: (_id: string, data: string) => calls.push(`out:${data}`),
+          onStderr: (_id: string, data: string) => calls.push(`err:${data}`),
+          onExit: (_id: string, status: string, code: number | null) =>
+            calls.push(`exit:${status}:${code}`),
+        },
+      };
+    }
+
+    beforeEach(() => {
+      files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+    });
+
+    it('同時実行数の上限に達すると ExecutionLimitError を投げ、一時ファイルを作らない', () => {
+      fakeConfig.nospaceMaxProcesses = 1;
+      service = new NospaceExecutionService(fakeConfig, fakeFs, fakeSpawner);
+      const first = service.run('a', runOptions, recorder().callbacks);
+      const tempFilesBefore = Array.from(files.keys()).filter((k) =>
+        k.includes('nospace-')
+      ).length;
+
+      const second = recorder();
+      expect(() => service.run('b', runOptions, second.callbacks)).toThrow(
+        ExecutionLimitError
+      );
+      expect(second.calls).toEqual([]);
+      expect(
+        Array.from(files.keys()).filter((k) => k.includes('nospace-')).length
+      ).toBe(tempFilesBefore);
+
+      first.kill();
+    });
+
+    it('プロセスが close すると実行枠が解放され、次の実行ができる', () => {
+      fakeConfig.nospaceMaxProcesses = 1;
+      service = new NospaceExecutionService(fakeConfig, fakeFs, fakeSpawner);
+      service.run('a', runOptions, recorder().callbacks);
+
+      fakeProcess.emit('close', 0);
+
+      fakeProcess = new FakeChildProcess(2);
+      expect(() =>
+        service.run('b', runOptions, recorder().callbacks)
+      ).not.toThrow();
+    });
+
+    it('BUG: error イベントのみ発火しても未処理例外にならず、実行枠・一時ファイルが解放され onExit は 1 回だけ呼ばれる', () => {
+      fakeConfig.nospaceMaxProcesses = 1;
+      service = new NospaceExecutionService(fakeConfig, fakeFs, fakeSpawner);
+      const rec = recorder();
+      const session = service.run('a', runOptions, rec.callbacks);
+
+      // リスナーが無いと EventEmitter は例外を投げる（実環境ではプロセス停止）
+      expect(() =>
+        fakeProcess.emit('error', new Error('spawn EACCES'))
+      ).not.toThrow();
+      // 続けて close が来ても二重通知しない
+      fakeProcess.emit('close', null);
+
+      expect(session.status).toBe('error');
+      expect(rec.calls.filter((c) => c.startsWith('exit:'))).toEqual([
+        'exit:error:null',
+      ]);
+      expect(rec.calls).toContain('err:spawn EACCES\n');
+      expect(
+        Array.from(files.keys()).filter((k) => k.includes('nospace-'))
+      ).toHaveLength(0);
+
+      fakeProcess = new FakeChildProcess(3);
+      expect(() =>
+        service.run('b', runOptions, recorder().callbacks)
+      ).not.toThrow();
+    });
+
+    it('BUG: エラー時の onExit 通知時点で、セッションが既に登録されている', () => {
+      files.delete(fakeConfig.nospaceBinPath);
+      let registeredAtExit: unknown = 'unset';
+      const session = service.run('a', runOptions, {
+        onStdout: () => {},
+        onStderr: () => {},
+        onExit: (id) => {
+          registeredAtExit = service.getSession(id);
+          service.removeSession(id);
+        },
+      });
+
+      expect(registeredAtExit).toBe(session);
+      // onExit 内の removeSession が効き、Map に残り続けない
+      expect(service.getSession(session.sessionId)).toBeUndefined();
+    });
+
+    it('バイナリ未検出・書き込み失敗でも実行枠がリークしない', () => {
+      fakeConfig.nospaceMaxProcesses = 1;
+      service = new NospaceExecutionService(fakeConfig, fakeFs, fakeSpawner);
+      files.delete(fakeConfig.nospaceBinPath);
+      service.run('a', runOptions, recorder().callbacks);
+      files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+      const originalWrite = fakeFs.writeFileSync;
+      fakeFs.writeFileSync = () => {
+        throw new Error('Disk full');
+      };
+      service.run('b', runOptions, recorder().callbacks);
+      fakeFs.writeFileSync = originalWrite;
+
+      expect(() =>
+        service.run('c', runOptions, recorder().callbacks)
+      ).not.toThrow();
+    });
+
+    it('stdout/stderr は utf8 でデコードされる設定になる', () => {
+      service.run('a', runOptions, recorder().callbacks);
+
+      expect(fakeProcess.stdout.encoding).toBe('utf8');
+      expect(fakeProcess.stderr.encoding).toBe('utf8');
+    });
+
+    /** 混雑状態を外から操作できる OutputFlowControl */
+    function fakeFlow() {
+      let congested = false;
+      let listener: (() => void) | null = null;
+      let unsubscribed = false;
+      const flow: OutputFlowControl = {
+        isCongested: () => congested,
+        onDrain: (l) => {
+          listener = l;
+          return () => {
+            unsubscribed = true;
+            listener = null;
+          };
+        },
+      };
+      return {
+        flow,
+        setCongested: (v: boolean) => (congested = v),
+        drain: () => listener?.(),
+        wasUnsubscribed: () => unsubscribed,
+      };
+    }
+
+    it('送信待ちが混雑すると出力の読み取りを止め、drain で再開する', () => {
+      const f = fakeFlow();
+      service.run('a', runOptions, recorder().callbacks, f.flow);
+
+      f.setCongested(true);
+      fakeProcess.stdout.emit('data', 'chunk');
+      expect(fakeProcess.stdout.pauseCount).toBe(1);
+      expect(fakeProcess.stderr.pauseCount).toBe(1);
+
+      // まだ混雑中の drain では再開しない
+      f.drain();
+      expect(fakeProcess.stdout.resumeCount).toBe(0);
+
+      f.setCongested(false);
+      f.drain();
+      expect(fakeProcess.stdout.resumeCount).toBe(1);
+      expect(fakeProcess.stderr.resumeCount).toBe(1);
+    });
+
+    it('終了後は drain の購読が解除される', () => {
+      const f = fakeFlow();
+      service.run('a', runOptions, recorder().callbacks, f.flow);
+
+      fakeProcess.emit('close', 0);
+
+      expect(f.wasUnsubscribed()).toBe(true);
+    });
+
+    it('一時停止中に kill すると読み取りを再開して close を待てる', () => {
+      const f = fakeFlow();
+      const session = service.run(
+        'a',
+        runOptions,
+        recorder().callbacks,
+        f.flow
+      );
+      f.setCongested(true);
+      fakeProcess.stdout.emit('data', 'chunk');
+
+      session.kill();
+
+      expect(fakeProcess.stdout.resumeCount).toBe(1);
     });
   });
 });

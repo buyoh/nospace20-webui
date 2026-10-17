@@ -302,4 +302,37 @@ describe('ExecutionControls', () => {
       expect(mockOnCompileAndRun).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe('disabled（バックエンド未準備）', () => {
+    it('disabled のとき Compile / Compile/Run / Run が無効になり、Stop は isRunning のみで判断する', () => {
+      render(
+        <ExecutionControls
+          isRunning={false}
+          disabled
+          onKill={jest.fn()}
+          onCompile={jest.fn()}
+          onCompileAndRun={jest.fn()}
+          onRun={jest.fn()}
+        />
+      );
+
+      expect(screen.getByText('Compile')).toBeDisabled();
+      expect(screen.getByText('Compile/Run')).toBeDisabled();
+      expect(screen.getByText('Run')).toBeDisabled();
+      expect(screen.getByText('Stop')).toBeDisabled();
+    });
+
+    it('disabled でも実行中なら Stop は押せる', () => {
+      render(
+        <ExecutionControls
+          isRunning
+          disabled
+          onKill={jest.fn()}
+          onRun={jest.fn()}
+        />
+      );
+
+      expect(screen.getByText('Stop')).toBeEnabled();
+    });
+  });
 });

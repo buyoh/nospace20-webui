@@ -132,11 +132,12 @@ describe('CheckResultEditor', () => {
     });
   });
 
-  describe('value prop 変更時の再描画', () => {
+  describe('別のテストケース（key 変更による remount）への切り替え', () => {
     it('別のテストケースに切り替えると新しい内容に更新される', () => {
       const mockOnChange = jest.fn();
       const { rerender } = render(
         <CheckResultEditor
+          key="case-a"
           value='{"trace_hit_counts":[1,2,3]}'
           onChange={mockOnChange}
         />
@@ -150,6 +151,7 @@ describe('CheckResultEditor', () => {
       // 別のテストケース（compile_error）に切り替え
       rerender(
         <CheckResultEditor
+          key="case-b"
           value='{"type":"compile_error","contains":["error msg"]}'
           onChange={mockOnChange}
         />
@@ -164,6 +166,7 @@ describe('CheckResultEditor', () => {
       const mockOnChange = jest.fn();
       const { rerender } = render(
         <CheckResultEditor
+          key="case-a"
           value='{"trace_hit_counts":[1]}'
           onChange={mockOnChange}
         />
@@ -177,6 +180,7 @@ describe('CheckResultEditor', () => {
       // unknown JSON に切り替え
       rerender(
         <CheckResultEditor
+          key="case-b"
           value='{"unknown_field":999}'
           onChange={mockOnChange}
         />
@@ -192,6 +196,7 @@ describe('CheckResultEditor', () => {
       const mockOnChange = jest.fn();
       const { rerender } = render(
         <CheckResultEditor
+          key="case-a"
           value='{"trace_hit_counts":[1]}'
           onChange={mockOnChange}
         />
@@ -203,6 +208,7 @@ describe('CheckResultEditor', () => {
       // 別のカウント値を持つデータに切り替え
       rerender(
         <CheckResultEditor
+          key="case-b"
           value='{"trace_hit_counts":[5,10]}'
           onChange={mockOnChange}
         />
@@ -212,6 +218,101 @@ describe('CheckResultEditor', () => {
       expect(inputs).toHaveLength(2);
       expect(inputs[0].value).toBe('5');
       expect(inputs[1].value).toBe('10');
+    });
+
+    it('BUG: key が同じなら value が変わってもモードを強制的に変更しない（JSON 編集中にフォームへ戻らない）', () => {
+      const mockOnChange = jest.fn();
+      const { rerender } = render(
+        <CheckResultEditor
+          value='{"unknown_field":1}'
+          onChange={mockOnChange}
+        />
+      );
+      expect(
+        (screen.getByDisplayValue('json') as HTMLInputElement).checked
+      ).toBe(true);
+
+      // 編集中の JSON が既知の型になった結果、親から渡される value が変わる
+      rerender(
+        <CheckResultEditor
+          value='{"trace_hit_counts":[1]}'
+          onChange={mockOnChange}
+        />
+      );
+
+      expect(
+        (screen.getByDisplayValue('json') as HTMLInputElement).checked
+      ).toBe(true);
+    });
+  });
+
+  describe('JSON 入力の有効性と空の扱い', () => {
+    it('不正な JSON を入力すると onValidityChange(false) が通知され、onChange は呼ばれない', () => {
+      const mockOnChange = jest.fn();
+      const onValidityChange = jest.fn();
+      render(
+        <CheckResultEditor
+          value='{"unknown_field":1}'
+          onChange={mockOnChange}
+          onValidityChange={onValidityChange}
+        />
+      );
+      expect(onValidityChange).toHaveBeenLastCalledWith(true);
+
+      fireEvent.change(screen.getByRole('textbox', { hidden: true }), {
+        target: { value: '{ broken' },
+      });
+
+      expect(onValidityChange).toHaveBeenLastCalledWith(false);
+      expect(mockOnChange).not.toHaveBeenCalled();
+    });
+
+    it('空文字列を入力すると「check なし」として onChange("") が呼ばれ、エラーにならない', () => {
+      const mockOnChange = jest.fn();
+      const onValidityChange = jest.fn();
+      render(
+        <CheckResultEditor
+          value='{"unknown_field":1}'
+          onChange={mockOnChange}
+          onValidityChange={onValidityChange}
+        />
+      );
+
+      fireEvent.change(screen.getByRole('textbox', { hidden: true }), {
+        target: { value: '' },
+      });
+
+      expect(mockOnChange).toHaveBeenCalledWith('');
+      expect(onValidityChange).toHaveBeenLastCalledWith(true);
+      expect(screen.queryByText('Invalid JSON syntax')).not.toBeInTheDocument();
+    });
+
+    it('空の初期値ではエラーを表示せず、有効として通知する', () => {
+      const onValidityChange = jest.fn();
+      render(
+        <CheckResultEditor
+          value=""
+          onChange={jest.fn()}
+          onValidityChange={onValidityChange}
+        />
+      );
+
+      expect(onValidityChange).toHaveBeenLastCalledWith(true);
+      expect(screen.queryByText('Invalid JSON syntax')).not.toBeInTheDocument();
+    });
+
+    it('不正な JSON が初期値の場合、最初からエラーが表示され無効として通知される', () => {
+      const onValidityChange = jest.fn();
+      render(
+        <CheckResultEditor
+          value="invalid json"
+          onChange={jest.fn()}
+          onValidityChange={onValidityChange}
+        />
+      );
+
+      expect(onValidityChange).toHaveBeenLastCalledWith(false);
+      expect(screen.getByText('Invalid JSON syntax')).toBeInTheDocument();
     });
   });
 });

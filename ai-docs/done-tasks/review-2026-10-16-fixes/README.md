@@ -3,7 +3,7 @@
 [code-review-2026-10-16](../code-review-2026-10-16/README.md) の指摘のうち、実行系の堅牢性（リソース上限・再接続・初期化競合・セッション混線）とテストエディタのエラー処理について修正方針を定める。
 
 作成日: 2026-10-16
-ステータス: 設計完了（未実装）
+ステータス: 完了
 
 ## 前提（公開範囲）
 
@@ -56,19 +56,19 @@ Run / Compile ボタンの有効条件は `backendState.kind === 'ready' && !isR
 
 | 関連指摘 | 関係 | 扱い |
 |---|---|---|
-| [01 サーバ停止（TDZ・payload 未検証）](../code-review-2026-10-16/01-server-crash-on-socket-handler.md) | 本タスクはコントローラーのコールバックを変更する。現状コールバックは `run()` の戻り値 `session` を参照しており、同期 `onExit` で TDZ 例外になる | **本タスクの 01 で TDZ・一時ファイル書き込み失敗時の throw・Controller の例外漏れを解消する**。payload の全面的な検証は対象外とし、本タスクで追加するフィールド（`requestId`）のみ検証する。不正 payload（`payload` 欠落等）による TypeError は Controller の try/catch で捕捉されるため、プロセス停止は防がれる |
-| [02 子プロセスのライフサイクル](../code-review-2026-10-16/02-child-process-lifecycle.md) | 04 の同時実行数カウントはプロセス終了（`close` / `error`）までスロットを占有する | (a) `error` 未処理は **04 で解消**（`finalize()` を `error` からも呼ぶ）。(b) stdin EPIPE、(c) SIGKILL フォールバック、(d) batch stdin 未 close、(e) 終了時の後始末は対象外。特に (c) は SIGTERM を無視するプロセスがスロットを恒久占有するため、本タスク直後に対応すること |
-| [07 WASM 実行の安全性](../code-review-2026-10-16/07-wasm-execution-safety.md) | 01 のクライアント ID 生成で `crypto.randomUUID` を使うと secure context 問題が波及する | 01 では ID 生成器を DI し、既定実装は `crypto.randomUUID` に依存しない |
+| [01 サーバ停止（TDZ・payload 未検証）](../../tasks/code-review-2026-10-16/01-server-crash-on-socket-handler.md) | 本タスクはコントローラーのコールバックを変更する。現状コールバックは `run()` の戻り値 `session` を参照しており、同期 `onExit` で TDZ 例外になる | **本タスクの 01 で TDZ・一時ファイル書き込み失敗時の throw・Controller の例外漏れを解消する**。payload の全面的な検証は対象外とし、本タスクで追加するフィールド（`requestId`）のみ検証する。不正 payload（`payload` 欠落等）による TypeError は Controller の try/catch で捕捉されるため、プロセス停止は防がれる |
+| [02 子プロセスのライフサイクル](../../tasks/code-review-2026-10-16/02-child-process-lifecycle.md) | 04 の同時実行数カウントはプロセス終了（`close` / `error`）までスロットを占有する | (a) `error` 未処理は **04 で解消**（`finalize()` を `error` からも呼ぶ）。(b) stdin EPIPE、(c) SIGKILL フォールバック、(d) batch stdin 未 close、(e) 終了時の後始末は対象外。特に (c) は SIGTERM を無視するプロセスがスロットを恒久占有するため、本タスク直後に対応すること |
+| [07 WASM 実行の安全性](../../tasks/code-review-2026-10-16/07-wasm-execution-safety.md) | 01 のクライアント ID 生成で `crypto.randomUUID` を使うと secure context 問題が波及する | 01 では ID 生成器を DI し、既定実装は `crypto.randomUUID` に依存しない |
 
 ## タスクステップ・チェックリスト
 
-1. [ ] 01: requestId 導入とセッション登録の保護（サーバ・クライアント・interfaces）
-2. [ ] 02: backend ライフサイクルと状態表示
-3. [ ] 03: Socket 再接続・切断処理（02 の `backendStateAtom` を利用）
-4. [ ] 04: リソース上限（01 の requestId を利用）
-5. [ ] 05: テストエディタ（他と独立。並行実施可）
-6. [ ] 各ステップで `npm test` / `npx tsc --noEmit` / lint を通す
-7. [ ] 完了後、`code-review-2026-10-16/` の該当指摘に完了を記載
+1. [x] 01: requestId 導入とセッション登録の保護（サーバ・クライアント・interfaces）
+2. [x] 02: backend ライフサイクルと状態表示
+3. [x] 03: Socket 再接続・切断処理（02 の `backendStateAtom` を利用）
+4. [x] 04: リソース上限（01 の requestId を利用）
+5. [x] 05: テストエディタ（他と独立。並行実施可）
+6. [x] 各ステップで `npm test` / `npx tsc --noEmit` / lint を通す
+7. [x] 完了後、`code-review-2026-10-16/` の該当指摘に完了を記載
 
 ## 対象外（将来タスク）
 

@@ -3,6 +3,7 @@ import {
   NospaceExecutionService,
   NospaceSession,
 } from '../../app/Services/NospaceExecutionService';
+import { ExecutionLimitError } from '../../app/Services/ExecutionSlotLimiter';
 import type { RunOptions, CompileOptions } from '../../interfaces/NospaceTypes';
 
 // Fake Socket implementation
@@ -83,6 +84,7 @@ class FakeNospaceExecutionService extends NospaceExecutionService {
     code: string;
     options: RunOptions;
     callbacks: any;
+    flowControl?: any;
   }> = [];
   private compileCalls: Array<{
     code: string;
@@ -90,12 +92,23 @@ class FakeNospaceExecutionService extends NospaceExecutionService {
     callbacks: any;
   }> = [];
   private removedSessionIds: string[] = [];
+  private sessionCounter = 0;
+  /** 次の run/compile で throw するエラー */
+  public throwOnStart: Error | null = null;
+  /** run/compile 内（戻り値を返す前）にコールバックを同期的に呼ぶための差し込み口 */
+  public onStart:
+    | ((session: FakeNospaceSession, callbacks: any) => void)
+    | null = null;
 
   // Override to skip constructor dependencies
   constructor() {
     // Call parent constructor with dummy values
     super(
-      { nospaceBinPath: '/dummy/path', nospaceTimeout: 10000 },
+      {
+        nospaceBinPath: '/dummy/path',
+        nospaceTimeout: 10000,
+        nospaceMaxProcesses: 5,
+      },
       {
         existsSync: () => false,
         writeFileSync: () => {},
@@ -106,10 +119,22 @@ class FakeNospaceExecutionService extends NospaceExecutionService {
     );
   }
 
-  run(code: string, options: RunOptions, callbacks: any): NospaceSession {
-    const session = new FakeNospaceSession();
+  private startFake(callbacks: any): FakeNospaceSession {
+    if (this.throwOnStart) throw this.throwOnStart;
+    const session = new FakeNospaceSession(`session-${++this.sessionCounter}`);
     this.fakeSessions.set(session.sessionId, session);
-    this.runCalls.push({ code, options, callbacks });
+    this.onStart?.(session, callbacks);
+    return session;
+  }
+
+  run(
+    code: string,
+    options: RunOptions,
+    callbacks: any,
+    flowControl?: any
+  ): NospaceSession {
+    const session = this.startFake(callbacks);
+    this.runCalls.push({ code, options, callbacks, flowControl });
     return session;
   }
 
@@ -118,8 +143,7 @@ class FakeNospaceExecutionService extends NospaceExecutionService {
     options: CompileOptions,
     callbacks: any
   ): NospaceSession {
-    const session = new FakeNospaceSession();
-    this.fakeSessions.set(session.sessionId, session);
+    const session = this.startFake(callbacks);
     this.compileCalls.push({ code, options, callbacks });
     return session;
   }
@@ -195,7 +219,11 @@ describe('NospaceController', () => {
         ignoreDebug: false,
       };
 
-      socket.trigger('nospace_run', { code, options });
+      socket.trigger('nospace_run', {
+        requestId: 'req-1',
+        code,
+        options,
+      });
 
       const calls = executionService.getRunCalls();
       expect(calls).toHaveLength(1);
@@ -212,7 +240,11 @@ describe('NospaceController', () => {
         ignoreDebug: false,
       };
 
-      socket.trigger('nospace_run', { code, options });
+      socket.trigger('nospace_run', {
+        requestId: 'req-1',
+        code,
+        options,
+      });
 
       const statusEvents = socket.getEmittedEvents('nospace_execution_status');
       expect(statusEvents).toHaveLength(1);
@@ -222,6 +254,7 @@ describe('NospaceController', () => {
     it('should kill and remove existing session before creating new one', () => {
       // First run
       socket.trigger('nospace_run', {
+        requestId: 'req-1',
         code: 'first',
         options: {
           language: 'nospace20',
@@ -237,6 +270,7 @@ describe('NospaceController', () => {
 
       // Second run (should kill first session)
       socket.trigger('nospace_run', {
+        requestId: 'req-1',
         code: 'second',
         options: {
           language: 'nospace20',
@@ -263,7 +297,12 @@ describe('NospaceController', () => {
       };
       const stdinData = 'input data';
 
-      socket.trigger('nospace_run', { code, options, stdinData });
+      socket.trigger('nospace_run', {
+        requestId: 'req-1',
+        code,
+        options,
+        stdinData,
+      });
 
       const calls = executionService.getRunCalls();
       expect(calls).toHaveLength(1);
@@ -274,17 +313,38 @@ describe('NospaceController', () => {
     });
   });
 
+  /** run を発行して、サービスが作った（このソケット所有の）セッションを返す */
+  function startRun(
+    requestId = 'req-1',
+    extra: Record<string, unknown> = {}
+  ): FakeNospaceSession {
+    socket.trigger('nospace_run', {
+      requestId,
+      code: 'test',
+      options: {
+        language: 'nospace20',
+        inputMode: 'interactive',
+        debug: false,
+        ignoreDebug: false,
+      },
+      ...extra,
+    });
+    const ids = executionService.getSessionIds();
+    return executionService.getSession(
+      ids[ids.length - 1]
+    ) as FakeNospaceSession;
+  }
+
   describe('handleStdinInput', () => {
     beforeEach(() => {
       controller.handleConnection(socket as any);
     });
 
     it('should send stdin data with newline appended', () => {
-      const session = new FakeNospaceSession('test-session', 'running');
-      executionService.addSession(session);
+      const session = startRun();
 
       socket.trigger('nospace_stdin', {
-        sessionId: 'test-session',
+        sessionId: session.sessionId,
         data: 'input data',
       });
 
@@ -294,11 +354,10 @@ describe('NospaceController', () => {
     });
 
     it('should not add extra newline if data already ends with newline', () => {
-      const session = new FakeNospaceSession('test-session', 'running');
-      executionService.addSession(session);
+      const session = startRun();
 
       socket.trigger('nospace_stdin', {
-        sessionId: 'test-session',
+        sessionId: session.sessionId,
         data: 'input data\n',
       });
 
@@ -308,16 +367,37 @@ describe('NospaceController', () => {
     });
 
     it('should not send stdin if session is not running', () => {
-      const session = new FakeNospaceSession('test-session', 'finished');
-      executionService.addSession(session);
+      const session = startRun();
+      session.status = 'finished';
 
       socket.trigger('nospace_stdin', {
-        sessionId: 'test-session',
+        sessionId: session.sessionId,
         data: 'input data',
       });
 
-      const stdinData = session.getStdinData();
-      expect(stdinData).toHaveLength(0);
+      expect(session.getStdinData()).toHaveLength(0);
+    });
+
+    it('should ignore stdin for a session owned by another socket', () => {
+      const otherSocket = new FakeSocket('other-socket');
+      controller.handleConnection(otherSocket as any);
+      const session = startRun();
+
+      otherSocket.trigger('nospace_stdin', {
+        sessionId: session.sessionId,
+        data: 'hijack',
+      });
+
+      expect(session.getStdinData()).toHaveLength(0);
+    });
+
+    it('should ignore stdin payload with invalid types without throwing', () => {
+      startRun();
+
+      expect(() => {
+        socket.trigger('nospace_stdin', { sessionId: 1, data: {} });
+        socket.trigger('nospace_stdin', undefined);
+      }).not.toThrow();
     });
   });
 
@@ -326,17 +406,18 @@ describe('NospaceController', () => {
       controller.handleConnection(socket as any);
     });
 
-    it('should kill session and emit killed status', () => {
-      const session = new FakeNospaceSession('test-session', 'running');
-      executionService.addSession(session);
+    it('should kill session and emit killed status with the request id', () => {
+      const session = startRun('req-kill');
+      socket.emittedEvents = [];
 
-      socket.trigger('nospace_kill', { sessionId: 'test-session' });
+      socket.trigger('nospace_kill', { sessionId: session.sessionId });
 
       expect(session.wasKillCalled()).toBe(true);
 
       const statusEvents = socket.getEmittedEvents('nospace_execution_status');
       expect(statusEvents).toHaveLength(1);
-      expect(statusEvents[0].sessionId).toBe('test-session');
+      expect(statusEvents[0].requestId).toBe('req-kill');
+      expect(statusEvents[0].sessionId).toBe(session.sessionId);
       expect(statusEvents[0].status).toBe('killed');
       expect(statusEvents[0].exitCode).toBe(null);
     });
@@ -346,6 +427,16 @@ describe('NospaceController', () => {
 
       const statusEvents = socket.getEmittedEvents('nospace_execution_status');
       expect(statusEvents).toHaveLength(0);
+    });
+
+    it('should not kill a session owned by another socket', () => {
+      const otherSocket = new FakeSocket('other-socket');
+      controller.handleConnection(otherSocket as any);
+      const session = startRun();
+
+      otherSocket.trigger('nospace_kill', { sessionId: session.sessionId });
+
+      expect(session.wasKillCalled()).toBe(false);
     });
   });
 
@@ -357,6 +448,7 @@ describe('NospaceController', () => {
     it('should kill and remove session on disconnect', () => {
       // Create a session
       socket.trigger('nospace_run', {
+        requestId: 'req-1',
         code: 'test',
         options: {
           language: 'nospace20',
@@ -401,6 +493,7 @@ describe('NospaceController', () => {
 
     it('should emit execution status and remove session on exit', () => {
       socket.trigger('nospace_run', {
+        requestId: 'req-1',
         code: 'test',
         options: {
           language: 'nospace20',
@@ -412,9 +505,10 @@ describe('NospaceController', () => {
 
       const calls = executionService.getRunCalls();
       const exitCallback = calls[0].callbacks.onExit;
+      const sessionId = executionService.getSessionIds()[0];
 
       // Simulate exit
-      exitCallback(0);
+      exitCallback(sessionId, 'finished', 0);
 
       const statusEvents = socket.getEmittedEvents('nospace_execution_status');
       // First event is from run, second is from onExit
@@ -438,7 +532,11 @@ describe('NospaceController', () => {
         target: 'ws',
       };
 
-      socket.trigger('nospace_compile', { code, options });
+      socket.trigger('nospace_compile', {
+        requestId: 'req-1',
+        code,
+        options,
+      });
 
       const calls = executionService.getCompileCalls();
       expect(calls).toHaveLength(1);
@@ -448,6 +546,7 @@ describe('NospaceController', () => {
 
     it('compile の初回ステータスが compiling である', () => {
       socket.trigger('nospace_compile', {
+        requestId: 'req-1',
         code: 'test',
         options: { language: 'standard', target: 'ws' },
       });
@@ -460,6 +559,7 @@ describe('NospaceController', () => {
 
     it('compile 中に disconnect で kill される', () => {
       socket.trigger('nospace_compile', {
+        requestId: 'req-1',
         code: 'test',
         options: { language: 'standard', target: 'ws' },
       });
@@ -477,6 +577,7 @@ describe('NospaceController', () => {
     it('compile 中に新しい compile リクエストで既存セッションが kill される', () => {
       // First compile
       socket.trigger('nospace_compile', {
+        requestId: 'req-1',
         code: 'first',
         options: { language: 'standard', target: 'ws' },
       });
@@ -488,12 +589,205 @@ describe('NospaceController', () => {
 
       // Second compile
       socket.trigger('nospace_compile', {
+        requestId: 'req-1',
         code: 'second',
         options: { language: 'min', target: 'mnemonic' },
       });
 
       expect(firstSession.wasKillCalled()).toBe(true);
       expect(executionService.getCompileCalls()).toHaveLength(2);
+    });
+  });
+
+  describe('requestId とエラー耐性', () => {
+    const runOptions = {
+      language: 'standard',
+      inputMode: 'interactive',
+      debug: false,
+      ignoreDebug: false,
+    };
+
+    beforeEach(() => {
+      controller.handleConnection(socket as any);
+    });
+
+    it('全てのイベントに要求の requestId が付く', () => {
+      socket.trigger('nospace_run', {
+        requestId: 'req-x',
+        code: 'c',
+        options: runOptions,
+      });
+      const cb = executionService.getRunCalls()[0].callbacks;
+      const sessionId = executionService.getSessionIds()[0];
+      cb.onStdout(sessionId, 'out');
+      cb.onStderr(sessionId, 'err');
+      cb.onExit(sessionId, 'finished', 0);
+
+      for (const e of socket.emittedEvents) {
+        expect(e.payload.requestId).toBe('req-x');
+      }
+      expect(socket.emittedEvents).toHaveLength(4);
+    });
+
+    it('BUG: onExit が run() の戻り前に同期で呼ばれても例外を出さず、running を通知せず、登録しない', () => {
+      executionService.onStart = (session, cb) => {
+        session.status = 'error';
+        cb.onStderr(session.sessionId, 'boom\n');
+        cb.onExit(session.sessionId, 'error', 1);
+      };
+
+      expect(() =>
+        socket.trigger('nospace_run', {
+          requestId: 'req-sync',
+          code: 'c',
+          options: runOptions,
+        })
+      ).not.toThrow();
+
+      const statuses = socket.getEmittedEvents('nospace_execution_status');
+      expect(statuses.map((e) => e.status)).toEqual(['error']);
+      expect(statuses[0].requestId).toBe('req-sync');
+
+      // 登録されていないため、切断しても kill 対象にならない
+      const session = executionService.getRemovedSessionIds();
+      socket.trigger('disconnect');
+      expect(executionService.getRemovedSessionIds()).toEqual(session);
+    });
+
+    it('BUG: compile の onExit が同期で呼ばれても compiling を通知しない', () => {
+      executionService.onStart = (session, cb) => {
+        session.status = 'error';
+        cb.onExit(session.sessionId, 'error', 1);
+      };
+
+      socket.trigger('nospace_compile', {
+        requestId: 'req-c',
+        code: 'c',
+        options: { language: 'standard', target: 'ex-ws' },
+      });
+
+      const statuses = socket.getEmittedEvents('nospace_execution_status');
+      expect(statuses.map((e) => e.status)).toEqual(['error']);
+    });
+
+    it('サービスが想定外の例外を投げても外へ出さず、要求のエラーとして通知する', () => {
+      executionService.throwOnStart = new Error('disk failure');
+
+      expect(() =>
+        socket.trigger('nospace_run', {
+          requestId: 'req-t',
+          code: 'c',
+          options: runOptions,
+        })
+      ).not.toThrow();
+
+      const statuses = socket.getEmittedEvents('nospace_execution_status');
+      expect(statuses).toHaveLength(1);
+      expect(statuses[0]).toMatchObject({
+        requestId: 'req-t',
+        status: 'error',
+      });
+    });
+
+    it('同時実行数の上限に達した場合は busy のエラーを requestId 付きで通知する', () => {
+      executionService.throwOnStart = new ExecutionLimitError();
+
+      socket.trigger('nospace_run', {
+        requestId: 'req-l',
+        code: 'c',
+        options: runOptions,
+      });
+      socket.trigger('nospace_compile', {
+        requestId: 'req-l2',
+        code: 'c',
+        options: { language: 'standard', target: 'ws' },
+      });
+
+      const stderrs = socket.getEmittedEvents('nospace_stderr');
+      expect(stderrs.map((e) => e.requestId)).toEqual(['req-l', 'req-l2']);
+      expect(stderrs[0].data).toContain('busy');
+      const statuses = socket.getEmittedEvents('nospace_execution_status');
+      expect(statuses.map((e) => e.status)).toEqual(['error', 'error']);
+    });
+
+    it('requestId が無い・不正な run/compile は無視される', () => {
+      socket.trigger('nospace_run', { code: 'c', options: runOptions });
+      socket.trigger('nospace_run', {
+        requestId: 123,
+        code: 'c',
+        options: runOptions,
+      });
+      socket.trigger('nospace_compile', {
+        requestId: '',
+        code: 'c',
+        options: {},
+      });
+
+      expect(executionService.getRunCalls()).toHaveLength(0);
+      expect(executionService.getCompileCalls()).toHaveLength(0);
+      expect(socket.emittedEvents).toHaveLength(0);
+    });
+
+    it('payload が欠落していても例外を出さない', () => {
+      expect(() => {
+        socket.trigger('nospace_run', undefined);
+        socket.trigger('nospace_compile', null);
+        socket.trigger('nospace_kill', undefined);
+      }).not.toThrow();
+    });
+
+    it('code や options が不正な場合は要求のエラーとして通知する', () => {
+      socket.trigger('nospace_run', {
+        requestId: 'req-bad',
+        code: 42,
+        options: undefined,
+      });
+
+      expect(executionService.getRunCalls()).toHaveLength(0);
+      const statuses = socket.getEmittedEvents('nospace_execution_status');
+      expect(statuses).toHaveLength(1);
+      expect(statuses[0]).toMatchObject({
+        requestId: 'req-bad',
+        status: 'error',
+      });
+    });
+
+    it('BUG: 旧セッションの onExit が新セッションの登録を消さない', () => {
+      socket.trigger('nospace_run', {
+        requestId: 'req-a',
+        code: 'a',
+        options: runOptions,
+      });
+      const [sessionA] = executionService.getSessionIds();
+      socket.trigger('nospace_run', {
+        requestId: 'req-b',
+        code: 'b',
+        options: runOptions,
+      });
+      const sessionB = executionService.getSessionIds()[0];
+      expect(sessionB).not.toBe(sessionA);
+
+      // 旧セッション A の close が後から届く
+      executionService
+        .getRunCalls()[0]
+        .callbacks.onExit(sessionA, 'killed', null);
+
+      // B はまだ登録されているため、切断時に kill される
+      const session = executionService.getSession(
+        sessionB
+      ) as FakeNospaceSession;
+      socket.trigger('disconnect');
+      expect(session.wasKillCalled()).toBe(true);
+    });
+
+    it('run には出力の混雑状況（flowControl）が渡される', () => {
+      socket.trigger('nospace_run', {
+        requestId: 'req-f',
+        code: 'c',
+        options: runOptions,
+      });
+
+      expect(executionService.getRunCalls()[0].flowControl).toBeDefined();
     });
   });
 });

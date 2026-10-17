@@ -39,3 +39,6 @@ export const testEditorSavingAtom = atom<boolean>(false);
 
 /** 新規作成モードか */
 export const testEditorCreateModeAtom = atom<boolean>(false);
+
+/** テストエディタの操作（読み込み・保存・作成）で発生した最新のエラーメッセージ */
+export const testEditorErrorAtom = atom<string | null>(null);

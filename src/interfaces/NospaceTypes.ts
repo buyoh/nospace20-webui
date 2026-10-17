@@ -67,17 +67,26 @@ export interface RunOptions {
 
 // --- Socket.IO event types ---
 
-/** クライアントからサーバへの Socket.IO イベント定義 */
+/**
+ * クライアントからサーバへの Socket.IO イベント定義。
+ * run / compile は、クライアントが発行した requestId を持つ。サーバはその要求に起因する
+ * 全イベントに同じ requestId を付けて返し、クライアントは現在の要求以外のイベントを破棄する。
+ */
 export interface NospaceClientToServerEvents {
   /** Run request */
   nospace_run: (payload: {
+    requestId: string;
     code: string;
     options: RunOptions;
     stdinData?: string; // Batch mode stdin data
   }) => void;
 
   /** Compile request */
-  nospace_compile: (payload: { code: string; options: CompileOptions }) => void;
+  nospace_compile: (payload: {
+    requestId: string;
+    code: string;
+    options: CompileOptions;
+  }) => void;
 
   /** Send stdin to running process (interactive mode) */
   nospace_stdin: (payload: { sessionId: string; data: string }) => void;
@@ -86,16 +95,25 @@ export interface NospaceClientToServerEvents {
   nospace_kill: (payload: { sessionId: string }) => void;
 }
 
-/** サーバからクライアントへの Socket.IO イベント定義 */
+/** サーバからクライアントへの Socket.IO イベント定義（全イベントが requestId を持つ） */
 export interface NospaceServerToClientEvents {
   /** Stdout data (streaming) */
-  nospace_stdout: (payload: { sessionId: string; data: string }) => void;
+  nospace_stdout: (payload: {
+    requestId: string;
+    sessionId: string;
+    data: string;
+  }) => void;
 
   /** Stderr data (streaming) */
-  nospace_stderr: (payload: { sessionId: string; data: string }) => void;
+  nospace_stderr: (payload: {
+    requestId: string;
+    sessionId: string;
+    data: string;
+  }) => void;
 
   /** Execution status change */
   nospace_execution_status: (payload: {
+    requestId: string;
     sessionId: string;
     status: ExecutionStatus;
     exitCode?: number | null;

@@ -2,6 +2,10 @@
 
 ## 完了したタスク一覧
 
+- [review-2026-10-16-fixes/](review-2026-10-16-fixes/) コードレビュー指摘 03/05/06/08/09 の修正（2026/10/17: 完了）
+  - 対応済み指摘: [code-review-2026-10-16/](code-review-2026-10-16/)
+  - 積み残し: [review-2026-10-16-followup.md](../tasks/review-2026-10-16-followup.md)
+
 - [nospace-webui-phase7-8-implementation.md](nospace-webui-phase7-8-implementation.md) nospace Web UI Phase 7-8 実装完了（2026/02/11: 完了）
 - [hooks-unit-tests.md](hooks-unit-tests.md) hooks（useNospaceSocket / useNospaceExecution）ユニットテスト（2026/02/11: 完了）
 - [test-review.md](test-review.md) テストコード レビュー・改善計画（2026/02/11: フェーズ1-2完了）

@@ -24,6 +24,7 @@ function createFakeSocket(): {
     on: (event: string, handler: (...args: any[]) => any) => {
       listeners[event] = handler;
     },
+    removeAllListeners: jest.fn(),
     emit: jest.fn(),
     close: jest.fn(),
   } as unknown as AppSocket;
@@ -42,6 +43,21 @@ async function connectBackend(
   await initPromise;
 }
 
+/** 接続し、最初の実行要求（requestId: 'req-1'）を開始するヘルパー */
+async function connectAndStart(
+  backend: ServerExecutionBackend,
+  socket: AppSocket,
+  listeners: Record<string, (...args: any[]) => any>
+): Promise<void> {
+  await connectBackend(backend, socket, listeners);
+  backend.run('code', {
+    language: 'standard',
+    debug: false,
+    ignoreDebug: false,
+    inputMode: 'batch',
+  });
+}
+
 describe('ServerExecutionBackend', () => {
   let backend: ServerExecutionBackend;
   let fakeSocket: AppSocket;
@@ -51,7 +67,11 @@ describe('ServerExecutionBackend', () => {
     const fake = createFakeSocket();
     fakeSocket = fake.socket;
     listeners = fake.listeners;
-    backend = new ServerExecutionBackend(() => fakeSocket);
+    let idCounter = 0;
+    backend = new ServerExecutionBackend(
+      () => fakeSocket,
+      () => `req-${++idCounter}`
+    );
   });
 
   afterEach(() => {
@@ -98,6 +118,7 @@ describe('ServerExecutionBackend', () => {
       backend.run(code, options, stdinData);
 
       expect((fakeSocket as any).emit).toHaveBeenCalledWith('nospace_run', {
+        requestId: 'req-1',
         code,
         options,
         stdinData,
@@ -126,6 +147,7 @@ describe('ServerExecutionBackend', () => {
       backend.compile(code, options);
 
       expect((fakeSocket as any).emit).toHaveBeenCalledWith('nospace_compile', {
+        requestId: 'req-1',
         code,
         options,
       });
@@ -144,7 +166,7 @@ describe('ServerExecutionBackend', () => {
     });
 
     it('stderr の JSON エラーで compileErrorsCallback が呼ばれる', async () => {
-      await connectBackend(backend, fakeSocket, listeners);
+      await connectAndStart(backend, fakeSocket, listeners);
 
       const compileErrorsCallback = jest.fn();
       backend.onCompileErrors(compileErrorsCallback);
@@ -155,6 +177,7 @@ describe('ServerExecutionBackend', () => {
       });
 
       listeners['nospace_stderr']({
+        requestId: 'req-1',
         sessionId: 'test-session',
         data: errorJson,
       });
@@ -165,12 +188,13 @@ describe('ServerExecutionBackend', () => {
     });
 
     it('stderr の非 JSON データで compileErrorsCallback が呼ばれない', async () => {
-      await connectBackend(backend, fakeSocket, listeners);
+      await connectAndStart(backend, fakeSocket, listeners);
 
       const compileErrorsCallback = jest.fn();
       backend.onCompileErrors(compileErrorsCallback);
 
       listeners['nospace_stderr']({
+        requestId: 'req-1',
         sessionId: 'test-session',
         data: 'plain error text',
       });
@@ -181,10 +205,11 @@ describe('ServerExecutionBackend', () => {
 
   describe('sendStdin', () => {
     it('should emit nospace_stdin', async () => {
-      await connectBackend(backend, fakeSocket, listeners);
+      await connectAndStart(backend, fakeSocket, listeners);
 
       // Simulate session start via execution_status event
       listeners['nospace_execution_status']({
+        requestId: 'req-1',
         sessionId: 'test-session',
         status: 'running',
       });
@@ -200,10 +225,11 @@ describe('ServerExecutionBackend', () => {
 
   describe('kill', () => {
     it('should emit nospace_kill', async () => {
-      await connectBackend(backend, fakeSocket, listeners);
+      await connectAndStart(backend, fakeSocket, listeners);
 
       // Simulate session start
       listeners['nospace_execution_status']({
+        requestId: 'req-1',
         sessionId: 'test-session',
         status: 'running',
       });
@@ -218,13 +244,17 @@ describe('ServerExecutionBackend', () => {
 
   describe('event callbacks', () => {
     it('should call output callback on nospace_stdout', async () => {
-      await connectBackend(backend, fakeSocket, listeners);
+      await connectAndStart(backend, fakeSocket, listeners);
 
       const outputCallback = jest.fn();
       backend.onOutput(outputCallback);
 
       // Trigger stdout event
-      listeners['nospace_stdout']({ sessionId: 's1', data: 'output data' });
+      listeners['nospace_stdout']({
+        requestId: 'req-1',
+        sessionId: 's1',
+        data: 'output data',
+      });
 
       expect(outputCallback).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -235,12 +265,16 @@ describe('ServerExecutionBackend', () => {
     });
 
     it('should call output callback on nospace_stderr', async () => {
-      await connectBackend(backend, fakeSocket, listeners);
+      await connectAndStart(backend, fakeSocket, listeners);
 
       const outputCallback = jest.fn();
       backend.onOutput(outputCallback);
 
-      listeners['nospace_stderr']({ sessionId: 's1', data: 'error data' });
+      listeners['nospace_stderr']({
+        requestId: 'req-1',
+        sessionId: 's1',
+        data: 'error data',
+      });
 
       expect(outputCallback).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -251,14 +285,18 @@ describe('ServerExecutionBackend', () => {
     });
 
     it('should format nospace error JSON in stderr', async () => {
-      await connectBackend(backend, fakeSocket, listeners);
+      await connectAndStart(backend, fakeSocket, listeners);
 
       const outputCallback = jest.fn();
       backend.onOutput(outputCallback);
 
       const errorJson =
         '{"success":false,"errors":[{"message":"undefined function: sdf__puti"}]}';
-      listeners['nospace_stderr']({ sessionId: 's1', data: errorJson });
+      listeners['nospace_stderr']({
+        requestId: 'req-1',
+        sessionId: 's1',
+        data: errorJson,
+      });
 
       expect(outputCallback).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -269,7 +307,7 @@ describe('ServerExecutionBackend', () => {
     });
 
     it('should format nospace error JSON with location info in stderr', async () => {
-      await connectBackend(backend, fakeSocket, listeners);
+      await connectAndStart(backend, fakeSocket, listeners);
 
       const outputCallback = jest.fn();
       backend.onOutput(outputCallback);
@@ -278,7 +316,11 @@ describe('ServerExecutionBackend', () => {
         success: false,
         errors: [{ message: 'syntax error', line: 5, column: 3 }],
       });
-      listeners['nospace_stderr']({ sessionId: 's1', data: errorJson });
+      listeners['nospace_stderr']({
+        requestId: 'req-1',
+        sessionId: 's1',
+        data: errorJson,
+      });
 
       expect(outputCallback).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -289,12 +331,13 @@ describe('ServerExecutionBackend', () => {
     });
 
     it('should call status callback on nospace_execution_status', async () => {
-      await connectBackend(backend, fakeSocket, listeners);
+      await connectAndStart(backend, fakeSocket, listeners);
 
       const statusCallback = jest.fn();
       backend.onStatusChange(statusCallback);
 
       listeners['nospace_execution_status']({
+        requestId: 'req-1',
         sessionId: 'test-session',
         status: 'running',
       });
@@ -307,12 +350,13 @@ describe('ServerExecutionBackend', () => {
     });
 
     it('should emit system message on status change to running', async () => {
-      await connectBackend(backend, fakeSocket, listeners);
+      await connectAndStart(backend, fakeSocket, listeners);
 
       const outputCallback = jest.fn();
       backend.onOutput(outputCallback);
 
       listeners['nospace_execution_status']({
+        requestId: 'req-1',
         sessionId: 'test-session',
         status: 'running',
       });
@@ -326,12 +370,13 @@ describe('ServerExecutionBackend', () => {
     });
 
     it('should emit system message on status change to finished', async () => {
-      await connectBackend(backend, fakeSocket, listeners);
+      await connectAndStart(backend, fakeSocket, listeners);
 
       const outputCallback = jest.fn();
       backend.onOutput(outputCallback);
 
       listeners['nospace_execution_status']({
+        requestId: 'req-1',
         sessionId: 'test-session',
         status: 'finished',
         exitCode: 0,
@@ -346,12 +391,13 @@ describe('ServerExecutionBackend', () => {
     });
 
     it('should emit system message on status change to killed', async () => {
-      await connectBackend(backend, fakeSocket, listeners);
+      await connectAndStart(backend, fakeSocket, listeners);
 
       const outputCallback = jest.fn();
       backend.onOutput(outputCallback);
 
       listeners['nospace_execution_status']({
+        requestId: 'req-1',
         sessionId: 'test-session',
         status: 'killed',
       });
@@ -365,12 +411,13 @@ describe('ServerExecutionBackend', () => {
     });
 
     it('should emit system message on status change to error', async () => {
-      await connectBackend(backend, fakeSocket, listeners);
+      await connectAndStart(backend, fakeSocket, listeners);
 
       const outputCallback = jest.fn();
       backend.onOutput(outputCallback);
 
       listeners['nospace_execution_status']({
+        requestId: 'req-1',
         sessionId: 'test-session',
         status: 'error',
       });
@@ -392,6 +439,230 @@ describe('ServerExecutionBackend', () => {
 
       expect((fakeSocket as any).close).toHaveBeenCalled();
       expect(backend.isReady()).toBe(false);
+    });
+  });
+
+  describe('要求の対応付け（requestId）', () => {
+    const runOptions = {
+      language: 'standard' as const,
+      debug: false,
+      ignoreDebug: false,
+      inputMode: 'interactive' as const,
+    };
+
+    it('BUG: 旧要求のイベントは破棄され、新しい実行の状態・出力に混入しない', async () => {
+      await connectBackend(backend, fakeSocket, listeners);
+      const statuses: string[] = [];
+      const outputs: string[] = [];
+      backend.onStatusChange((status) => statuses.push(status));
+      backend.onOutput((e) => outputs.push(e.data));
+
+      backend.run('a', runOptions); // req-1
+      listeners['nospace_execution_status']({
+        requestId: 'req-1',
+        sessionId: 'old',
+        status: 'running',
+      });
+      backend.run('b', runOptions); // req-2（旧セッションは kill される）
+      listeners['nospace_execution_status']({
+        requestId: 'req-2',
+        sessionId: 'new',
+        status: 'running',
+      });
+      // 旧セッションの終了通知と遅延した出力が後から届く
+      listeners['nospace_stdout']({
+        requestId: 'req-1',
+        sessionId: 'old',
+        data: 'stale',
+      });
+      listeners['nospace_execution_status']({
+        requestId: 'req-1',
+        sessionId: 'old',
+        status: 'killed',
+      });
+
+      expect(statuses).toEqual(['running', 'running']);
+      expect(outputs.join('')).not.toContain('stale');
+      expect(outputs.join('')).not.toContain('killed');
+      // kill / stdin は新しいセッションに向く
+      backend.kill();
+      expect((fakeSocket as any).emit).toHaveBeenLastCalledWith(
+        'nospace_kill',
+        {
+          sessionId: 'new',
+        }
+      );
+    });
+
+    it('終端ステータスの後に届く同じ要求の重複イベント（killed の二重通知など）は無視する', async () => {
+      await connectBackend(backend, fakeSocket, listeners);
+      const statuses: string[] = [];
+      backend.onStatusChange((status) => statuses.push(status));
+      backend.run('a', runOptions);
+
+      for (const status of ['running', 'killed', 'killed']) {
+        listeners['nospace_execution_status']({
+          requestId: 'req-1',
+          sessionId: 's',
+          status,
+        });
+      }
+
+      expect(statuses).toEqual(['running', 'killed']);
+    });
+
+    it('終端ステータス後の kill / sendStdin はサーバへ送らない', async () => {
+      await connectBackend(backend, fakeSocket, listeners);
+      backend.run('a', runOptions);
+      listeners['nospace_execution_status']({
+        requestId: 'req-1',
+        sessionId: 's',
+        status: 'running',
+      });
+      listeners['nospace_execution_status']({
+        requestId: 'req-1',
+        sessionId: 's',
+        status: 'finished',
+        exitCode: 0,
+      });
+      (fakeSocket as any).emit.mockClear();
+
+      backend.kill();
+      backend.sendStdin('x');
+
+      expect((fakeSocket as any).emit).not.toHaveBeenCalled();
+    });
+
+    it('実行要求の前に届いたイベントは無視する', async () => {
+      await connectBackend(backend, fakeSocket, listeners);
+      const outputs: string[] = [];
+      backend.onOutput((e) => outputs.push(e.data));
+
+      listeners['nospace_stdout']({
+        requestId: 'req-1',
+        sessionId: 's',
+        data: 'x',
+      });
+
+      expect(outputs).toEqual([]);
+    });
+
+    it('sessionId 確定前の kill は、running 受信時に送信される', async () => {
+      await connectBackend(backend, fakeSocket, listeners);
+      backend.run('a', runOptions);
+      (fakeSocket as any).emit.mockClear();
+
+      backend.kill();
+      expect((fakeSocket as any).emit).not.toHaveBeenCalled();
+
+      listeners['nospace_execution_status']({
+        requestId: 'req-1',
+        sessionId: 's',
+        status: 'running',
+      });
+
+      expect((fakeSocket as any).emit).toHaveBeenCalledWith('nospace_kill', {
+        sessionId: 's',
+      });
+    });
+
+    it('sessionId 確定前の stdin は、running 受信時に順に送信される', async () => {
+      await connectBackend(backend, fakeSocket, listeners);
+      backend.run('a', runOptions);
+      (fakeSocket as any).emit.mockClear();
+
+      backend.sendStdin('1\n');
+      backend.sendStdin('2\n');
+      listeners['nospace_execution_status']({
+        requestId: 'req-1',
+        sessionId: 's',
+        status: 'running',
+      });
+
+      const stdinCalls = (fakeSocket as any).emit.mock.calls.filter(
+        (c: any[]) => c[0] === 'nospace_stdin'
+      );
+      expect(stdinCalls.map((c: any[]) => c[1].data)).toEqual(['1\n', '2\n']);
+    });
+
+    it('run が未接続で失敗した場合、以後のイベントを受け付けない', () => {
+      expect(() => backend.run('a', runOptions)).toThrow(
+        'Socket not connected'
+      );
+      const outputs: string[] = [];
+      backend.onOutput((e) => outputs.push(e.data));
+
+      listeners['nospace_stdout']?.({
+        requestId: 'req-1',
+        sessionId: 's',
+        data: 'x',
+      });
+
+      expect(outputs).toEqual([]);
+    });
+  });
+
+  describe('切断・再接続', () => {
+    const runOptions = {
+      language: 'standard' as const,
+      debug: false,
+      ignoreDebug: false,
+      inputMode: 'interactive' as const,
+    };
+
+    it('BUG: 実行中に切断されたら error ステータスと切断メッセージを 1 回通知し、以後の旧イベントは無視する', async () => {
+      await connectBackend(backend, fakeSocket, listeners);
+      const statuses: Array<[string, string]> = [];
+      const outputs: string[] = [];
+      backend.onStatusChange((status, sessionId) =>
+        statuses.push([status, sessionId])
+      );
+      backend.onOutput((e) => outputs.push(e.data));
+      backend.run('a', runOptions);
+      listeners['nospace_execution_status']({
+        requestId: 'req-1',
+        sessionId: 's',
+        status: 'running',
+      });
+
+      listeners['disconnect']('transport close');
+      listeners['nospace_execution_status']({
+        requestId: 'req-1',
+        sessionId: 's',
+        status: 'killed',
+      });
+
+      expect(statuses).toEqual([
+        ['running', 's'],
+        ['error', 's'],
+      ]);
+      expect(outputs.filter((o) => o.includes('Connection lost'))).toHaveLength(
+        1
+      );
+    });
+
+    it('実行中でなければ切断しても status を通知せず、接続状態のみ通知する', async () => {
+      await connectBackend(backend, fakeSocket, listeners);
+      const statuses: string[] = [];
+      const states: string[] = [];
+      backend.onStatusChange((status) => statuses.push(status));
+      backend.onConnectionChange((state) => states.push(state));
+
+      listeners['disconnect']('transport close');
+      listeners['connect']();
+
+      expect(statuses).toEqual([]);
+      expect(states).toEqual(['reconnecting', 'connected']);
+    });
+
+    it('サーバ側からの意図的な切断は lost として通知する', async () => {
+      await connectBackend(backend, fakeSocket, listeners);
+      const states: string[] = [];
+      backend.onConnectionChange((state) => states.push(state));
+
+      listeners['disconnect']('io server disconnect');
+
+      expect(states).toEqual(['lost']);
     });
   });
 });

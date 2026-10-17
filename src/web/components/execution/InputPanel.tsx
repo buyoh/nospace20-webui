@@ -3,6 +3,7 @@ import { useAtomValue, useSetAtom } from 'jotai';
 import { executionOptionsAtom } from '../../stores/optionsAtom';
 import { outputEntriesAtom } from '../../stores/executionAtom';
 import type { OutputEntry } from '../../../interfaces/NospaceTypes';
+import { appendOutputEntry } from '../../libs/outputBuffer';
 import { Button } from '../common/Button';
 import { TextInput } from '../common/TextInput';
 import { Textarea } from '../common/Textarea';
@@ -41,7 +42,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({
       data: `> ${interactiveInput}\n`,
       timestamp: Date.now(),
     };
-    setOutputEntries((prev) => [...prev, entry]);
+    setOutputEntries((prev) => appendOutputEntry(prev, entry));
 
     // Clear input
     setInteractiveInput('');

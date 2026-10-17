@@ -10,13 +10,17 @@ import {
   currentSessionIdAtom,
   outputEntriesAtom,
   exitCodeAtom,
+  backendStateAtom,
 } from '../../web/stores/executionAtom';
 import {
   compileOutputAtom,
   compileStatusAtom,
 } from '../../web/stores/compileOutputAtom';
 import { compileErrorsAtom } from '../../web/stores/compileErrorsAtom';
-import type { ExecutionBackend } from '../../web/services/ExecutionBackend';
+import type {
+  ConnectionState,
+  ExecutionBackend,
+} from '../../web/services/ExecutionBackend';
 import type {
   OutputEntry,
   ExecutionStatus,
@@ -46,9 +50,21 @@ class FakeExecutionBackend implements ExecutionBackend {
   sendStdinCalls: string[] = [];
   killCalls: number = 0;
 
+  /** 設定すると init() はこの Promise の解決まで待つ（遅い初期化の再現用） */
+  initGate: Promise<void> | null = null;
+  /** 設定すると init() はこのエラーで reject する */
+  initError: Error | null = null;
+  connectionCallback: ((state: ConnectionState) => void) | null = null;
+
   async init(): Promise<void> {
     this.initCalled = true;
+    if (this.initGate) await this.initGate;
+    if (this.initError) throw this.initError;
     this.isReadyValue = true;
+  }
+
+  onConnectionChange(callback: (state: ConnectionState) => void): void {
+    this.connectionCallback = callback;
   }
 
   isReady(): boolean {
@@ -354,5 +370,253 @@ describe('useExecutionBackend', () => {
 
     expect(fakeBackend.disposeCalled).toBe(true);
     expect(result.current.backendRef.current).toBe(secondBackend);
+  });
+
+  // ─── 初期化の競合・失敗・状態 ───────────────────────────────────────
+
+  describe('backendState と初期化の競合', () => {
+    /** 手動で解決できる Promise */
+    function deferred() {
+      let resolve!: () => void;
+      const promise = new Promise<void>((r) => (resolve = r));
+      return { promise, resolve };
+    }
+
+    it('初期化中は initializing、完了後は ready になる', async () => {
+      const { store, wrapper } = createTestWrapper();
+      const gate = deferred();
+      fakeBackend.initGate = gate.promise;
+
+      renderHook(() => useExecutionBackend('wasm', backendFactory), {
+        wrapper,
+      });
+      await waitFor(() => expect(fakeBackend.initCalled).toBe(true));
+      expect(store.get(backendStateAtom)).toEqual({ kind: 'initializing' });
+
+      await act(async () => gate.resolve());
+
+      await waitFor(() =>
+        expect(store.get(backendStateAtom)).toEqual({ kind: 'ready' })
+      );
+    });
+
+    it('BUG: 遅い init が flavor 切り替え後に完了しても、古い backend は採用されず dispose される', async () => {
+      const { wrapper } = createTestWrapper();
+      const gate = deferred();
+      const slowBackend = new FakeExecutionBackend();
+      slowBackend.initGate = gate.promise;
+      const fastBackend = new FakeExecutionBackend();
+      const factory: BackendFactory = async (flavor) =>
+        flavor === 'websocket' ? slowBackend : fastBackend;
+
+      const { rerender, result } = renderHook(
+        ({ flavor }: { flavor: Flavor }) =>
+          useExecutionBackend(flavor, factory),
+        { wrapper, initialProps: { flavor: 'websocket' as Flavor } }
+      );
+      await waitFor(() => expect(slowBackend.initCalled).toBe(true));
+
+      // websocket の接続完了前に wasm へ戻す
+      rerender({ flavor: 'wasm' });
+      await waitFor(() =>
+        expect(result.current.backendRef.current).toBe(fastBackend)
+      );
+
+      // 遅い init が後から完了する
+      await act(async () => gate.resolve());
+
+      expect(result.current.backendRef.current).toBe(fastBackend);
+      expect(slowBackend.disposeCalled).toBe(true);
+      expect(fastBackend.disposeCalled).toBe(false);
+    });
+
+    it('BUG: init 中にアンマウントされた場合、init 完了後も backendRef に残らず dispose される', async () => {
+      const { wrapper } = createTestWrapper();
+      const gate = deferred();
+      fakeBackend.initGate = gate.promise;
+
+      const { unmount, result } = renderHook(
+        () => useExecutionBackend('wasm', backendFactory),
+        { wrapper }
+      );
+      await waitFor(() => expect(fakeBackend.initCalled).toBe(true));
+      unmount();
+      await act(async () => gate.resolve());
+
+      expect(result.current.backendRef.current).toBeNull();
+      expect(fakeBackend.disposeCalled).toBe(true);
+    });
+
+    it('factory が reject しても未処理にならず、backendState が error になる', async () => {
+      const { store, wrapper } = createTestWrapper();
+      const factory: BackendFactory = async () => {
+        throw new Error('chunk load failed');
+      };
+
+      renderHook(() => useExecutionBackend('wasm', factory), { wrapper });
+
+      await waitFor(() =>
+        expect(store.get(backendStateAtom)).toEqual({
+          kind: 'error',
+          message: 'chunk load failed',
+        })
+      );
+    });
+
+    it('init が reject したら backend を採用せず error になり、retry で再初期化して ready になる', async () => {
+      const { store, wrapper } = createTestWrapper();
+      const failing = new FakeExecutionBackend();
+      failing.initError = new Error('WASM fetch failed');
+      const recovered = new FakeExecutionBackend();
+      let calls = 0;
+      const factory: BackendFactory = async () =>
+        ++calls === 1 ? failing : recovered;
+
+      const { result } = renderHook(
+        () => useExecutionBackend('wasm', factory),
+        { wrapper }
+      );
+      await waitFor(() =>
+        expect(store.get(backendStateAtom)).toEqual({
+          kind: 'error',
+          message: 'WASM fetch failed',
+        })
+      );
+      expect(result.current.backendRef.current).toBeNull();
+      expect(failing.disposeCalled).toBe(true);
+
+      act(() => result.current.retry());
+
+      await waitFor(() =>
+        expect(store.get(backendStateAtom)).toEqual({ kind: 'ready' })
+      );
+      expect(result.current.backendRef.current).toBe(recovered);
+    });
+
+    it('init 失敗で dispose された backend が後からコールバックを呼んでも atom は変化しない', async () => {
+      const { store, wrapper } = createTestWrapper();
+      fakeBackend.initError = new Error('boom');
+
+      renderHook(() => useExecutionBackend('wasm', backendFactory), {
+        wrapper,
+      });
+      await waitFor(() =>
+        expect(store.get(backendStateAtom).kind).toBe('error')
+      );
+
+      act(() => {
+        fakeBackend.triggerStatusChange('running', 'late');
+        fakeBackend.triggerOutput({
+          type: 'stdout',
+          data: 'late',
+          timestamp: 0,
+        });
+      });
+
+      expect(store.get(executionStatusAtom)).toBe('idle');
+      expect(store.get(outputEntriesAtom)).toEqual([]);
+    });
+
+    it('flavor 切り替えで実行状態・コンパイル状態・追跡 ref がリセットされる', async () => {
+      const { store, wrapper } = createTestWrapper();
+      const second = new FakeExecutionBackend();
+      let calls = 0;
+      const factory: BackendFactory = async () =>
+        ++calls === 1 ? fakeBackend : second;
+      const { result, rerender } = renderHook(
+        ({ flavor }: { flavor: Flavor }) =>
+          useExecutionBackend(flavor, factory),
+        { wrapper, initialProps: { flavor: 'websocket' as Flavor } }
+      );
+      await waitFor(() =>
+        expect(result.current.backendRef.current).toBe(fakeBackend)
+      );
+      // websocket でコンパイル中
+      result.current.compileTargetRef.current = 'ws';
+      result.current.prevStatusRef.current = 'compiling';
+      act(() => fakeBackend.triggerStatusChange('compiling', 's'));
+      expect(store.get(executionStatusAtom)).toBe('compiling');
+
+      rerender({ flavor: 'wasm' });
+
+      await waitFor(() =>
+        expect(result.current.backendRef.current).toBe(second)
+      );
+      expect(store.get(executionStatusAtom)).toBe('idle');
+      expect(store.get(compileStatusAtom)).toBeNull();
+      expect(result.current.compileTargetRef.current).toBeNull();
+      expect(result.current.prevStatusRef.current).toBeNull();
+    });
+
+    it('接続状態の変化が backendState に反映される', async () => {
+      const { store, wrapper } = createTestWrapper();
+      renderHook(() => useExecutionBackend('websocket', backendFactory), {
+        wrapper,
+      });
+      await waitFor(() =>
+        expect(store.get(backendStateAtom)).toEqual({ kind: 'ready' })
+      );
+
+      act(() => fakeBackend.connectionCallback?.('reconnecting'));
+      expect(store.get(backendStateAtom)).toEqual({ kind: 'disconnected' });
+
+      act(() => fakeBackend.connectionCallback?.('connected'));
+      expect(store.get(backendStateAtom)).toEqual({ kind: 'ready' });
+
+      act(() => fakeBackend.connectionCallback?.('lost'));
+      expect(store.get(backendStateAtom).kind).toBe('error');
+    });
+  });
+
+  describe('コンパイル結果と出力上限', () => {
+    it('BUG: 構造化エラーがなくても compiling → error で終わったら compileStatus は error になる', async () => {
+      const { store, wrapper } = createTestWrapper();
+      const { result } = renderHook(
+        () => useExecutionBackend('websocket', backendFactory),
+        { wrapper }
+      );
+      await waitFor(() =>
+        expect(result.current.backendRef.current).toBe(fakeBackend)
+      );
+      result.current.prevStatusRef.current = 'compiling';
+      result.current.compileTargetRef.current = 'ws';
+      act(() => fakeBackend.triggerStatusChange('compiling', 's'));
+
+      // 切断・サーバエラーなど（構造化エラーなし）
+      act(() => fakeBackend.triggerStatusChange('error', 's', null));
+
+      expect(store.get(compileStatusAtom)).toBe('error');
+    });
+
+    it('出力は同種エントリが連結され、上限を超えると古い出力が捨てられる', async () => {
+      const { store, wrapper } = createTestWrapper();
+      const { result } = renderHook(
+        () => useExecutionBackend('wasm', backendFactory, { maxChars: 10 }),
+        { wrapper }
+      );
+      await waitFor(() =>
+        expect(result.current.backendRef.current).toBe(fakeBackend)
+      );
+
+      act(() => {
+        for (let i = 0; i < 5; i++) {
+          fakeBackend.triggerOutput({
+            type: 'stdout',
+            data: '0123456789',
+            timestamp: i,
+          });
+        }
+      });
+
+      const entries = store.get(outputEntriesAtom);
+      expect(entries[0].data).toContain('omitted');
+      const body = entries
+        .slice(1)
+        .map((e) => e.data)
+        .join('');
+      // 上限以内に収まり、最新の出力が残る
+      expect(body.length).toBeLessThanOrEqual(10);
+      expect('0123456789'.endsWith(body.slice(-1))).toBe(true);
+    });
   });
 });
