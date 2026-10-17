@@ -1,13 +1,16 @@
 /**
  * アプリケーションが使用する環境変数の定義。
- * すべてのフィールドは任意であり、デフォルト値はそれぞれの読み込み側で設定する。
- * Web 側は src/web/libs/env.ts、App 側は src/app/Config.ts で読み込む。
+ * 値は env.example.js（既定値）・env.local.js・実際の環境変数から読み込まれる（src/app/ConfigLoader.ts）。
+ * Web 側は src/web/libs/env.ts（vite.config.ts の define 経由）、App 側は src/app/Config.ts で読み込む。
+ * キーを追加した場合は env.example.js と ConfigLoader の CONFIG_KEYS も更新すること。
  */
 export interface ExpectedEnvVars {
   /** (web, app)実行環境 ('production' | 'development' 等) */
   NODE_ENV?: string;
   /** (web) アプリケーション実行フレーバー ('websocket' | 'wasm') */
   VITE_APPLICATION_FLAVOR?: string;
+  /** (web) ベースパス */
+  VITE_BASE_PATH?: string;
   /** (app)HTTP サーバーポート */
   PORT?: string;
   /** (app)フロントエンド配信モード ('vite' | 'static') */
@@ -25,4 +28,3 @@ export interface ExpectedEnvVars {
   /** (web) nospace-webui のバージョン (日付: YYYY.MM.DD) */
   VITE_WEBUI_VERSION?: string;
 }
-// 修正後、.env.example も更新すること

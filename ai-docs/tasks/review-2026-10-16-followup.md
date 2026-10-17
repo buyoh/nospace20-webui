@@ -48,7 +48,7 @@
 
 - [02](../done-tasks/code-review-2026-10-16/02-child-process-lifecycle.md) 解決策 6: `existsSync` → `accessSync(X_OK)`（EACCES は `error` イベントで安全に処理されるため）
 - [07](../done-tasks/code-review-2026-10-16/07-wasm-execution-safety.md) 解決策 2・3: step ごとの経過時間による budget 調整、Web Worker 化。巨大なソースのコンパイルが UI を固める問題が残る
-- [10](../done-tasks/code-review-2026-10-16/10-config-and-env.md) (c): 子プロセスの環境変数の絞り込み
+- ~~[10](../done-tasks/code-review-2026-10-16/10-config-and-env.md) (c): 子プロセスの環境変数の絞り込み~~ → **完了**（[config-file-and-child-env](../done-tasks/config-file-and-child-env/README.md)）
 - [11](../done-tasks/code-review-2026-10-16/11-ci-and-dependencies.md): 外部アクションのコミット SHA 固定（現在はタグ）、CI への型チェック追加（既存のテストコードと ace のモード定義に型エラーがあり、先に解消が必要）
 
 ## タスクステップ・チェックリスト

@@ -1,30 +1,43 @@
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import wasm from 'vite-plugin-wasm';
-import { parse } from 'dotenv';
-import { readFileSync } from 'fs';
-import path from 'path';
+import {
+  fsConfigFileReader,
+  loadConfigValues,
+} from './src/app/ConfigLoader';
 
-export default defineConfig(({ mode }) => {
-  // .env.example を最低優先度で読み込む（process.envに注入しない）
-  let exampleEnv: Record<string, string> = {};
-  try {
-    const examplePath = path.resolve(process.cwd(), '.env.example');
-    exampleEnv = parse(readFileSync(examplePath));
-  } catch (e) {
-    // .env.example が存在しない場合は無視
-  }
-  
-  // Vite標準の環境変数読み込み（.env, .env.local, .env.[mode], .env.[mode].local）
-  const env = loadEnv(mode, process.cwd(), '');
-  
-  // 優先順位: env（高） > exampleEnv（低）
-  const mergedEnv = { ...exampleEnv, ...env };
-  
+export default defineConfig(() => {
+  // env.example.js（必須）・env.local.js・環境変数をマージした設定値（process.env には書き込まない）
+  const values = loadConfigValues(fsConfigFileReader, process.env);
+
+  // VITE_ で始まる値を import.meta.env.VITE_* として埋め込む
+  const define = Object.fromEntries(
+    Object.entries(values)
+      .filter(([key]) => key.startsWith('VITE_'))
+      .map(([key, value]) => [`import.meta.env.${key}`, JSON.stringify(value)])
+  );
+
   return {
-    base: mergedEnv.VITE_BASE_PATH || '/',
+    base: values.VITE_BASE_PATH || '/',
+    define,
+    // 設定は env.*.js から読むため、Vite 標準の .env* ファイルの読み込みは無効にする
+    // （移行前の .env.local が残っていても読まれないようにする）。
+    // process.env の VITE_* は Vite が引き続き取り込むが、定義済みのキーは define が優先される
+    envDir: false as const,
     server: {
       port: 5173,
+      fs: {
+        // 開発サーバーが設定ファイルを配信しないようにする。
+        // 指定すると Vite の既定値を置き換えるため、既定の項目も残す
+        deny: [
+          '.env',
+          '.env.*',
+          '*.{crt,pem}',
+          '**/.git/**',
+          'env.local.*',
+          'env.example.*',
+        ],
+      },
     },
     plugins: [
       react(),

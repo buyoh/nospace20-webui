@@ -2,6 +2,7 @@
 
 ## 完了したタスク一覧
 
+- [config-file-and-child-env/](config-file-and-child-env/) 設定ファイルの JS 化と子プロセス環境変数の許可リスト化（2026/10/17: 完了）
 - [review-2026-10-16-fixes/](review-2026-10-16-fixes/) コードレビュー指摘 03/05/06/08/09 の修正（2026/10/17: 完了）
   - 対応済み指摘 01〜11: [code-review-2026-10-16/](code-review-2026-10-16/)（01・02・04・07・10・11 は 2026/10/17 完了）
   - 積み残し: [review-2026-10-16-followup.md](../tasks/review-2026-10-16-followup.md)

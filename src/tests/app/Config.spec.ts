@@ -1,7 +1,7 @@
 import { parseAppConfig, ConfigError } from '../../app/Config';
 import type { ExpectedEnvVars } from '../../interfaces/EnvConfig';
 
-/** .env.example 相当の完全な環境変数 */
+/** env.example.js 相当の完全な設定値 */
 const validEnv = (overrides: ExpectedEnvVars = {}): ExpectedEnvVars => ({
   NODE_ENV: 'development',
   PORT: '8090',
@@ -14,7 +14,7 @@ const validEnv = (overrides: ExpectedEnvVars = {}): ExpectedEnvVars => ({
 });
 
 describe('parseAppConfig', () => {
-  it('.env.example 相当の値をパースできる', () => {
+  it('env.example.js 相当の値をパースできる', () => {
     const config = parseAppConfig(validEnv());
     expect(config.production).toBe(false);
     expect(config.develop).toBe(true);

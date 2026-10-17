@@ -1,4 +1,4 @@
-import { spawn, ChildProcess } from 'child_process';
+import { ChildProcess } from 'child_process';
 import { writeFileSync, unlinkSync, existsSync, mkdirSync } from 'fs';
 import { randomUUID } from 'crypto';
 import { join } from 'path';
@@ -6,6 +6,7 @@ import {
   ExecutionSlotLimiter,
   ExecutionLimitError,
 } from './ExecutionSlotLimiter';
+import { createProcessSpawner } from './ChildProcessEnv';
 import type { RunOptions, CompileOptions } from '../../interfaces/NospaceTypes';
 
 /** ファイルシステム操作の抽象 */
@@ -39,11 +40,6 @@ const defaultFileSystem: FileSystem = {
   },
   unlinkSync,
   mkdirSync,
-};
-
-/** デフォルトのProcessSpawner実装 */
-const defaultProcessSpawner: ProcessSpawner = {
-  spawn,
 };
 
 /** Nospace セッションの実行状態 */
@@ -315,7 +311,7 @@ export class NospaceExecutionService {
   constructor(
     private readonly config: ExecutionConfig,
     private readonly fs: FileSystem = defaultFileSystem,
-    private readonly spawner: ProcessSpawner = defaultProcessSpawner,
+    private readonly spawner: ProcessSpawner = createProcessSpawner(),
     limiter?: ExecutionSlotLimiter
   ) {
     this.limiter =

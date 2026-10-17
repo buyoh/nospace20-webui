@@ -13,7 +13,7 @@ process.on('unhandledRejection', (reason) => {
 
 (async () => {
   try {
-    // 設定は import 時ではなくここで読み込む（.env.example が無い・値が不正なら起動を失敗させる）
+    // 設定は import 時ではなくここで読み込む（env.example.js が無い・値が不正なら起動を失敗させる）
     const config = loadAppConfig();
     console.log('Config.frontend', config.frontend);
     const server = await setupExpressServer(config);

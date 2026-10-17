@@ -27,6 +27,8 @@
 
 ## 完了済みタスク
 
+- [config-file-and-child-env/](../done-tasks/config-file-and-child-env/) 設定ファイルの JS 化（env.example.js / env.local.js）と子プロセスに渡す環境変数の許可リスト化（コードレビュー 2026-10-16 の 10 (c)）
+
 - [code-review-2026-10-16/](../done-tasks/code-review-2026-10-16/) コードレビュー指摘 01〜11 の対応記録（サーバ停止・子プロセス終了処理・テスト管理 API・WASM 実行の安全性・設定の fail fast・CI/依存 ほか）
 
 - [review-2026-10-16-fixes/](../done-tasks/review-2026-10-16-fixes/) コードレビュー指摘 03/05/06/08/09 の修正（requestId 導入・backend 状態管理・再接続・リソース上限・テストエディタ堅牢化）

@@ -30,7 +30,7 @@ Props にはあるが、コンポーネント / 関数本体に概要コメン�
 
 - `WasmExecutionBackend.spec.ts:94-98` が `globalThis.crypto` を `Object.defineProperty` で差し替え（07 (c) の問題を隠蔽）
 - `useCheckResultEditor.ts:89` が `window.confirm` に直接依存し、確認分岐をテストできない
-- Config import 経由でテストが実ファイル `.env.local` を読む（10 (a) 参照）
+- ~~Config import 経由でテストが実ファイル `.env.local` を読む（10 (a) 参照）~~ → 解消済み（10 で ConfigLoader に分離、その後 [config-file-and-child-env](../../done-tasks/config-file-and-child-env/README.md) で `env.*.js` に移行し dotenv を廃止）
 
 ## 違反しているルール
 
@@ -44,4 +44,4 @@ Props にはあるが、コンポーネント / 関数本体に概要コメン�
 |---|---|---|
 | 1 | 上記箇所に JSDoc を追加 | 各ファイル（挙動変更なし） |
 | 2 | ID 生成器・`confirm` 関数を DI 化し、テストのグローバル差し替えを削除 | `WasmExecutionBackend`, `useCheckResultEditor`, 各テスト |
-| 3 | Config の dotenv 読み込みをエントリポイントに移す（10 の解決策 2） | 10 参照 |
+| 3 | ~~Config の dotenv 読み込みをエントリポイントに移す（10 の解決策 2）~~ 対応済み | 10 参照 |
