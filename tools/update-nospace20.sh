@@ -25,7 +25,7 @@ cd "$(dirname "$0")/.."
 pushd "$NOSPACE20_DIR" > /dev/null
 NO_DEBUG=true bash ./build-wasm.sh
 cd tools/vscode-ext
-npm ci
+npm ci --ignore-scripts
 npm run build-ext
 popd > /dev/null
 
