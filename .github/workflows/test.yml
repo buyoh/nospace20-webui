@@ -2,7 +2,6 @@ name: test
 
 on: [push]
 
-# 最小権限: テストは読み取りのみで足りる
 permissions:
   contents: read
 
@@ -21,18 +20,17 @@ jobs:
     - uses: actions/checkout@v6
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
+        persist-credentials: false
     - name: get git submodules
       run: |
         git submodule init
         git submodule update
-    # 依存パッケージの lifecycle スクリプトを実行しない（供給網リスクの低減）
     - name: install packages
       run: |
         npm ci --ignore-scripts
-    - name: run tests
-      run: |
-        npm run test
-    # 型チェックとビルド（サーバー: tsc、クライアント: vite build）
     - name: build
       run: |
         npm run build
+    - name: run tests
+      run: |
+        npm run test

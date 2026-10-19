@@ -13,7 +13,6 @@ jobs:
         node: [22]
 
     runs-on: ubuntu-24.04
-    # 自動コミットのために書き込み権限が必要なのはこのジョブのみ
     permissions:
       contents: write
     
@@ -24,6 +23,7 @@ jobs:
     - uses: actions/checkout@v6
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
+        persist-credentials: false
     - name: Please tell me who you are.
       run: |
           git config --global user.email "15198247+buyoh@users.noreply.github.com"
@@ -32,7 +32,6 @@ jobs:
       run: |
         git submodule init
         git submodule update
-    # 書き込み権限付きのトークンの下で、依存パッケージの lifecycle スクリプトを実行しない
     - name: install packages
       run: |
         npm ci --ignore-scripts
