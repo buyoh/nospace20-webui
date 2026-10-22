@@ -3,7 +3,7 @@
 .header {
   background-color: colors.$bg-tertiary;
   color: colors.$text-white;
-  padding: 1rem 2rem;
+  padding: 0.5rem 1rem;
   border-bottom: 1px solid colors.$border-primary;
   display: flex;
   align-items: center;
@@ -23,7 +23,7 @@
   h1 {
     display: flex;
     margin: 0;
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     font-weight: 500;
   }
 
@@ -55,7 +55,7 @@
 }
 
 .header-flavor-badge {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 600;
   padding: 0.2rem 0.6rem;
   border-radius: 4px;
@@ -70,7 +70,7 @@
   color: colors.$text-primary;
   border: 1px solid colors.$border-secondary;
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   cursor: pointer;
 
   &:focus {

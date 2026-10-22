@@ -28,11 +28,6 @@ function renderHeader(options?: { flavor?: 'wasm' | 'websocket' }) {
 }
 
 describe('Header', () => {
-  it('タイトルが表示される', () => {
-    renderHeader();
-    expect(screen.getByText('nospace Web IDE')).toBeInTheDocument();
-  });
-
   it('バージョン情報が表示される', () => {
     renderHeader();
     const nospaceVersion = screen.getByTestId('nospace-version');

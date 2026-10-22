@@ -33,12 +33,13 @@ export const SampleList: React.FC<SampleListProps> = ({ samples, onLoad }) => {
         )}
       </div>
       <div className="sample-list__footer">
+        <h3>Learn nospace20</h3>
         <a href="https://github.com/buyoh/nospace20/blob/master/docs/spec.md">
-          Language Specification
+          📓 Language Specification
         </a>{' '}
         /{' '}
         <a href="https://github.com/buyoh/nospace20/blob/master/docs/tutorial.md">
-          Tutorial
+          📖 Tutorial
         </a>
       </div>
     </div>
