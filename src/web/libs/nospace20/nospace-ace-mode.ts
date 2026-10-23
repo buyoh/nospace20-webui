@@ -22,6 +22,9 @@ ace.define(
             include: '#keywords',
           },
           {
+            include: '#types',
+          },
+          {
             include: '#builtins',
           },
           {
@@ -38,6 +41,9 @@ ace.define(
           },
           {
             include: '#punctuation',
+          },
+          {
+            include: '#struct-definition',
           },
           {
             include: '#function-definition',
@@ -72,7 +78,8 @@ ace.define(
           },
           {
             token: 'keyword.declaration.nospace',
-            regex: /\b(?:func|let|static|final|constexpr|alias)\b/,
+            regex:
+              /\b(?:func|let|static|final|constexpr|alias|struct|namespace|import|weak|export)\b/,
           },
         ],
         '#builtins': [
@@ -130,11 +137,11 @@ ace.define(
           },
           {
             token: 'keyword.operator.arithmetic.nospace',
-            regex: /[+\-*/%]/,
+            regex: /[+\-*\/%]/,
           },
           {
             token: 'keyword.operator.assignment.compound.nospace',
-            regex: /\+=|-=|\*=|\/=|%=/,
+            regex: /\+=|\-=|\*=|\/=|%=/,
           },
           {
             token: 'keyword.operator.assignment.nospace',
@@ -143,6 +150,14 @@ ace.define(
           {
             token: 'keyword.operator.reference.nospace',
             regex: /&/,
+          },
+          {
+            token: 'keyword.operator.type-annotation.nospace',
+            regex: /@/,
+          },
+          {
+            token: 'keyword.operator.field-access.nospace',
+            regex: /\./,
           },
         ],
         '#punctuation': [
@@ -174,6 +189,18 @@ ace.define(
             token: 'punctuation.section.parens.end.nospace',
             regex: /\)/,
           },
+          {
+            token: 'punctuation.section.brackets.begin.nospace',
+            regex: /\[/,
+          },
+          {
+            token: 'punctuation.section.brackets.end.nospace',
+            regex: /\]/,
+          },
+          {
+            token: 'punctuation.accessor.namespace.nospace',
+            regex: /\$/,
+          },
         ],
         '#double-strings': [
           {
@@ -204,6 +231,27 @@ ace.define(
               'text',
             ],
             regex: /\b(func)(\s*:\s*)([a-zA-Z_][a-zA-Z0-9_]*)(\s*\()/,
+          },
+        ],
+        '#struct-definition': [
+          {
+            token: [
+              'keyword.declaration.struct.nospace',
+              'text',
+              'entity.name.type.struct.nospace',
+              'text',
+            ],
+            regex: /\b(struct)(\s*:\s*)([A-Z][a-zA-Z0-9_]*)(\s*\()/,
+          },
+        ],
+        '#types': [
+          {
+            token: 'support.type.primitive.nospace',
+            regex: /(?<=@)\s*\b(?:int|void)\b/,
+          },
+          {
+            token: 'entity.name.type.nospace',
+            regex: /(?<=@)\s*\b[A-Z][a-zA-Z0-9_]*\b/,
           },
         ],
         '#function-call': [
