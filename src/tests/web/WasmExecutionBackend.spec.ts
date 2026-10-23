@@ -17,14 +17,8 @@ let lastVMStepArg: number | undefined; // step() に渡された引数
 let lastCompileArgs: any[] = []; // compile() に渡された引数
 let lastVMConstructorArgs: any[] = []; // WasmWhitespaceVM constructor に渡された引数
 
-// WasmNospaceVM 用のフェイク変数
-let lastNospaceVMConstructorArgs: any[] = [];
-let fakeNospaceVMConstructorShouldThrow: any;
-let fakeNospaceVMStepResult: any; // NospaceVM.step() の返り値
-let fakeNospaceVMTotalSteps = 0; // NospaceVM.total_steps() の返り値
-let fakeNospaceVMStdout = ''; // NospaceVM.flushStdout() の返り値
 let fakeTracedData: any = {}; // WhitespaceVM の get_traced() 返り値
-let fakeNospaceTracedData: any = {}; // NospaceVM の getTraced() 返り値
+let lastFromWhitespaceArgs: any[] = []; // WasmWhitespaceVM.fromWhitespace に渡された引数
 
 /** フェイク Nospace20Loader (jest.mock() を使わない DI 実装) */
 const fakeLoader: Nospace20Loader = {
@@ -38,6 +32,10 @@ const fakeLoader: Nospace20Loader = {
       return fakeCompileResult;
     },
     WasmWhitespaceVM: class {
+      static fromWhitespace(...args: any[]) {
+        lastFromWhitespaceArgs = args;
+        return new (this as any)();
+      }
       constructor(...args: any[]) {
         lastVMConstructorArgs = args;
         if (fakeVMConstructorShouldThrow !== undefined) {
@@ -56,32 +54,6 @@ const fakeLoader: Nospace20Loader = {
       }
       get_traced() {
         return fakeTracedData;
-      }
-      free() {}
-    },
-    WasmNospaceVM: class {
-      constructor(...args: any[]) {
-        lastNospaceVMConstructorArgs = args;
-        if (fakeNospaceVMConstructorShouldThrow !== undefined) {
-          throw fakeNospaceVMConstructorShouldThrow;
-        }
-      }
-      step(_budget: number) {
-        return fakeNospaceVMStepResult ?? { status: 'complete' };
-      }
-      total_steps() {
-        return fakeNospaceVMTotalSteps;
-      }
-      flushStdout() {
-        const out = fakeNospaceVMStdout;
-        fakeNospaceVMStdout = '';
-        return out;
-      }
-      getTraced() {
-        return fakeNospaceTracedData;
-      }
-      is_complete() {
-        return false;
       }
       free() {}
     },
@@ -110,13 +82,8 @@ describe('WasmExecutionBackend', () => {
     lastVMStepArg = undefined;
     lastCompileArgs = [];
     lastVMConstructorArgs = [];
-    lastNospaceVMConstructorArgs = [];
-    fakeNospaceVMConstructorShouldThrow = undefined;
-    fakeNospaceVMStepResult = undefined;
-    fakeNospaceVMTotalSteps = 0;
-    fakeNospaceVMStdout = '';
+    lastFromWhitespaceArgs = [];
     fakeTracedData = {};
-    fakeNospaceTracedData = {};
     outputEntries = [];
 
     backend = new WasmExecutionBackend(fakeLoader);
@@ -379,7 +346,6 @@ describe('WasmExecutionBackend', () => {
     const options: RunOptions = {
       language: 'standard',
       debug: false,
-      ignoreDebug: false,
       inputMode: 'batch',
     };
     let compileErrors: any[];
@@ -434,7 +400,6 @@ describe('WasmExecutionBackend', () => {
       const options: RunOptions = {
         language: 'standard',
         debug: false,
-        ignoreDebug: false,
         inputMode: 'batch',
         stepBudget: 500,
       };
@@ -448,7 +413,6 @@ describe('WasmExecutionBackend', () => {
       const options: RunOptions = {
         language: 'standard',
         debug: false,
-        ignoreDebug: false,
         inputMode: 'batch',
         // stepBudget を省略
       };
@@ -469,7 +433,6 @@ describe('WasmExecutionBackend', () => {
       const options: RunOptions = {
         language: 'standard',
         debug: false,
-        ignoreDebug: false,
         inputMode: 'batch',
         maxTotalSteps: 1000,
       };
@@ -490,7 +453,6 @@ describe('WasmExecutionBackend', () => {
       const options: RunOptions = {
         language: 'standard',
         debug: false,
-        ignoreDebug: false,
         inputMode: 'batch',
         // maxTotalSteps を省略
       };
@@ -537,7 +499,6 @@ describe('WasmExecutionBackend', () => {
       const options: RunOptions = {
         language: 'standard',
         debug: false,
-        ignoreDebug: false,
         inputMode: 'batch',
         stdExtensions: ['debug'],
       };
@@ -552,7 +513,6 @@ describe('WasmExecutionBackend', () => {
       const options: RunOptions = {
         language: 'standard',
         debug: false,
-        ignoreDebug: false,
         inputMode: 'batch',
       };
       backend.run('code', options, '');
@@ -566,7 +526,6 @@ describe('WasmExecutionBackend', () => {
       const options: RunOptions = {
         language: 'standard',
         debug: false,
-        ignoreDebug: false,
         inputMode: 'batch',
         stdExtensions: [],
       };
@@ -608,195 +567,98 @@ describe('WasmExecutionBackend', () => {
     });
   });
 
-  describe('run(direct: true) - WasmNospaceVM 実行パス', () => {
+  describe('run - VM の構築引数', () => {
     const baseOptions: RunOptions = {
       language: 'standard',
       debug: false,
-      ignoreDebug: false,
       inputMode: 'batch',
-      direct: true,
     };
 
-    it('direct: true の場合に WasmNospaceVM コンストラクタが呼ばれる', async () => {
+    it('BUG: 廃止された WasmNospaceVM を使わず、nospace ソースは WasmWhitespaceVM のコンストラクタで構築する', async () => {
+      // 原因: nospace20 v4 で WasmNospaceVM（直接実行型インタプリタ）が削除された。
+      // 解決策: ソースの実行は WasmWhitespaceVM（コンパイル込み）に一本化する。
       backend.run('nospace code', baseOptions, 'stdin data');
       await flushAsync();
 
-      expect(lastNospaceVMConstructorArgs[0]).toBe('nospace code');
-      expect(lastNospaceVMConstructorArgs[1]).toBe('stdin data');
+      expect(lastVMConstructorArgs[0]).toBe('nospace code');
+      expect(lastVMConstructorArgs[1]).toBe('stdin data');
+      expect(lastFromWhitespaceArgs).toEqual([]);
     });
 
-    it('direct: false の場合は WasmWhitespaceVM が使用される（従来動作）', async () => {
-      const options: RunOptions = { ...baseOptions, direct: false };
-      backend.run('code', options);
+    it('language が ws の場合は fromWhitespace で構築する', async () => {
+      backend.run('ws code', { ...baseOptions, language: 'ws' }, 'in');
       await flushAsync();
 
-      expect(lastVMConstructorArgs.length).toBeGreaterThan(0);
-      expect(lastNospaceVMConstructorArgs.length).toBe(0);
+      expect(lastFromWhitespaceArgs[0]).toBe('ws code');
+      expect(lastFromWhitespaceArgs[1]).toBe('in');
+      expect(lastVMConstructorArgs).toEqual([]);
     });
 
-    it('NospaceVM で step が complete を返すと finished ステータスになる', async () => {
-      const statuses: string[] = [];
-      backend.onStatusChange((status) => statuses.push(status));
-
-      backend.run('code', baseOptions);
+    it('実行オプションが fromWhitespace の引数に渡される', async () => {
+      backend.run('ws code', {
+        ...baseOptions,
+        language: 'ws',
+        stdExtensions: ['debug'],
+        maxMemoryCells: 1000,
+        strictHeap: true,
+        randomizeHeap: false,
+      });
       await flushAsync();
 
-      expect(statuses).toContain('running');
-      expect(statuses).toContain('finished');
-    });
-
-    it('NospaceVM の stdout が出力エントリに反映される', async () => {
-      fakeNospaceVMStdout = 'hello from nospace\n';
-      // step が called される前に stdout を設定しておく
-      fakeNospaceVMStepResult = { status: 'complete' };
-
-      backend.run('code', baseOptions);
-      await flushAsync();
-
-      const stdoutEntries = outputEntries.filter((e) => e.type === 'stdout');
-      expect(stdoutEntries.some((e) => e.data === 'hello from nospace\n')).toBe(
-        true
-      );
-    });
-
-    it('NospaceVM でエラー発生時に stderr に出力される', async () => {
-      fakeNospaceVMStepResult = { status: 'error', error: 'runtime error' };
-
-      backend.run('code', baseOptions);
-      await flushAsync();
-
-      const stderrEntry = outputEntries.find((e) => e.type === 'stderr');
-      expect(stderrEntry).toBeDefined();
-      expect(stderrEntry!.data).toBe('runtime error');
-    });
-
-    it('NospaceVM でエラー発生時に error ステータスになる', async () => {
-      fakeNospaceVMStepResult = { status: 'error', error: 'runtime error' };
-      const statuses: string[] = [];
-      backend.onStatusChange((status) => statuses.push(status));
-
-      backend.run('code', baseOptions);
-      await flushAsync();
-
-      expect(statuses).toContain('error');
-    });
-
-    it('NospaceVM コンストラクタが ResultErr をスローした場合、onCompileErrors が呼ばれる', async () => {
-      const compileErrors: any[] = [];
-      backend.onCompileErrors((errors) => compileErrors.push(...errors));
-      fakeNospaceVMConstructorShouldThrow = {
-        success: false,
-        errors: [{ message: 'nospace compile error', line: 2, column: 5 }],
-      };
-
-      backend.run('code', baseOptions);
-      await flushAsync();
-
-      expect(compileErrors).toEqual([
-        { message: 'nospace compile error', line: 2, column: 5 },
+      // fromWhitespace(source, stdin, std_extensions, max_memory_cells, strict_heap, randomize_heap)
+      expect(lastFromWhitespaceArgs.slice(2)).toEqual([
+        ['debug'],
+        1000,
+        true,
+        false,
       ]);
     });
 
-    it('NospaceVM コンストラクタが ResultErr をスローした場合、stderr に出力される', async () => {
-      fakeNospaceVMConstructorShouldThrow = {
-        success: false,
-        errors: [{ message: 'parse error', line: 3 }],
-      };
-
-      backend.run('code', baseOptions);
-      await flushAsync();
-
-      const stderrEntry = outputEntries.find((e) => e.type === 'stderr');
-      expect(stderrEntry).toBeDefined();
-      expect(stderrEntry!.data).toContain('parse error');
-    });
-
-    it('NospaceVM に optPasses が渡される', async () => {
-      const options: RunOptions = {
-        ...baseOptions,
-        optPasses: ['all', 'constant-folding'],
-      };
-      backend.run('code', options);
-      await flushAsync();
-
-      // WasmNospaceVM(source, stdin, opt_passes, ignore_debug)
-      expect(lastNospaceVMConstructorArgs[2]).toEqual([
-        'all',
-        'constant-folding',
-      ]);
-    });
-
-    it('optPasses が空の場合は null が渡される', async () => {
-      const options: RunOptions = {
-        ...baseOptions,
-        optPasses: [],
-      };
-      backend.run('code', options);
-      await flushAsync();
-
-      expect(lastNospaceVMConstructorArgs[2]).toBeNull();
-    });
-
-    it('NospaceVM に ignoreDebug が渡される', async () => {
-      const options: RunOptions = {
-        ...baseOptions,
-        ignoreDebug: true,
-      };
-      backend.run('code', options);
-      await flushAsync();
-
-      // WasmNospaceVM(source, stdin, opt_passes, ignore_debug)
-      expect(lastNospaceVMConstructorArgs[3]).toBe(true);
-    });
-
-    it('kill() で NospaceVM のステップ実行が中断される', async () => {
-      fakeNospaceVMStepResult = { status: 'suspended' };
-      fakeNospaceVMTotalSteps = 0;
-
-      const statuses: string[] = [];
-      backend.onStatusChange((status) => statuses.push(status));
-
-      // 非同期で kill する
+    it('実行オプションがコンストラクタの引数に渡される', async () => {
       backend.run('code', {
         ...baseOptions,
-        stepBudget: 1,
-        maxTotalSteps: 1_000_000,
+        stdExtensions: ['alloc'],
+        optPasses: ['all'],
+        maxMemoryCells: 0,
+        strictHeap: false,
+        randomizeHeap: true,
       });
-      backend.kill();
       await flushAsync();
 
-      expect(statuses).toContain('killed');
+      // new(source, stdin, interactive, std_extensions, opt_passes, max_memory_cells, strict_heap, randomize_heap)
+      expect(lastVMConstructorArgs.slice(2)).toEqual([
+        null,
+        ['alloc'],
+        ['all'],
+        0,
+        false,
+        true,
+      ]);
     });
 
-    it('maxTotalSteps 超過で killed ステータスになる', async () => {
-      fakeNospaceVMStepResult = { status: 'suspended' };
-      fakeNospaceVMTotalSteps = 2000;
-
-      const statuses: string[] = [];
-      backend.onStatusChange((status) => statuses.push(status));
-
-      const options: RunOptions = {
-        ...baseOptions,
-        maxTotalSteps: 1000,
-      };
-      backend.run('code', options);
-      await flushAsync();
-
-      expect(statuses).toContain('killed');
-    });
-
-    it('完了時のシステムメッセージにステップ数が含まれる', async () => {
-      fakeNospaceVMTotalSteps = 42;
-
+    it('未指定のオプションは null を渡し、WASM の既定値に任せる', async () => {
       backend.run('code', baseOptions);
       await flushAsync();
 
-      const systemEntries = outputEntries.filter((e) => e.type === 'system');
-      const completionMsg = systemEntries.find((e) =>
-        e.data.includes('completed')
-      );
-      expect(completionMsg).toBeDefined();
-      expect(completionMsg!.data).toContain('42 steps');
+      expect(lastVMConstructorArgs.slice(2)).toEqual([
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+      ]);
+    });
+
+    it('maxMemoryCells は許容範囲（0〜4294967295 の整数）に収めて渡す', async () => {
+      // 原因: 範囲外の値は WASM のコンストラクタがエラーにする。UI の number 入力は範囲を強制しない。
+      backend.run('code', { ...baseOptions, maxMemoryCells: -5 });
+      await flushAsync();
+      expect(lastVMConstructorArgs[5]).toBe(0);
+
+      backend.run('code', { ...baseOptions, maxMemoryCells: 2 ** 40 });
+      await flushAsync();
+      expect(lastVMConstructorArgs[5]).toBe(4_294_967_295);
     });
   });
 
@@ -805,7 +667,6 @@ describe('WasmExecutionBackend', () => {
       const baseOptions: RunOptions = {
         language: 'standard',
         debug: true,
-        ignoreDebug: false,
         inputMode: 'batch',
       };
 
@@ -834,40 +695,6 @@ describe('WasmExecutionBackend', () => {
 
       it('debug: false の場合、traced が空でなくても trace は出力されない', async () => {
         fakeTracedData = { foo: 3 };
-        const options: RunOptions = { ...baseOptions, debug: false };
-        backend.run('code', options);
-        await flushAsync();
-
-        const traceEntry = outputEntries
-          .filter((e) => e.type === 'stderr')
-          .find((e) => e.data.startsWith('[Trace]'));
-        expect(traceEntry).toBeUndefined();
-      });
-    });
-
-    describe('WasmNospaceVM (direct: true)', () => {
-      const baseOptions: RunOptions = {
-        language: 'standard',
-        debug: true,
-        ignoreDebug: false,
-        inputMode: 'batch',
-        direct: true,
-      };
-
-      it('debug: true かつ traced が空でない場合、[Trace] JSON が stderr に出力される', async () => {
-        fakeNospaceTracedData = { x: 5 };
-        backend.run('code', baseOptions);
-        await flushAsync();
-
-        const traceEntry = outputEntries
-          .filter((e) => e.type === 'stderr')
-          .find((e) => e.data.startsWith('[Trace]'));
-        expect(traceEntry).toBeDefined();
-        expect(traceEntry!.data).toBe('[Trace] {"x":5}\n');
-      });
-
-      it('debug: false の場合、traced が空でなくても trace は出力されない', async () => {
-        fakeNospaceTracedData = { x: 5 };
         const options: RunOptions = { ...baseOptions, debug: false };
         backend.run('code', options);
         await flushAsync();

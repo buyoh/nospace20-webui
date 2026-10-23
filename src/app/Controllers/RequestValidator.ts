@@ -52,6 +52,18 @@ const LANGUAGES: readonly LanguageSubset[] = ['standard', 'min', 'ws'];
 const TARGETS: readonly CompileTarget[] = ['ws', 'mnemonic', 'ex-ws', 'json'];
 const INPUT_MODES: readonly InputMode[] = ['interactive', 'batch'];
 
+/** whitespace20 の --max-memory-cells が受け付ける最大値（u32）。0 は無制限 */
+const MAX_MEMORY_CELLS = 4_294_967_295;
+
+function isMemoryCellLimit(value: unknown): value is number {
+  return (
+    typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value >= 0 &&
+    value <= MAX_MEMORY_CELLS
+  );
+}
+
 type Fail = { ok: false; requestId: string | null; message: string };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -120,6 +132,14 @@ export const RequestValidator = {
     if (!optPasses) {
       return fail(requestId, 'optPasses must be a list of names', 'run');
     }
+    const maxMemoryCells = options.maxMemoryCells;
+    if (maxMemoryCells !== undefined && !isMemoryCellLimit(maxMemoryCells)) {
+      return fail(
+        requestId,
+        `maxMemoryCells must be an integer between 0 and ${MAX_MEMORY_CELLS}`,
+        'run'
+      );
+    }
     const stdinData = (payload as Record<string, unknown>).stdinData;
     if (stdinData !== undefined && typeof stdinData !== 'string') {
       return fail(requestId, 'stdinData must be a string', 'run');
@@ -133,7 +153,9 @@ export const RequestValidator = {
         options: {
           language: options.language,
           debug: options.debug === true,
-          ignoreDebug: options.ignoreDebug === true,
+          strictHeap: options.strictHeap === true,
+          randomizeHeap: options.randomizeHeap === true,
+          ...(maxMemoryCells !== undefined && { maxMemoryCells }),
           inputMode: options.inputMode,
           stdExtensions,
           optPasses,

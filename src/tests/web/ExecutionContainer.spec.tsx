@@ -89,15 +89,18 @@ describe('ExecutionContainer', () => {
       expect(tabLabels).toContain('Run');
     });
 
-    it('WASM flavor で Run(Direct) タブが表示される', async () => {
-      const store = createStore();
-      store.set(flavorAtom, 'wasm');
-      const { container } = await act(async () => renderWithStore(store));
+    it.each(['wasm', 'websocket'] as const)(
+      '%s flavor で Run(Direct) タブが表示されない（直接実行型インタプリタは廃止）',
+      async (flavor) => {
+        const store = createStore();
+        store.set(flavorAtom, flavor);
+        const { container } = await act(async () => renderWithStore(store));
 
-      const tabButtons = container.querySelectorAll('.mode-tab');
-      const tabLabels = Array.from(tabButtons).map((btn) => btn.textContent);
-      expect(tabLabels).toContain('Run(Direct)');
-    });
+        const tabButtons = container.querySelectorAll('.mode-tab');
+        const tabLabels = Array.from(tabButtons).map((btn) => btn.textContent);
+        expect(tabLabels).not.toContain('Run(Direct)');
+      }
+    );
 
     it('WASM flavor で Test Editor タブが表示されない', async () => {
       const store = createStore();
@@ -118,7 +121,6 @@ describe('ExecutionContainer', () => {
       const tabLabels = Array.from(tabButtons).map((btn) => btn.textContent);
       expect(tabLabels).toContain('Compile');
       expect(tabLabels).toContain('Run');
-      expect(tabLabels).toContain('Run(Direct)');
       expect(tabLabels).toContain('Test Editor');
     });
   });
@@ -264,18 +266,6 @@ describe('ExecutionContainer', () => {
       });
 
       expect(store.get(operationModeAtom)).toBe('compile');
-    });
-
-    it('WASM flavor で operationMode が "run-direct" の場合、"compile" にリダイレクトされない', async () => {
-      const store = createStore();
-      store.set(flavorAtom, 'wasm');
-      store.set(operationModeAtom, 'run-direct');
-      await act(async () => {
-        renderWithStore(store);
-      });
-
-      // run-direct は WasmNospaceVM で対応するためリダイレクトしない
-      expect(store.get(operationModeAtom)).toBe('run-direct');
     });
   });
 });

@@ -126,6 +126,7 @@ describe('NospaceExecutionService', () => {
     // Fake ExecutionConfig
     fakeConfig = {
       nospaceBinPath: '/fake/path/to/wsc',
+      whitespaceBinPath: '/fake/path/to/whitespace20',
       nospaceTimeout: 5000,
       nospaceMaxProcesses: 5,
     };
@@ -142,14 +143,14 @@ describe('NospaceExecutionService', () => {
     it('セッションを作成してsessionsマップに登録する', () => {
       const code = 'print "Hello, World!"';
       const options: RunOptions = {
-        language: 'standard',
+        language: 'ws',
         debug: false,
-        ignoreDebug: false,
         inputMode: 'batch',
       };
 
       // Binary exists
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
 
       const session = service.run(code, options, {
         onStdout: jest.fn(),
@@ -172,9 +173,8 @@ describe('NospaceExecutionService', () => {
     it('バイナリが存在しない場合、onStderrとonExit(1)が呼ばれ、statusが"error"になる', () => {
       const code = 'print "Hello"';
       const options: RunOptions = {
-        language: 'standard',
+        language: 'ws',
         debug: false,
-        ignoreDebug: false,
         inputMode: 'batch',
       };
 
@@ -183,6 +183,7 @@ describe('NospaceExecutionService', () => {
 
       // Binary does NOT exist
       files.delete(fakeConfig.nospaceBinPath);
+      files.delete(fakeConfig.whitespaceBinPath);
 
       const session = service.run(code, options, {
         onStdout: jest.fn(),
@@ -195,7 +196,7 @@ describe('NospaceExecutionService', () => {
       expect(session.exitCode).toBe(1);
       expect(onStderr).toHaveBeenCalledWith(
         expect.any(String),
-        expect.stringContaining('nospace20 binary not found')
+        expect.stringContaining('whitespace20 binary not found')
       );
       expect(onExit).toHaveBeenCalledWith(expect.any(String), 'error', 1);
     });
@@ -203,13 +204,13 @@ describe('NospaceExecutionService', () => {
     it('一時ファイルにコードが書き込まれる', () => {
       const code = 'print "test code"';
       const options: RunOptions = {
-        language: 'standard',
+        language: 'ws',
         debug: false,
-        ignoreDebug: false,
         inputMode: 'batch',
       };
 
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
 
       const session = service.run(code, options, {
         onStdout: jest.fn(),
@@ -230,13 +231,13 @@ describe('NospaceExecutionService', () => {
     it('BUG: writeFileSyncが失敗しても例外を投げず、エラーセッションを返しonStderr/onExitが呼ばれる', () => {
       const code = 'print "test"';
       const options: RunOptions = {
-        language: 'standard',
+        language: 'ws',
         debug: false,
-        ignoreDebug: false,
         inputMode: 'batch',
       };
 
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
 
       const onStderr = jest.fn();
       const onExit = jest.fn();
@@ -263,93 +264,136 @@ describe('NospaceExecutionService', () => {
       expect(onExit).toHaveBeenCalledWith(expect.any(String), 'error', 1);
     });
 
-    it('コマンド引数が正しく構築される (standard, no debug)', () => {
-      const code = 'code';
-      const options: RunOptions = {
-        language: 'standard',
-        debug: false,
-        ignoreDebug: false,
-        inputMode: 'batch',
-      };
+    const runCallbacks = () => ({
+      onStdout: jest.fn(),
+      onStderr: jest.fn(),
+      onExit: jest.fn(),
+    });
 
-      files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+    it('whitespace20 を起動し、ソースの一時ファイルを最後の引数にする', () => {
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
 
-      service.run(code, options, {
-        onStdout: jest.fn(),
-        onStderr: jest.fn(),
-        onExit: jest.fn(),
-      });
+      service.run(
+        'code',
+        { language: 'ws', debug: false, inputMode: 'batch' },
+        runCallbacks()
+      );
 
-      expect(spawnCalls[0][0]).toBe(fakeConfig.nospaceBinPath);
+      const [cmd, args] = spawnCalls[0];
+      expect(cmd).toBe(fakeConfig.whitespaceBinPath);
+      expect(args).toEqual([expect.stringMatching(/nospace-.*\.ws$/)]);
+    });
+
+    it('実行オプションが whitespace20 の引数になる', () => {
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
+
+      service.run(
+        'code',
+        {
+          language: 'ws',
+          debug: true,
+          strictHeap: true,
+          randomizeHeap: true,
+          maxMemoryCells: 1000,
+          inputMode: 'batch',
+        },
+        runCallbacks()
+      );
+
+      const args = spawnCalls[0][1];
+      expect(args).toEqual(
+        expect.arrayContaining([
+          '--debug',
+          '--strict-heap',
+          '--randomize-heap',
+          '--max-memory-cells',
+          '1000',
+        ])
+      );
+      expect(args.indexOf('--max-memory-cells') + 1).toBe(args.indexOf('1000'));
+    });
+
+    it('maxMemoryCells が 0（無制限）でも引数に渡す', () => {
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
+
+      service.run(
+        'code',
+        { language: 'ws', debug: false, inputMode: 'batch', maxMemoryCells: 0 },
+        runCallbacks()
+      );
+
       expect(spawnCalls[0][1]).toEqual(
-        expect.arrayContaining(['--std', 'standard'])
+        expect.arrayContaining(['--max-memory-cells', '0'])
       );
     });
 
-    it('コマンド引数が正しく構築される (with debug and ignoreDebug)', () => {
-      const code = 'code';
-      const options: RunOptions = {
-        language: 'ws',
-        debug: true,
-        ignoreDebug: true,
-        inputMode: 'interactive',
-      };
+    it('オプションが無効・未指定なら対応する引数を渡さない', () => {
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
 
-      files.set(fakeConfig.nospaceBinPath, 'fake-binary');
-
-      service.run(code, options, {
-        onStdout: jest.fn(),
-        onStderr: jest.fn(),
-        onExit: jest.fn(),
-      });
-
-      expect(spawnCalls[0][0]).toBe(fakeConfig.nospaceBinPath);
-      expect(spawnCalls[0][1]).toEqual(
-        expect.arrayContaining(['--std', 'ws', '--debug', '--ignore-debug'])
+      service.run(
+        'code',
+        { language: 'ws', debug: false, inputMode: 'batch' },
+        runCallbacks()
       );
+
+      const args = spawnCalls[0][1];
+      for (const flag of [
+        '--debug',
+        '--strict-heap',
+        '--randomize-heap',
+        '--max-memory-cells',
+        '--std-ext',
+        '--std',
+        '--mode',
+        '--ignore-debug',
+      ]) {
+        expect(args).not.toContain(flag);
+      }
     });
 
-    it('コマンド引数が正しく構築される (with stdExtensions)', () => {
-      const code = 'code';
-      const options: RunOptions = {
-        language: 'standard',
-        debug: false,
-        ignoreDebug: false,
-        inputMode: 'batch',
-        stdExtensions: ['alloc'],
-      };
+    it('stdExtensions の debug だけを --std-ext として渡す（alloc は whitespace20 が受け付けない）', () => {
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
 
-      files.set(fakeConfig.nospaceBinPath, 'fake-binary');
-
-      service.run(code, options, {
-        onStdout: jest.fn(),
-        onStderr: jest.fn(),
-        onExit: jest.fn(),
-      });
-
-      expect(spawnCalls[0][1]).toEqual(
-        expect.arrayContaining(['--std', 'standard', '--std-ext', 'alloc'])
+      service.run(
+        'code',
+        {
+          language: 'ws',
+          debug: false,
+          inputMode: 'batch',
+          stdExtensions: ['alloc', 'debug'],
+        },
+        runCallbacks()
       );
+
+      const args = spawnCalls[0][1];
+      expect(args).toEqual(expect.arrayContaining(['--std-ext', 'debug']));
+      expect(args).not.toContain('alloc');
     });
 
-    it('コマンド引数が正しく構築される (stdExtensions 未指定)', () => {
-      const code = 'code';
-      const options: RunOptions = {
-        language: 'standard',
-        debug: false,
-        ignoreDebug: false,
-        inputMode: 'batch',
-      };
-
+    it('BUG: nospace のソース（language が ws 以外）は起動せずエラーにする', () => {
+      // 原因: nospace20 v4 はコンパイラ専用で、ソースを渡しても Whitespace を出力するだけだった。
+      // 解決策: run は Whitespace のみ受け付け、コンパイルを促すエラーで終了する。
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
+      const callbacks = runCallbacks();
 
-      service.run(code, options, {
-        onStdout: jest.fn(),
-        onStderr: jest.fn(),
-        onExit: jest.fn(),
-      });
+      const session = service.run(
+        'code',
+        { language: 'standard', debug: false, inputMode: 'batch' },
+        callbacks
+      );
 
-      expect(spawnCalls[0][1]).not.toContain('--std-ext');
+      expect(spawnCalls).toHaveLength(0);
+      expect(session.status).toBe('error');
+      expect(callbacks.onStderr).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.stringContaining('Compile')
+      );
+      expect(callbacks.onExit).toHaveBeenCalledWith(
+        expect.any(String),
+        'error',
+        1
+      );
     });
   });
 
@@ -357,13 +401,13 @@ describe('NospaceExecutionService', () => {
     it('正常終了時: statusが"finished"、exitCodeが0、一時ファイルが削除される', (done) => {
       const code = 'print "done"';
       const options: RunOptions = {
-        language: 'standard',
+        language: 'ws',
         debug: false,
-        ignoreDebug: false,
         inputMode: 'batch',
       };
 
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
 
       const onExit = jest.fn((_sessionId, _status, code) => {
         expect(code).toBe(0);
@@ -394,13 +438,13 @@ describe('NospaceExecutionService', () => {
     it('異常終了時: statusが"error"、exitCodeが非0', (done) => {
       const code = 'bad code';
       const options: RunOptions = {
-        language: 'standard',
+        language: 'ws',
         debug: false,
-        ignoreDebug: false,
         inputMode: 'batch',
       };
 
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
 
       const onExit = jest.fn((_sessionId, _status, code) => {
         expect(code).toBe(1);
@@ -424,13 +468,13 @@ describe('NospaceExecutionService', () => {
     it('kill呼び出し時: statusが"killed"、SIGTERMが送信される', (done) => {
       const code = 'infinite loop';
       const options: RunOptions = {
-        language: 'standard',
+        language: 'ws',
         debug: false,
-        ignoreDebug: false,
         inputMode: 'batch',
       };
 
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
 
       const session = service.run(code, options, {
         onStdout: jest.fn(),
@@ -450,13 +494,13 @@ describe('NospaceExecutionService', () => {
     it('sendStdin: process.stdin.writeにデータが渡される', () => {
       const code = 'input test';
       const options: RunOptions = {
-        language: 'standard',
+        language: 'ws',
         debug: false,
-        ignoreDebug: false,
         inputMode: 'interactive',
       };
 
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
 
       const session = service.run(code, options, {
         onStdout: jest.fn(),
@@ -478,13 +522,13 @@ describe('NospaceExecutionService', () => {
 
       const code = 'slow code';
       const options: RunOptions = {
-        language: 'standard',
+        language: 'ws',
         debug: false,
-        ignoreDebug: false,
         inputMode: 'batch',
       };
 
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
 
       const onStderr = jest.fn();
       const onExit = jest.fn();
@@ -513,13 +557,13 @@ describe('NospaceExecutionService', () => {
     it('stdout/stderrデータがコールバックに渡される', () => {
       const code = 'output test';
       const options: RunOptions = {
-        language: 'standard',
+        language: 'ws',
         debug: false,
-        ignoreDebug: false,
         inputMode: 'batch',
       };
 
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
 
       const onStdout = jest.fn();
       const onStderr = jest.fn();
@@ -551,6 +595,7 @@ describe('NospaceExecutionService', () => {
 
     it('compile で正しいコマンドライン引数を構築する', () => {
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
 
       service.compile('code', compileOptions, {
         onStdout: jest.fn(),
@@ -561,19 +606,27 @@ describe('NospaceExecutionService', () => {
       expect(spawnCalls).toHaveLength(1);
       expect(spawnCalls[0][0]).toBe(fakeConfig.nospaceBinPath);
       expect(spawnCalls[0][1]).toEqual(
-        expect.arrayContaining([
-          '--mode',
-          'compile',
-          '--std',
-          'standard',
-          '--target',
-          'ws',
-        ])
+        expect.arrayContaining(['--std', 'standard', '--target', 'ws'])
       );
     });
 
-    it('compile で --mode compile が含まれる', () => {
+    it('BUG: nospace20 v4 で廃止された --mode を渡さない', () => {
+      // 原因: nospace20 がコンパイラ専用になり --mode が無くなったが、サーバが渡し続けていた。
+      // 解決策: --mode を渡さない。
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+
+      service.compile('code', compileOptions, {
+        onStdout: jest.fn(),
+        onStderr: jest.fn(),
+        onExit: jest.fn(),
+      });
+
+      expect(spawnCalls[0][1]).not.toContain('--mode');
+    });
+
+    it('compile で language と target が引数に含まれる', () => {
+      files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
 
       service.compile(
         'code',
@@ -586,8 +639,6 @@ describe('NospaceExecutionService', () => {
       );
 
       const spawnArgs = spawnCalls[0][1];
-      expect(spawnArgs).toContain('--mode');
-      expect(spawnArgs).toContain('compile');
       expect(spawnArgs).toContain('--std');
       expect(spawnArgs).toContain('min');
       expect(spawnArgs).toContain('--target');
@@ -596,6 +647,7 @@ describe('NospaceExecutionService', () => {
 
     it('compile で一時ファイルを作成する', () => {
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
 
       service.compile('source-code', compileOptions, {
         onStdout: jest.fn(),
@@ -613,6 +665,7 @@ describe('NospaceExecutionService', () => {
 
     it('compile でコンパイル成功時に stdout を通知する', () => {
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
 
       const onStdout = jest.fn();
 
@@ -631,6 +684,7 @@ describe('NospaceExecutionService', () => {
 
     it('compile でコンパイルエラー時に stderr を通知する', () => {
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
 
       const onStderr = jest.fn();
 
@@ -649,6 +703,7 @@ describe('NospaceExecutionService', () => {
 
     it('compile でプロセス終了時にコールバックを呼び出す', (done) => {
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
 
       const onExit = jest.fn((_sessionId, _status, code) => {
         expect(code).toBe(0);
@@ -694,6 +749,7 @@ describe('NospaceExecutionService', () => {
 
       // Binary does NOT exist
       files.delete(fakeConfig.nospaceBinPath);
+      files.delete(fakeConfig.whitespaceBinPath);
 
       const session = service.compile('code', compileOptions, {
         onStdout: jest.fn(),
@@ -711,6 +767,7 @@ describe('NospaceExecutionService', () => {
 
     it('compile で stdExtensions が --std-ext フラグとして渡される', () => {
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
 
       service.compile(
         'code',
@@ -744,6 +801,7 @@ describe('NospaceExecutionService', () => {
 
     it('compile で stdExtensions が空の場合 --std-ext は含まれない', () => {
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
 
       service.compile(
         'code',
@@ -766,6 +824,7 @@ describe('NospaceExecutionService', () => {
 
     it('compile で stdExtensions が未定義の場合 --std-ext は含まれない', () => {
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
 
       // CompileOptions の stdExtensions が undefined（旧クライアントからのリクエスト想定）
       service.compile(
@@ -792,13 +851,13 @@ describe('NospaceExecutionService', () => {
     it('作成したセッションを取得できる', () => {
       const code = 'print "test"';
       const options: RunOptions = {
-        language: 'standard',
+        language: 'ws',
         debug: false,
-        ignoreDebug: false,
         inputMode: 'batch',
       };
 
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
 
       const session = service.run(code, options, {
         onStdout: jest.fn(),
@@ -817,13 +876,13 @@ describe('NospaceExecutionService', () => {
     it('セッションを削除後、getSessionでundefinedを返す', () => {
       const code = 'print "test"';
       const options: RunOptions = {
-        language: 'standard',
+        language: 'ws',
         debug: false,
-        ignoreDebug: false,
         inputMode: 'batch',
       };
 
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
 
       const session = service.run(code, options, {
         onStdout: jest.fn(),
@@ -841,9 +900,8 @@ describe('NospaceExecutionService', () => {
 
   describe('実行枠・終了処理・背圧', () => {
     const runOptions: RunOptions = {
-      language: 'standard',
+      language: 'ws',
       debug: false,
-      ignoreDebug: false,
       inputMode: 'batch',
     };
 
@@ -863,6 +921,7 @@ describe('NospaceExecutionService', () => {
 
     beforeEach(() => {
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
     });
 
     it('同時実行数の上限に達すると ExecutionLimitError を投げ、一時ファイルを作らない', () => {
@@ -928,6 +987,7 @@ describe('NospaceExecutionService', () => {
 
     it('BUG: エラー時の onExit 通知時点で、セッションが既に登録されている', () => {
       files.delete(fakeConfig.nospaceBinPath);
+      files.delete(fakeConfig.whitespaceBinPath);
       let registeredAtExit: unknown = 'unset';
       const session = service.run('a', runOptions, {
         onStdout: () => {},
@@ -947,8 +1007,10 @@ describe('NospaceExecutionService', () => {
       fakeConfig.nospaceMaxProcesses = 1;
       service = new NospaceExecutionService(fakeConfig, fakeFs, fakeSpawner);
       files.delete(fakeConfig.nospaceBinPath);
+      files.delete(fakeConfig.whitespaceBinPath);
       service.run('a', runOptions, recorder().callbacks);
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
       const originalWrite = fakeFs.writeFileSync;
       fakeFs.writeFileSync = () => {
         throw new Error('Disk full');
@@ -1038,9 +1100,8 @@ describe('NospaceExecutionService', () => {
 
   describe('終了処理（kill・stdin・killAll）', () => {
     const runOptions: RunOptions = {
-      language: 'standard',
+      language: 'ws',
       debug: false,
-      ignoreDebug: false,
       inputMode: 'batch',
     };
     const noop = {
@@ -1051,6 +1112,7 @@ describe('NospaceExecutionService', () => {
 
     beforeEach(() => {
       files.set(fakeConfig.nospaceBinPath, 'fake-binary');
+      files.set(fakeConfig.whitespaceBinPath, 'fake-binary');
     });
 
     afterEach(() => {

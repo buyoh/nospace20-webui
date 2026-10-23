@@ -35,8 +35,6 @@ export type { BackendFactory };
 export interface UseNospaceExecutionResult {
   /** 実行中またはコンパイル中かどうか */
   isRunning: boolean;
-  /** ソースコードを実行する */
-  handleRun: (stdinData?: string, runOptions?: { direct?: boolean }) => void;
   /** ソースコードをコンパイルする */
   handleCompile: () => void;
   /** コンパイル済みコードを実行する（Whitespace ターゲット時のみ） */
@@ -127,66 +125,12 @@ export function useNospaceExecution(
   useEffect(() => {
     if (flavor === 'wasm') {
       // WASM 非対応のオプションをリセット
-      // NOTE: ignoreDebug は WasmNospaceVM 対応のためリセットしない
       setExecutionOptions((prev) => ({
         ...prev,
         inputMode: 'batch',
       }));
     }
   }, [flavor, setExecutionOptions]);
-
-  const handleRun = useCallback(
-    (stdinData?: string, runOptions?: { direct?: boolean }) => {
-      const backend = backendRef.current;
-      if (!backend || !backend.isReady() || !backendReady || isRunning) {
-        console.warn('[useNospaceExecution] handleRun blocked:', {
-          backendExists: !!backend,
-          backendReady: backend?.isReady() ?? false,
-          backendState: backendState.kind,
-          isRunning,
-        });
-        return;
-      }
-
-      setOutputEntries([]);
-      setCompileErrors([]);
-
-      // サーバ flavor では running の通知が非同期に届く。それまで Run を連打できないよう、
-      // 開始前に楽観的に running にする
-      setExecutionStatus('running');
-      try {
-        backend.run(
-          sourceCode,
-          {
-            language: compileOptions.language,
-            debug: executionOptions.debug,
-            ignoreDebug: executionOptions.ignoreDebug,
-            inputMode: executionOptions.inputMode,
-            stepBudget: executionOptions.stepBudget,
-            maxTotalSteps: executionOptions.maxTotalSteps,
-            optPasses: executionOptions.optPasses,
-            stdExtensions: compileOptions.stdExtensions,
-            direct: runOptions?.direct,
-          },
-          stdinData
-        );
-      } catch (err) {
-        handleStartFailure(err);
-      }
-    },
-    [
-      sourceCode,
-      executionOptions,
-      compileOptions,
-      isRunning,
-      backendReady,
-      backendState,
-      setOutputEntries,
-      setCompileErrors,
-      setExecutionStatus,
-      handleStartFailure,
-    ]
-  );
 
   const handleCompile = useCallback(() => {
     const backend = backendRef.current;
@@ -234,10 +178,14 @@ export function useNospaceExecution(
           {
             language: 'ws',
             debug: executionOptions.debug,
-            ignoreDebug: false,
+            strictHeap: executionOptions.strictHeap,
+            randomizeHeap: executionOptions.randomizeHeap,
+            maxMemoryCells: executionOptions.maxMemoryCells,
             inputMode: 'batch',
             stepBudget: executionOptions.stepBudget,
             maxTotalSteps: executionOptions.maxTotalSteps,
+            // VM の debug 拡張はコンパイル時の --std-ext と揃える（揃わないと __assert / __trace が無効になる）
+            stdExtensions: compileOptions.stdExtensions,
           },
           stdinData
         );
@@ -247,6 +195,7 @@ export function useNospaceExecution(
     },
     [
       executionOptions,
+      compileOptions.stdExtensions,
       isRunning,
       backendReady,
       setOutputEntries,
@@ -269,7 +218,6 @@ export function useNospaceExecution(
 
   return {
     isRunning,
-    handleRun,
     handleCompile,
     handleRunCompileOutput,
     handleKill,

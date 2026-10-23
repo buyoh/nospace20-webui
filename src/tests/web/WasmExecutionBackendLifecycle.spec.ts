@@ -52,7 +52,6 @@ const wait = (ms = 30) => new Promise<void>((r) => setTimeout(r, ms));
 const runOptions = {
   language: 'standard' as const,
   debug: false,
-  ignoreDebug: false,
   inputMode: 'batch' as const,
 };
 

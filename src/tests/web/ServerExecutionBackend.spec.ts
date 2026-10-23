@@ -53,7 +53,6 @@ async function connectAndStart(
   backend.run('code', {
     language: 'standard',
     debug: false,
-    ignoreDebug: false,
     inputMode: 'batch',
   });
 }
@@ -110,7 +109,6 @@ describe('ServerExecutionBackend', () => {
       const options = {
         language: 'standard' as const,
         debug: false,
-        ignoreDebug: false,
         inputMode: 'batch' as const,
       };
       const stdinData = 'input data';
@@ -130,7 +128,6 @@ describe('ServerExecutionBackend', () => {
         backend.run('code', {
           language: 'standard',
           debug: false,
-          ignoreDebug: false,
           inputMode: 'batch',
         });
       }).toThrow('Socket not connected');
@@ -446,7 +443,6 @@ describe('ServerExecutionBackend', () => {
     const runOptions = {
       language: 'standard' as const,
       debug: false,
-      ignoreDebug: false,
       inputMode: 'interactive' as const,
     };
 
@@ -606,7 +602,6 @@ describe('ServerExecutionBackend', () => {
     const runOptions = {
       language: 'standard' as const,
       debug: false,
-      ignoreDebug: false,
       inputMode: 'interactive' as const,
     };
 

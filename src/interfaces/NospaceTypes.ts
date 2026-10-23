@@ -31,8 +31,12 @@ export interface CompileOptions {
 export interface ExecutionOptions {
   /** Enable debug trace */
   debug: boolean;
-  /** Disable debug built-in functions */
-  ignoreDebug: boolean;
+  /** 未初期化のヒープ領域の読み取りをエラーにする（--strict-heap） */
+  strictHeap: boolean;
+  /** 未初期化のヒープ領域の読み取りで決定的な非ゼロ値を返す（--randomize-heap）。strictHeap が優先される */
+  randomizeHeap: boolean;
+  /** VM のメモリ上限（セル数）。0 は無制限（--max-memory-cells） */
+  maxMemoryCells: number;
   /** Standard input mode */
   inputMode: InputMode;
   /** WASM: 1回の vm.step() コールで実行する命令数 (default: 10000) */
@@ -49,8 +53,12 @@ export interface RunOptions {
   language: LanguageSubset;
   /** Enable debug trace */
   debug: boolean;
-  /** Disable debug built-in functions */
-  ignoreDebug: boolean;
+  /** 未初期化のヒープ領域の読み取りをエラーにする */
+  strictHeap?: boolean;
+  /** 未初期化のヒープ領域の読み取りで決定的な非ゼロ値を返す */
+  randomizeHeap?: boolean;
+  /** VM のメモリ上限（セル数）。0 は無制限。未指定は実行環境の既定値 */
+  maxMemoryCells?: number;
   /** Standard input mode */
   inputMode: InputMode;
   /** WASM only: 1回の vm.step() コールで実行する命令数 */
@@ -61,8 +69,6 @@ export interface RunOptions {
   optPasses?: string[];
   /** 有効にする標準拡張 */
   stdExtensions?: string[];
-  /** WasmNospaceVM を使用した直接インタプリタ実行を行うか（WASM only） */
-  direct?: boolean;
 }
 
 // --- Socket.IO event types ---

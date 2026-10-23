@@ -94,8 +94,6 @@ export interface ExecutionBackendCapabilities {
   supportsInteractiveStdin: boolean;
   /** Supports compile */
   supportsCompile: boolean;
-  /** Supports ignoreDebug option */
-  supportsIgnoreDebug: boolean;
   /** Supports language subset selection for run */
   supportsLanguageSubsetForRun: boolean;
   /** Requires server connection */

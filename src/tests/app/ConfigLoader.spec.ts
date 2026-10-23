@@ -10,6 +10,7 @@ const EXAMPLE = {
   PORT: 8090,
   FRONTEND: 'vite',
   NOSPACE_BIN_PATH: './bin/nospace20',
+  NOSPACE_WHITESPACE_BIN_PATH: './bin/whitespace20',
   NOSPACE_TIMEOUT: 30,
   NOSPACE_MAX_PROCESSES: 5,
   NOSPACE_TEST_DIR: './resources/tests',

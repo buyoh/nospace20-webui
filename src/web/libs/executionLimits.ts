@@ -45,3 +45,16 @@ export function clampMaxTotalSteps(value: unknown): number {
     DEFAULT_MAX_TOTAL_STEPS
   );
 }
+
+/**
+ * VM のメモリ上限（セル数）の許容範囲。0 は無制限。
+ * 上限は WASM の max_memory_cells が受け付ける最大値（u32）。
+ * これを超える値・負数・小数は WASM のコンストラクタがエラーにするため、実行開始時に必ず収める。
+ */
+export const DEFAULT_MAX_MEMORY_CELLS = 4_194_304;
+export const MAX_MEMORY_CELLS = 4_294_967_295;
+
+/** maxMemoryCells を許容範囲に収める。未指定・不正な値は既定値にする */
+export function clampMaxMemoryCells(value: unknown): number {
+  return clampNumber(value, 0, MAX_MEMORY_CELLS, DEFAULT_MAX_MEMORY_CELLS);
+}

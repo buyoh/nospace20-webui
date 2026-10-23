@@ -17,6 +17,8 @@ export interface AppConfig {
   httpPort: number;
   frontend: 'vite' | 'static';
   nospaceBinPath: string;
+  /** whitespace20（Whitespace VM）実行ファイルのパス */
+  whitespaceBinPath: string;
   /** プロセス実行タイムアウト（ミリ秒） */
   nospaceTimeout: number;
   nospaceMaxProcesses: number;
@@ -88,6 +90,7 @@ export function parseAppConfig(env: ExpectedEnvVars): AppConfig {
     httpPort: requireInteger(env, 'PORT', 1, 65535),
     frontend,
     nospaceBinPath: requireString(env, 'NOSPACE_BIN_PATH'),
+    whitespaceBinPath: requireString(env, 'NOSPACE_WHITESPACE_BIN_PATH'),
     nospaceTimeout: requireInteger(env, 'NOSPACE_TIMEOUT', 1, 86400) * 1000,
     nospaceMaxProcesses: requireInteger(env, 'NOSPACE_MAX_PROCESSES', 1, 1000),
     nospaceTestDir: env.NOSPACE_TEST_DIR,

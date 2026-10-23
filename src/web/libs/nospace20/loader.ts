@@ -3,7 +3,6 @@
 // bundler 形式の nospace20.js を動的 import し、WASM の遅延ロードを提供する。
 
 import type {
-  WasmNospaceVM as WasmNospaceVMType,
   WasmWhitespaceVM as WasmWhitespaceVMType,
   compile as compileType,
   getOptions as getOptionsType,
@@ -12,7 +11,6 @@ import type {
 
 /** nospace20 WASM モジュールの公開 API */
 export type Nospace20Module = {
-  WasmNospaceVM: typeof WasmNospaceVMType;
   WasmWhitespaceVM: typeof WasmWhitespaceVMType;
   compile: typeof compileType;
   getOptions: typeof getOptionsType;

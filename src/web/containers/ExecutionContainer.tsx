@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
-import { executionOptionsAtom } from '../stores/optionsAtom';
 import { flavorAtom } from '../stores/flavorAtom';
 import { operationModeAtom } from '../stores/testEditorAtom';
 import { sourceCodeAtom } from '../stores/editorAtom';
@@ -40,7 +39,7 @@ interface ExecutionContainerProps {
 
 /**
  * 実行パネル全体を統括するコンテナ。
- * Compile / Run / Run(Direct) / TestEditor の4タブ構成。
+ * Compile / Run / TestEditor / Sample のタブ構成。
  * Flavor に応じて利用可能なタブのみを表示する。
  */
 export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({
@@ -57,7 +56,6 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({
   } = components ?? {};
 
   const flavor = useAtomValue(flavorAtom);
-  const executionOptions = useAtomValue(executionOptionsAtom);
   const [batchInput, setBatchInput] = useState('');
   const [operationMode, setOperationMode] = useAtom(operationModeAtom);
   const setSourceCode = useSetAtom(sourceCodeAtom);
@@ -68,7 +66,6 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({
 
   const {
     isRunning,
-    handleRun,
     handleCompile,
     handleRunCompileOutput,
     handleKill,
@@ -113,7 +110,6 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({
   }, [compileStatus, compileOutput, handleRunCompileOutput]);
 
   // WASM flavor は test-editor 非対応のため compile に強制リダイレクト
-  // NOTE: run-direct は WasmNospaceVM で対応するためリダイレクトしない
   useEffect(() => {
     if (isWasm && operationMode === 'test-editor') {
       setOperationMode('compile');
@@ -124,14 +120,6 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({
   const handleLoadSample = (code: string) => {
     setSourceCode(code);
     setOperationMode('compile');
-  };
-
-  const handleRunWithInput = () => {
-    const inputMode = isWasm ? 'batch' : executionOptions.inputMode;
-    handleRun(
-      inputMode === 'batch' ? batchInput : undefined,
-      operationMode === 'run-direct' ? { direct: true } : undefined
-    );
   };
 
   const handleRunCompiled = () => {
@@ -172,12 +160,6 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({
           onClick={() => setOperationMode('run')}
         >
           Run
-        </button>
-        <button
-          className={`mode-tab ${operationMode === 'run-direct' ? 'active' : ''}`}
-          onClick={() => setOperationMode('run-direct')}
-        >
-          Run(Direct)
         </button>
         {isWebSocket && (
           <button
@@ -240,27 +222,7 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({
             forceBatchMode={true}
           />
         </>
-      ) : (
-        <>
-          {/* Run(Direct) タブ: 従来の Execution モード相当 */}
-          <ExecutionOptionsImpl />
-          {statusBar}
-          <ExecutionControls
-            isRunning={isRunning}
-            disabled={!backendReady}
-            onRun={handleRunWithInput}
-            onKill={handleKill}
-          />
-          <OutputPanelImpl onClear={handleClearOutput} />
-          <InputPanelImpl
-            isRunning={isRunning}
-            onSendStdin={handleSendStdin}
-            batchInput={batchInput}
-            onBatchInputChange={setBatchInput}
-            forceBatchMode={isWasm}
-          />
-        </>
-      )}
+      ) : null}
     </div>
   );
 };

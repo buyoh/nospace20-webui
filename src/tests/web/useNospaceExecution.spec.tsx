@@ -238,179 +238,6 @@ describe('useNospaceExecution', () => {
     });
   });
 
-  describe('handleRun', () => {
-    it('backend.run が正しい引数で呼ばれる', async () => {
-      const { store, wrapper } = createTestWrapper();
-      store.set(sourceCodeAtom, 'print "test"');
-      store.set(executionStatusAtom, 'idle');
-      store.set(executionOptionsAtom, {
-        debug: false,
-        ignoreDebug: false,
-        inputMode: 'batch',
-        stepBudget: 10000,
-        maxTotalSteps: 100_000_000,
-      });
-      store.set(compileOptionsAtom, {
-        language: 'standard',
-        target: 'ws',
-      });
-
-      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
-        wrapper,
-      });
-
-      await waitFor(() => {
-        expect(fakeBackend.isReadyValue).toBe(true);
-      });
-
-      act(() => {
-        result.current.handleRun();
-      });
-
-      expect(fakeBackend.runCalls).toHaveLength(1);
-      expect(fakeBackend.runCalls[0]).toEqual([
-        'print "test"',
-        {
-          language: 'standard',
-          debug: false,
-          ignoreDebug: false,
-          inputMode: 'batch',
-          stepBudget: 10000,
-          maxTotalSteps: 100_000_000,
-        },
-        undefined,
-      ]);
-    });
-
-    it('stdinData が渡される', async () => {
-      const { store, wrapper } = createTestWrapper();
-      store.set(sourceCodeAtom, 'code');
-      store.set(executionStatusAtom, 'idle');
-      store.set(executionOptionsAtom, {
-        debug: true,
-        ignoreDebug: true,
-        inputMode: 'batch',
-        stepBudget: 10000,
-        maxTotalSteps: 100_000_000,
-      });
-
-      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
-        wrapper,
-      });
-
-      await waitFor(() => {
-        expect(fakeBackend.isReadyValue).toBe(true);
-      });
-
-      act(() => {
-        result.current.handleRun('input data');
-      });
-
-      expect(fakeBackend.runCalls).toHaveLength(1);
-      expect(fakeBackend.runCalls[0][0]).toBe('code');
-      expect(fakeBackend.runCalls[0][1]).toEqual(
-        expect.objectContaining({
-          inputMode: 'batch',
-        })
-      );
-      expect(fakeBackend.runCalls[0][2]).toBe('input data');
-    });
-
-    it('handleRun に stepBudget / maxTotalSteps が RunOptions に含まれる', async () => {
-      const { store, wrapper } = createTestWrapper();
-      store.set(sourceCodeAtom, 'code');
-      store.set(executionStatusAtom, 'idle');
-      store.set(executionOptionsAtom, {
-        debug: false,
-        ignoreDebug: false,
-        inputMode: 'batch',
-        stepBudget: 500,
-        maxTotalSteps: 5000,
-      });
-
-      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
-        wrapper,
-      });
-
-      await waitFor(() => {
-        expect(fakeBackend.isReadyValue).toBe(true);
-      });
-
-      act(() => {
-        result.current.handleRun();
-      });
-
-      expect(fakeBackend.runCalls).toHaveLength(1);
-      expect(fakeBackend.runCalls[0][1]).toEqual(
-        expect.objectContaining({
-          stepBudget: 500,
-          maxTotalSteps: 5000,
-        })
-      );
-    });
-
-    it('実行前に outputEntries がクリアされる', async () => {
-      const { store, wrapper } = createTestWrapper();
-      store.set(sourceCodeAtom, 'code');
-      store.set(executionStatusAtom, 'idle');
-      store.set(outputEntriesAtom, [
-        { type: 'stdout', data: 'old', timestamp: 123 },
-      ]);
-
-      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
-        wrapper,
-      });
-
-      await waitFor(() => {
-        expect(fakeBackend.isReadyValue).toBe(true);
-      });
-
-      act(() => {
-        result.current.handleRun();
-      });
-
-      expect(store.get(outputEntriesAtom)).toEqual([]);
-    });
-
-    it('backend が ready でない場合は呼ばれない', async () => {
-      const { store, wrapper } = createTestWrapper();
-      store.set(sourceCodeAtom, 'code');
-      store.set(executionStatusAtom, 'idle');
-
-      fakeBackend.isReadyValue = false;
-
-      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
-        wrapper,
-      });
-
-      act(() => {
-        result.current.handleRun();
-      });
-
-      expect(fakeBackend.runCalls).toHaveLength(0);
-    });
-
-    it('実行中の場合は呼ばれない', async () => {
-      const { store, wrapper } = createTestWrapper();
-      store.set(sourceCodeAtom, 'code');
-      store.set(executionStatusAtom, 'running');
-
-      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
-        wrapper,
-      });
-
-      await waitFor(() => {
-        expect(fakeBackend.isReadyValue).toBe(true);
-      });
-
-      act(() => {
-        result.current.handleRun();
-      });
-
-      expect(fakeBackend.runCalls).toHaveLength(0);
-    });
-  });
-
   describe('handleKill', () => {
     it('backend.kill が呼ばれる', async () => {
       const { wrapper } = createTestWrapper();
@@ -672,7 +499,6 @@ describe('useNospaceExecution', () => {
       store.set(executionStatusAtom, 'idle');
       store.set(executionOptionsAtom, {
         debug: true,
-        ignoreDebug: false,
         inputMode: 'batch',
         stepBudget: 10000,
         maxTotalSteps: 100_000_000,
@@ -696,7 +522,6 @@ describe('useNospaceExecution', () => {
         expect.objectContaining({
           language: 'ws',
           debug: true,
-          ignoreDebug: false,
           inputMode: 'batch',
         })
       );
@@ -725,12 +550,88 @@ describe('useNospaceExecution', () => {
       expect(store.get(outputEntriesAtom)).toEqual([]);
     });
 
+    it('メモリ・ヒープの実行オプションと、コンパイル時の stdExtensions が RunOptions に含まれる', async () => {
+      const { store, wrapper } = createTestWrapper();
+      store.set(executionStatusAtom, 'idle');
+      store.set(executionOptionsAtom, {
+        debug: false,
+        strictHeap: true,
+        randomizeHeap: true,
+        maxMemoryCells: 0,
+        inputMode: 'batch',
+        stepBudget: 10000,
+        maxTotalSteps: 100_000_000,
+        optPasses: [],
+      });
+      store.set(compileOptionsAtom, {
+        language: 'standard',
+        target: 'ws',
+        stdExtensions: ['alloc', 'debug'],
+        optPasses: [],
+      });
+
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
+        wrapper,
+      });
+
+      await waitFor(() => {
+        expect(fakeBackend.isReadyValue).toBe(true);
+      });
+
+      act(() => {
+        result.current.handleRunCompileOutput('compiled code');
+      });
+
+      expect(fakeBackend.runCalls[0][1]).toEqual(
+        expect.objectContaining({
+          strictHeap: true,
+          randomizeHeap: true,
+          maxMemoryCells: 0,
+          stdExtensions: ['alloc', 'debug'],
+        })
+      );
+    });
+
+    it('backend が ready でない場合は呼ばれない', async () => {
+      const { store, wrapper } = createTestWrapper();
+      store.set(executionStatusAtom, 'idle');
+      fakeBackend.isReadyValue = false;
+
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
+        wrapper,
+      });
+
+      act(() => {
+        result.current.handleRunCompileOutput('code');
+      });
+
+      expect(fakeBackend.runCalls).toHaveLength(0);
+    });
+
+    it('実行中の場合は呼ばれない', async () => {
+      const { store, wrapper } = createTestWrapper();
+      store.set(executionStatusAtom, 'running');
+
+      const { result } = renderHook(() => useNospaceExecution(backendFactory), {
+        wrapper,
+      });
+
+      await waitFor(() => {
+        expect(fakeBackend.isReadyValue).toBe(true);
+      });
+
+      act(() => {
+        result.current.handleRunCompileOutput('code');
+      });
+
+      expect(fakeBackend.runCalls).toHaveLength(0);
+    });
+
     it('handleRunCompileOutput に stepBudget / maxTotalSteps が RunOptions に含まれる', async () => {
       const { store, wrapper } = createTestWrapper();
       store.set(executionStatusAtom, 'idle');
       store.set(executionOptionsAtom, {
         debug: false,
-        ignoreDebug: false,
         inputMode: 'batch',
         stepBudget: 200,
         maxTotalSteps: 3000,
@@ -799,7 +700,7 @@ describe('useNospaceExecution', () => {
         store.set(backendStateAtom, { kind: 'disconnected' });
       });
       act(() => {
-        result.current.handleRun();
+        result.current.handleRunCompileOutput('code');
         result.current.handleCompile();
       });
 
@@ -817,14 +718,14 @@ describe('useNospaceExecution', () => {
       );
 
       act(() => {
-        result.current.handleRun();
+        result.current.handleRunCompileOutput('code');
       });
       // backend からはまだ running が通知されていない（サーバ flavor を想定）
       expect(store.get(executionStatusAtom)).toBe('running');
       expect(result.current.isRunning).toBe(true);
 
       act(() => {
-        result.current.handleRun();
+        result.current.handleRunCompileOutput('code');
       });
 
       expect(fakeBackend.runCalls).toHaveLength(1);
@@ -857,7 +758,7 @@ describe('useNospaceExecution', () => {
       );
 
       act(() => {
-        result.current.handleRun();
+        result.current.handleRunCompileOutput('code');
       });
 
       expect(store.get(executionStatusAtom)).toBe('error');

@@ -21,12 +21,6 @@ describe('testEditorAtom', () => {
       expect(store.get(operationModeAtom)).toBe('run');
     });
 
-    it('"run-direct" に設定できること', () => {
-      const store = createStore();
-      store.set(operationModeAtom, 'run-direct');
-      expect(store.get(operationModeAtom)).toBe('run-direct');
-    });
-
     it('"test-editor" に設定できること', () => {
       const store = createStore();
       store.set(operationModeAtom, 'test-editor');
@@ -36,17 +30,11 @@ describe('testEditorAtom', () => {
 
   describe('OperationMode 型', () => {
     it('有効な値が代入可能であること（型チェック）', () => {
-      // 型として 'compile' | 'run' | 'run-direct' | 'test-editor' が有効
-      const modes: OperationMode[] = [
-        'compile',
-        'run',
-        'run-direct',
-        'test-editor',
-      ];
-      expect(modes).toHaveLength(4);
+      // 型として 'compile' | 'run' | 'test-editor' が有効
+      const modes: OperationMode[] = ['compile', 'run', 'test-editor'];
+      expect(modes).toHaveLength(3);
       expect(modes).toContain('compile');
       expect(modes).toContain('run');
-      expect(modes).toContain('run-direct');
       expect(modes).toContain('test-editor');
     });
   });

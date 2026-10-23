@@ -67,7 +67,6 @@ export class ServerExecutionBackend implements ExecutionBackend {
   static capabilities: ExecutionBackendCapabilities = {
     supportsInteractiveStdin: true,
     supportsCompile: true,
-    supportsIgnoreDebug: true,
     supportsLanguageSubsetForRun: true,
     requiresServer: true,
   };

@@ -115,6 +115,7 @@ class FakeNospaceExecutionService extends NospaceExecutionService {
     super(
       {
         nospaceBinPath: '/dummy/path',
+        whitespaceBinPath: '/dummy/path',
         nospaceTimeout: 10000,
         nospaceMaxProcesses: 5,
       },
@@ -225,7 +226,6 @@ describe('NospaceController', () => {
         language: 'standard',
         inputMode: 'interactive',
         debug: false,
-        ignoreDebug: false,
       };
 
       socket.trigger('nospace_run', {
@@ -240,6 +240,8 @@ describe('NospaceController', () => {
       // 検証・正規化された options が渡される（未指定のリストは空配列になる）
       expect(calls[0].options).toEqual({
         ...options,
+        strictHeap: false,
+        randomizeHeap: false,
         stdExtensions: [],
         optPasses: [],
       });
@@ -251,7 +253,6 @@ describe('NospaceController', () => {
         language: 'standard',
         inputMode: 'interactive',
         debug: false,
-        ignoreDebug: false,
       };
 
       socket.trigger('nospace_run', {
@@ -274,7 +275,6 @@ describe('NospaceController', () => {
           language: 'standard',
           inputMode: 'interactive',
           debug: false,
-          ignoreDebug: false,
         },
       });
 
@@ -290,7 +290,6 @@ describe('NospaceController', () => {
           language: 'standard',
           inputMode: 'interactive',
           debug: false,
-          ignoreDebug: false,
         },
       });
 
@@ -309,7 +308,6 @@ describe('NospaceController', () => {
           language: 'standard',
           inputMode: 'batch',
           debug: false,
-          ignoreDebug: false,
         },
         stdinData: 'input data',
       });
@@ -329,7 +327,6 @@ describe('NospaceController', () => {
           language: 'standard',
           inputMode: 'batch',
           debug: false,
-          ignoreDebug: false,
         },
       });
 
@@ -352,7 +349,6 @@ describe('NospaceController', () => {
         language: 'standard',
         inputMode: 'batch',
         debug: false,
-        ignoreDebug: false,
       };
       const stdinData = 'input data';
 
@@ -384,7 +380,6 @@ describe('NospaceController', () => {
         language: 'standard',
         inputMode: 'interactive',
         debug: false,
-        ignoreDebug: false,
       },
       ...extra,
     });
@@ -513,7 +508,6 @@ describe('NospaceController', () => {
           language: 'standard',
           inputMode: 'interactive',
           debug: false,
-          ignoreDebug: false,
         },
       });
 
@@ -558,7 +552,6 @@ describe('NospaceController', () => {
           language: 'standard',
           inputMode: 'interactive',
           debug: false,
-          ignoreDebug: false,
         },
       });
 
@@ -667,7 +660,6 @@ describe('NospaceController', () => {
       language: 'standard',
       inputMode: 'interactive',
       debug: false,
-      ignoreDebug: false,
     };
 
     beforeEach(() => {
@@ -879,7 +871,6 @@ describe('NospaceController', () => {
       language: 'standard',
       inputMode: 'interactive',
       debug: false,
-      ignoreDebug: false,
     };
 
     /** 不正な run を送り、プロセスが起動されず requestId 付きのエラーが返ることを確認する */
@@ -936,6 +927,8 @@ describe('NospaceController', () => {
 
       expect(executionService.getRunCalls()[0].options).toEqual({
         ...validOptions,
+        strictHeap: false,
+        randomizeHeap: false,
         stdExtensions: ['alloc'],
         optPasses: [],
       });

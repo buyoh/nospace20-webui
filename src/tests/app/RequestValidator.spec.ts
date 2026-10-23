@@ -10,7 +10,6 @@ const runPayload = (overrides: Record<string, unknown> = {}) => ({
     language: 'standard',
     inputMode: 'batch',
     debug: true,
-    ignoreDebug: false,
     stdExtensions: ['alloc', 'debug'],
   },
   stdinData: '1\n',
@@ -30,7 +29,8 @@ describe('RequestValidator.parseRun', () => {
           language: 'standard',
           inputMode: 'batch',
           debug: true,
-          ignoreDebug: false,
+          strictHeap: false,
+          randomizeHeap: false,
           stdExtensions: ['alloc', 'debug'],
           optPasses: [],
         },
@@ -39,21 +39,60 @@ describe('RequestValidator.parseRun', () => {
     });
   });
 
-  it('boolean でない debug / ignoreDebug は false にする', () => {
+  it('strictHeap / randomizeHeap / maxMemoryCells を受け取る', () => {
+    const result = RequestValidator.parseRun(
+      runPayload({
+        options: {
+          language: 'ws',
+          inputMode: 'batch',
+          strictHeap: true,
+          randomizeHeap: true,
+          maxMemoryCells: 0,
+        },
+      })
+    );
+
+    expect(result.ok && result.value.options).toMatchObject({
+      strictHeap: true,
+      randomizeHeap: true,
+      maxMemoryCells: 0,
+    });
+  });
+
+  it.each([
+    ['負数', -1],
+    ['小数', 1.5],
+    ['u32 を超える値', 4294967296],
+    ['NaN', NaN],
+    ['文字列', '100'],
+  ])('maxMemoryCells が %s なら拒否する', (_label, maxMemoryCells) => {
+    const result = RequestValidator.parseRun(
+      runPayload({
+        options: { language: 'ws', inputMode: 'batch', maxMemoryCells },
+      })
+    );
+
+    expect(result.ok).toBe(false);
+    expect(!result.ok && result.message).toContain('maxMemoryCells');
+  });
+
+  it('boolean でない debug / strictHeap / randomizeHeap は false にする', () => {
     const result = RequestValidator.parseRun(
       runPayload({
         options: {
           language: 'min',
           inputMode: 'interactive',
           debug: 'yes',
-          ignoreDebug: 1,
+          strictHeap: 1,
+          randomizeHeap: 'yes',
         },
       })
     );
 
     expect(result.ok && result.value.options).toMatchObject({
       debug: false,
-      ignoreDebug: false,
+      strictHeap: false,
+      randomizeHeap: false,
     });
   });
 

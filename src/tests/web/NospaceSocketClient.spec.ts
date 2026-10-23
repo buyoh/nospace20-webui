@@ -165,7 +165,6 @@ describe('NospaceSocketClient', () => {
       const options = {
         language: 'standard' as const,
         debug: false,
-        ignoreDebug: false,
         inputMode: 'batch' as const,
       };
 
@@ -192,7 +191,6 @@ describe('NospaceSocketClient', () => {
       const options = {
         language: 'standard' as const,
         debug: false,
-        ignoreDebug: false,
         inputMode: 'batch' as const,
       };
 
@@ -214,7 +212,6 @@ describe('NospaceSocketClient', () => {
         client.emitRun('req-1', 'code', {
           language: 'standard',
           debug: false,
-          ignoreDebug: false,
           inputMode: 'batch',
         });
       }).toThrow('Socket not connected');
@@ -469,7 +466,6 @@ describe('NospaceSocketClient', () => {
         client.emitRun('r', 'code', {
           language: 'standard',
           debug: false,
-          ignoreDebug: false,
           inputMode: 'batch',
         })
       ).toThrow('Socket not connected');

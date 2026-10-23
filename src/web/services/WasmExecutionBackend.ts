@@ -16,12 +16,16 @@ import {
   isNospaceErrorResult,
 } from '../libs/formatNospaceErrors';
 
-import { clampMaxTotalSteps, clampStepBudget } from '../libs/executionLimits';
+import {
+  clampMaxMemoryCells,
+  clampMaxTotalSteps,
+  clampStepBudget,
+} from '../libs/executionLimits';
 import { createDefaultRequestIdGenerator } from '../libs/requestId';
 
 /**
  * ステップ実行ループ用 VM アダプタ。
- * WasmWhitespaceVM と WasmNospaceVM のメソッド名の差異を吸収する。
+ * WasmWhitespaceVM のメソッド名（snake_case）を、ループ側の名前に対応づける。
  */
 interface VmAdapter {
   step(budget: number): { status: string; error?: string };
@@ -37,17 +41,6 @@ function adaptWhitespaceVm(vm: any): VmAdapter {
     step: (b) => vm.step(b),
     flushStdout: () => vm.flush_stdout(),
     getTraced: () => vm.get_traced(),
-    totalSteps: () => vm.total_steps(),
-    free: () => vm.free(),
-  };
-}
-
-/** WasmNospaceVM をアダプタ化する */
-function adaptNospaceVm(vm: any): VmAdapter {
-  return {
-    step: (b) => vm.step(b),
-    flushStdout: () => vm.flushStdout(),
-    getTraced: () => vm.getTraced(),
     totalSteps: () => vm.total_steps(),
     free: () => vm.free(),
   };
@@ -108,7 +101,6 @@ export class WasmExecutionBackend implements ExecutionBackend {
   static capabilities: ExecutionBackendCapabilities = {
     supportsInteractiveStdin: false,
     supportsCompile: true,
-    supportsIgnoreDebug: true,
     supportsLanguageSubsetForRun: false,
     requiresServer: false,
   };
@@ -164,32 +156,42 @@ export class WasmExecutionBackend implements ExecutionBackend {
     let vm: any = null;
 
     try {
-      let adapter: VmAdapter;
+
+      const stdExtensions = options.stdExtensions?.length
+        ? (options.stdExtensions as any)
+        : null;
+      // 0 は無制限。未指定は WASM 側の既定値（4,194,304）になる
+      const maxMemoryCells =
+        options.maxMemoryCells === undefined
+          ? null
+          : clampMaxMemoryCells(options.maxMemoryCells);
+      const strictHeap = options.strictHeap ?? null;
+      const randomizeHeap = options.randomizeHeap ?? null;
 
       if (options.language === 'ws') {
         // Whitespace ソースを直接実行
-        vm = nospace20.WasmWhitespaceVM.fromWhitespace(code, stdinData);
-        adapter = adaptWhitespaceVm(vm);
-      } else if (options.direct) {
-        // WasmNospaceVM で nospace ソースを直接インタプリタ実行
-        vm = new nospace20.WasmNospaceVM(
+        vm = nospace20.WasmWhitespaceVM.fromWhitespace(
           code,
           stdinData,
-          options.optPasses?.length ? (options.optPasses as any) : null,
-          options.ignoreDebug ?? null
+          stdExtensions,
+          maxMemoryCells,
+          strictHeap,
+          randomizeHeap
         );
-        adapter = adaptNospaceVm(vm);
       } else {
         // nospace → Whitespace コンパイル → WS VM 実行
-        const stdExtensions = options.stdExtensions;
         vm = new nospace20.WasmWhitespaceVM(
           code,
           stdinData,
           null,
-          stdExtensions?.length ? (stdExtensions as any) : null
+          stdExtensions,
+          options.optPasses?.length ? (options.optPasses as any) : null,
+          maxMemoryCells,
+          strictHeap,
+          randomizeHeap
         );
-        adapter = adaptWhitespaceVm(vm);
       }
+      const adapter = adaptWhitespaceVm(vm);
       this.vm = vm;
 
       this.statusCallback?.('running', sessionId);

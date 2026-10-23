@@ -6,6 +6,10 @@ import { CollapsibleSection } from '../common/CollapsibleSection';
 import { Select } from '../common/Select';
 import { TextInput } from '../common/TextInput';
 import { Checkbox } from '../common/Checkbox';
+import {
+  MAX_MEMORY_CELLS,
+  clampMaxMemoryCells,
+} from '../../libs/executionLimits';
 import './styles/ExecutionOptions.scss';
 
 /**
@@ -28,18 +32,51 @@ export const ExecutionOptions: React.FC = () => {
         />
       </div>
 
-      {/* Ignore debug — WebSocket のみ */}
-      {!isWasm && (
-        <div className="option-group">
-          <Checkbox
-            label="Ignore debug functions (--ignore-debug)"
-            checked={options.ignoreDebug}
-            onChange={(e) =>
-              setOptions({ ...options, ignoreDebug: e.target.checked })
-            }
+      {/* Strict heap — 両 flavor で利用可能 */}
+      <div className="option-group">
+        <Checkbox
+          label="Strict heap (--strict-heap)"
+          checked={options.strictHeap}
+          onChange={(e) =>
+            setOptions({ ...options, strictHeap: e.target.checked })
+          }
+        />
+      </div>
+
+      {/* Randomize heap — 両 flavor で利用可能（strict heap が優先される） */}
+      <div className="option-group">
+        <Checkbox
+          label="Randomize heap (--randomize-heap)"
+          checked={options.randomizeHeap}
+          onChange={(e) =>
+            setOptions({ ...options, randomizeHeap: e.target.checked })
+          }
+        />
+      </div>
+
+      {/* Max Memory Cells — 両 flavor で利用可能（0 は無制限） */}
+      <div className="option-group">
+        <label>
+          <span>Max Memory Cells (0 = unlimited):</span>
+          <TextInput
+            type="number"
+            min={0}
+            max={MAX_MEMORY_CELLS}
+            value={options.maxMemoryCells}
+            onChange={(e) => {
+              // BUG FIX: 入力を空にすると Number('') === 0 となり、意図せず「無制限」になっていた。
+              // 解決策として、空・非数の入力は無視し、許容範囲に収めた値だけを反映する。
+              if (e.target.value.trim() === '') return;
+              const value = Number(e.target.value);
+              if (!Number.isFinite(value)) return;
+              setOptions({
+                ...options,
+                maxMemoryCells: clampMaxMemoryCells(value),
+              });
+            }}
           />
-        </div>
-      )}
+        </label>
+      </div>
 
       {/* Input Mode — WebSocket のみ（WASM は batch 固定） */}
       {!isWasm && (

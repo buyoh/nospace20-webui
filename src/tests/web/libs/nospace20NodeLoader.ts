@@ -5,7 +5,7 @@
  * WASM バイナリを直接ロードする。Jest/Node.js テスト環境専用。
  *
  * 使い方:
- *   import { WasmNospaceVM, compile, ... } from './nospace20NodeLoader';
+ *   import { compile, ... } from './nospace20NodeLoader';
  *
  * 注意: このファイルはブラウザ環境・本番コードでは使用しないこと。
  */
@@ -13,7 +13,6 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import type {
-  WasmNospaceVM as WasmNospaceVMType,
   WasmWhitespaceVM as WasmWhitespaceVMType,
   compile as compileType,
   getOptions as getOptionsType,
@@ -44,7 +43,6 @@ const wasmInstance = new WebAssembly.Instance(wasmModule, {
   wasmInstance.exports
 );
 
-export const WasmNospaceVM = bgJs.WasmNospaceVM as typeof WasmNospaceVMType;
 export const WasmWhitespaceVM =
   bgJs.WasmWhitespaceVM as typeof WasmWhitespaceVMType;
 export const compile = bgJs.compile as typeof compileType;

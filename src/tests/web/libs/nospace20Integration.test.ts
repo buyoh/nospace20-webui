@@ -12,7 +12,6 @@
  */
 
 import {
-  WasmNospaceVM,
   WasmWhitespaceVM,
   compile,
   getOptions,
@@ -54,9 +53,7 @@ const STDIN_ECHO_SRC = `func: __main() {
 }`;
 
 /** VM をステップ実行して完了まで待つ */
-function runUntilComplete(
-  vm: InstanceType<typeof WasmNospaceVM> | InstanceType<typeof WasmWhitespaceVM>
-) {
+function runUntilComplete(vm: InstanceType<typeof WasmWhitespaceVM>) {
   const MAX_STEPS = 1_000_000;
   let totalSteps = 0;
   for (;;) {
@@ -194,14 +191,14 @@ describe('compile + formatNospaceErrors 統合', () => {
 });
 
 // ----------------------------------------------------------------------------
-// WasmNospaceVM (直接インタプリタ実行)
+// WasmWhitespaceVM (nospace ソースから構築)
 // ----------------------------------------------------------------------------
 
-describe('WasmNospaceVM', () => {
+describe('WasmWhitespaceVM (nospace ソースから構築)', () => {
   it('Hello World コードを実行して stdout に出力される', () => {
-    const vm = new WasmNospaceVM(HELLO_WORLD_SRC, '');
+    const vm = new WasmWhitespaceVM(HELLO_WORLD_SRC, '');
     const result = runUntilComplete(vm);
-    const stdout = vm.flushStdout();
+    const stdout = vm.flush_stdout();
     vm.free();
 
     expect(result.status).toBe('complete');
@@ -209,9 +206,9 @@ describe('WasmNospaceVM', () => {
   });
 
   it('puts を使った Hello World コードを実行できる', () => {
-    const vm = new WasmNospaceVM(PUTS_HELLO_WORLD_SRC, '');
+    const vm = new WasmWhitespaceVM(PUTS_HELLO_WORLD_SRC, '');
     const result = runUntilComplete(vm);
-    const stdout = vm.flushStdout();
+    const stdout = vm.flush_stdout();
     vm.free();
 
     expect(result.status).toBe('complete');
@@ -219,9 +216,9 @@ describe('WasmNospaceVM', () => {
   });
 
   it('stdin から文字を読み込んで出力できる', () => {
-    const vm = new WasmNospaceVM(STDIN_ECHO_SRC, 'A');
+    const vm = new WasmWhitespaceVM(STDIN_ECHO_SRC, 'A');
     const result = runUntilComplete(vm);
-    const stdout = vm.flushStdout();
+    const stdout = vm.flush_stdout();
     vm.free();
 
     expect(result.status).toBe('complete');
@@ -229,11 +226,11 @@ describe('WasmNospaceVM', () => {
   });
 
   it('構文エラーのあるコードでコンストラクタが例外をスローする', () => {
-    expect(() => new WasmNospaceVM(INVALID_SYNTAX_SRC, '')).toThrow();
+    expect(() => new WasmWhitespaceVM(INVALID_SYNTAX_SRC, '')).toThrow();
   });
 
   it('total_steps が実行後に 0 より大きい値を返す', () => {
-    const vm = new WasmNospaceVM(HELLO_WORLD_SRC, '');
+    const vm = new WasmWhitespaceVM(HELLO_WORLD_SRC, '');
     runUntilComplete(vm);
     const steps = vm.total_steps();
     vm.free();
@@ -241,33 +238,55 @@ describe('WasmNospaceVM', () => {
     expect(steps).toBeGreaterThan(0);
   });
 
-  it('is_complete が実行完了後に true を返す', () => {
-    const vm = new WasmNospaceVM(HELLO_WORLD_SRC, '');
-    runUntilComplete(vm);
-    const complete = vm.is_complete();
-    vm.free();
-
-    expect(complete).toBe(true);
-  });
-
   it('opt_passes を指定した VM が正常に実行できる', () => {
-    const vm = new WasmNospaceVM(HELLO_WORLD_SRC, '', ['all']);
+    const vm = new WasmWhitespaceVM(HELLO_WORLD_SRC, '', null, null, ['all']);
     const result = runUntilComplete(vm);
-    const stdout = vm.flushStdout();
+    const stdout = vm.flush_stdout();
     vm.free();
 
     expect(result.status).toBe('complete');
     expect(stdout).toBe('Hi\n');
   });
 
-  it('ignore_debug=true を指定した VM が正常に実行できる', () => {
-    const vm = new WasmNospaceVM(HELLO_WORLD_SRC, '', null, true);
+  it('strict_heap / randomize_heap / max_memory_cells を指定した VM が実行できる', () => {
+    const vm = new WasmWhitespaceVM(
+      HELLO_WORLD_SRC,
+      '',
+      null,
+      null,
+      null,
+      0,
+      true,
+      false
+    );
     const result = runUntilComplete(vm);
-    const stdout = vm.flushStdout();
+    const stdout = vm.flush_stdout();
     vm.free();
 
     expect(result.status).toBe('complete');
     expect(stdout).toBe('Hi\n');
+  });
+
+  it('メモリ上限を超えるとエラーになる', () => {
+    const vm = new WasmWhitespaceVM(
+      PUTS_HELLO_WORLD_SRC,
+      '',
+      null,
+      null,
+      null,
+      1
+    );
+    const result = runUntilComplete(vm);
+    vm.free();
+
+    expect(result.status).toBe('error');
+    expect(result.error).toContain('memory limit exceeded');
+  });
+
+  it('max_memory_cells が負数ならコンストラクタが例外をスローする', () => {
+    expect(
+      () => new WasmWhitespaceVM(HELLO_WORLD_SRC, '', null, null, null, -1)
+    ).toThrow();
   });
 });
 
@@ -302,24 +321,5 @@ describe('compile + WasmWhitespaceVM 統合', () => {
 
     expect(result.status).toBe('complete');
     expect(stdout).toBe('hello world\n');
-  });
-
-  it('WasmNospaceVM と WasmWhitespaceVM の実行結果が一致する', () => {
-    // compile → WasmWhitespaceVM
-    const compileResult = compile(PUTS_HELLO_WORLD_SRC, 'ws', 'standard');
-    expect(compileResult.success).toBe(true);
-    if (!compileResult.success) return;
-    const wsVm = WasmWhitespaceVM.fromWhitespace(compileResult.output, '');
-    runUntilComplete(wsVm);
-    const wsStdout = wsVm.flush_stdout();
-    wsVm.free();
-
-    // WasmNospaceVM (直接インタプリタ)
-    const nsVm = new WasmNospaceVM(PUTS_HELLO_WORLD_SRC, '');
-    runUntilComplete(nsVm);
-    const nsStdout = nsVm.flushStdout();
-    nsVm.free();
-
-    expect(wsStdout).toBe(nsStdout);
   });
 });

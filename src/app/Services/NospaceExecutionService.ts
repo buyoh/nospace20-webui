@@ -24,7 +24,10 @@ export interface ProcessSpawner {
 
 /** 設定値の抽象 */
 export interface ExecutionConfig {
+  /** nospace20（コンパイラ）のパス */
   nospaceBinPath: string;
+  /** whitespace20（Whitespace VM）のパス */
+  whitespaceBinPath: string;
   nospaceTimeout: number;
   /** 同時実行プロセス数の上限 */
   nospaceMaxProcesses: number;
@@ -319,7 +322,10 @@ export class NospaceExecutionService {
   }
 
   /**
-   * Run source code with nospace20 interpreter
+   * Whitespace コードを whitespace20 で実行する。
+   *
+   * nospace20 は v4.0.0 でコンパイラ専用になり、nospace のソースを直接実行できない。
+   * nospace のソースは、先にコンパイルして得た Whitespace を渡すこと。
    * @throws {ExecutionLimitError} 同時実行数の上限に達している場合
    */
   run(
@@ -328,27 +334,44 @@ export class NospaceExecutionService {
     callbacks: SessionCallbacks,
     flowControl?: OutputFlowControl
   ): NospaceSession {
+    if (options.language !== 'ws') {
+      return this.failSession(
+        randomUUID(),
+        'Only Whitespace code can be run. Compile the nospace source first.\n',
+        callbacks
+      );
+    }
+
     const args: string[] = [];
 
-    // --std <language>
-    args.push('--std', options.language);
-
-    // Debug flags
     if (options.debug) {
       args.push('--debug');
     }
-    if (options.ignoreDebug) {
-      args.push('--ignore-debug');
+    if (options.strictHeap) {
+      args.push('--strict-heap');
+    }
+    if (options.randomizeHeap) {
+      args.push('--randomize-heap');
+    }
+    if (options.maxMemoryCells !== undefined) {
+      args.push('--max-memory-cells', String(options.maxMemoryCells));
     }
 
-    // BUG FIX: stdExtensions が CLI に渡されていなかった。
-    // WASM backend は stdExtensions を VM コンストラクタに渡すが、
-    // サーバー側では --std-ext フラグとして渡す必要がある。
-    for (const ext of options.stdExtensions ?? []) {
-      args.push('--std-ext', ext);
+    // whitespace20 が受け付ける --std-ext は debug のみ（alloc はコンパイル時の拡張）。
+    // コンパイラと VM で揃えないと __assert / __trace が黙って無効になる。
+    if (options.stdExtensions?.includes('debug')) {
+      args.push('--std-ext', 'debug');
     }
 
-    return this.spawnSession(code, args, callbacks, flowControl);
+    return this.spawnSession(
+      code,
+      args,
+      this.config.whitespaceBinPath,
+      'whitespace20',
+      '.ws',
+      callbacks,
+      flowControl
+    );
   }
 
   /**
@@ -373,7 +396,6 @@ export class NospaceExecutionService {
     }
 
     const args: string[] = [];
-    args.push('--mode', 'compile');
     args.push('--std', options.language);
     args.push('--target', options.target);
 
@@ -383,7 +405,15 @@ export class NospaceExecutionService {
       args.push('--std-ext', ext);
     }
 
-    return this.spawnSession(code, args, callbacks, flowControl);
+    return this.spawnSession(
+      code,
+      args,
+      this.config.nospaceBinPath,
+      'nospace20',
+      '.ns',
+      callbacks,
+      flowControl
+    );
   }
 
   /**
@@ -456,11 +486,14 @@ export class NospaceExecutionService {
 
   /**
    * 実行枠の確保・一時ファイルへの書き込み・バイナリ存在チェック・プロセス spawn を行う共通処理。
-   * run() / compile() の両方から呼び出される。
+   * run()（whitespace20）/ compile()（nospace20）の両方から呼び出される。
    */
   private spawnSession(
     code: string,
     args: string[],
+    binPath: string,
+    binName: string,
+    sourceExt: string,
     callbacks: SessionCallbacks,
     flowControl?: OutputFlowControl
   ): NospaceSession {
@@ -475,7 +508,7 @@ export class NospaceExecutionService {
 
     const sessionId = randomUUID();
     const tmpDir = './tmp';
-    const tempFilePath = join(tmpDir, `nospace-${sessionId}.ns`);
+    const tempFilePath = join(tmpDir, `nospace-${sessionId}${sourceExt}`);
 
     // Write code to temporary file
     try {
@@ -496,7 +529,7 @@ export class NospaceExecutionService {
     args.push(tempFilePath);
 
     // Check if binary exists
-    if (!this.fs.existsSync(this.config.nospaceBinPath)) {
+    if (!this.fs.existsSync(binPath)) {
       releaseSlot();
       // Cleanup temp file
       try {
@@ -506,7 +539,7 @@ export class NospaceExecutionService {
       }
       return this.failSession(
         sessionId,
-        `nospace20 binary not found at: ${this.config.nospaceBinPath}\n`,
+        `${binName} binary not found at: ${binPath}\n`,
         callbacks
       );
     }
@@ -514,7 +547,7 @@ export class NospaceExecutionService {
     // Spawn process
     let process: ChildProcess;
     try {
-      process = this.spawner.spawn(this.config.nospaceBinPath, args);
+      process = this.spawner.spawn(binPath, args);
     } catch (error) {
       releaseSlot();
       try {

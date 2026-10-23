@@ -7,6 +7,7 @@ const validEnv = (overrides: ExpectedEnvVars = {}): ExpectedEnvVars => ({
   PORT: '8090',
   FRONTEND: 'vite',
   NOSPACE_BIN_PATH: './components/nospace20/bin/nospace20',
+  NOSPACE_WHITESPACE_BIN_PATH: './components/nospace20/bin/whitespace20',
   NOSPACE_TIMEOUT: '30',
   NOSPACE_MAX_PROCESSES: '5',
   NOSPACE_TEST_DIR: './resources/tests',
@@ -21,6 +22,9 @@ describe('parseAppConfig', () => {
     expect(config.httpPort).toBe(8090);
     expect(config.frontend).toBe('vite');
     expect(config.nospaceBinPath).toBe('./components/nospace20/bin/nospace20');
+    expect(config.whitespaceBinPath).toBe(
+      './components/nospace20/bin/whitespace20'
+    );
     expect(config.nospaceTimeout).toBe(30000);
     expect(config.nospaceMaxProcesses).toBe(5);
     expect(config.nospaceTestDir).toBe('./resources/tests');
@@ -55,6 +59,7 @@ describe('parseAppConfig', () => {
       'PORT',
       'FRONTEND',
       'NOSPACE_BIN_PATH',
+      'NOSPACE_WHITESPACE_BIN_PATH',
       'NOSPACE_TIMEOUT',
       'NOSPACE_MAX_PROCESSES',
     ] as const)('%s が未定義なら ConfigError', (key) => {

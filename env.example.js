@@ -34,6 +34,9 @@ module.exports = {
   // nospace20 実行ファイルのパス
   NOSPACE_BIN_PATH: './components/nospace20/bin/nospace20',
 
+  // whitespace20 実行ファイルのパス
+  NOSPACE_WHITESPACE_BIN_PATH: './components/nospace20/bin/whitespace20',
+
   // プロセス実行タイムアウト（秒）
   NOSPACE_TIMEOUT: 30,
 

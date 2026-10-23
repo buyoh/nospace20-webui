@@ -17,6 +17,8 @@ export interface ExpectedEnvVars {
   FRONTEND?: string;
   /** (app)nospace20 実行ファイルのパス */
   NOSPACE_BIN_PATH?: string;
+  /** (app)whitespace20 実行ファイルのパス */
+  NOSPACE_WHITESPACE_BIN_PATH?: string;
   /** (app)プロセス実行タイムアウト（秒） */
   NOSPACE_TIMEOUT?: string;
   /** (app)同時実行プロセス数の上限 */
