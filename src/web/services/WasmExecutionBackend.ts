@@ -156,7 +156,6 @@ export class WasmExecutionBackend implements ExecutionBackend {
     let vm: any = null;
 
     try {
-
       const stdExtensions = options.stdExtensions?.length
         ? (options.stdExtensions as any)
         : null;
