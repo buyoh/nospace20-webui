@@ -217,7 +217,6 @@ export const ExecutionContainer: React.FC<ExecutionContainerProps> = ({
             collapsed={compileOutputCollapsed}
             onToggleCollapse={() => setCompileOutputCollapsed((prev) => !prev)}
           />
-          <OutputPanelImpl onClear={handleClearOutput} />
         </>
       ) : operationMode === 'run' ? (
         <>
