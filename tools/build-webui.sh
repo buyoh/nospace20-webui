@@ -4,8 +4,8 @@ set -eu
 
 cd "$(dirname "$0")/.."
 
-if [ ! -f .env.local ]; then
-  echo "Error: .env.local file not found." >&2
+if [ ! -f env.local.js ]; then
+  echo "Error: env.local.js file not found." >&2
   exit 1
 fi
 
